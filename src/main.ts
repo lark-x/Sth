@@ -1,0 +1,15 @@
+import { openDatabase } from './database.ts';
+import { createApp } from './server.ts';
+
+const port = Number(process.env.STH_PORT || 9321);
+if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid STH_PORT');
+const db = openDatabase();
+const server = createApp(db, { publicOrigin: process.env.STH_PUBLIC_ORIGIN, webPassword: process.env.STH_WEB_PASSWORD });
+server.once('close', () => db.close());
+const host = process.env.STH_CONTAINER === '1' ? '0.0.0.0' : '127.0.0.1';
+server.listen(port, host, () => {
+  const address = server.address();
+  if (address && typeof address !== 'string') console.log(`Sth ready at http://127.0.0.1:${address.port}`);
+});
+process.once('SIGTERM', () => server.close());
+process.once('SIGINT', () => server.close());

@@ -1,0 +1,9 @@
+node_modules/
+.data/
+artifacts/
+coverage/
+__pycache__/
+*.pyc
+.env
+*.sqlite*
+*.log

@@ -1,0 +1,26 @@
+name: sth
+services:
+  web:
+    build:
+      context: .
+      args:
+        STH_REVISION: ${STH_REVISION:-local}
+    image: sth-local:workspace
+    init: true
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:9321:9321'
+    environment:
+      STH_PUBLIC_ORIGIN: ${STH_PUBLIC_ORIGIN:-}
+      STH_WEB_PASSWORD: ${STH_WEB_PASSWORD:-}
+    volumes:
+      - data:/app/.data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9321/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 15s
+      timeout: 5s
+      retries: 3
+volumes:
+  data: {}
