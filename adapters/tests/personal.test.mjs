@@ -133,7 +133,7 @@ async function hermesProfile(f) {
     recursive: true, filter: path => !path.includes('__pycache__'),
   });
   await writeFile(join(home, 'config.yaml'), [
-    'platform_toolsets:', '  qqbot:',
+    'plugins:', '  enabled:', '    - sth-personal-operations', 'platform_toolsets:', '  qqbot:',
     '    - sth-personal-operations', '  weixin:', '    - sth-personal-operations', '',
   ].join('\n'));
   const source = process.env.STH_TEST_HERMES_SOURCE || resolve(dirname(python), '..', '..');
@@ -144,12 +144,10 @@ async function hermesProfile(f) {
   const runtime = { ...env, HERMES_HOME: home, HERMES_DISABLE_LAZY_INSTALLS: '1',
     PYTHONPATH: [source, join(source, 'workspace')].join(delimiter), HERMES_DISABLE_AUTO_UPDATE: '1' };
   const execute = promisify(execFile);
-  const cli = args => execute(python, ['-B', '-X', 'utf8', '-m', 'hermes_cli.main', ...args], {
+  const { stdout: gatewayHelp } = await execute(python, ['-B', '-X', 'utf8', '-m', 'hermes_cli.main', 'gateway', 'run', '--help'], {
     cwd: home, timeout: 25_000, env: runtime,
   });
-  await cli(['plugins', 'enable', 'sth-personal-operations']);
-  assert.match(await readFile(join(home, 'config.yaml'), 'utf8'), /enabled:\s*\n\s*- sth-personal-operations/);
-  assert.match((await cli(['gateway', 'run', '--help'])).stdout, /--no-supervise/);
+  assert.match(gatewayHelp, /--no-supervise/);
   const script = join(adapters, 'tests', 'personal-hermes.py');
   return {
     home,

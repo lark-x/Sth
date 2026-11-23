@@ -29,13 +29,14 @@ $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'SthHermes/profiles/sth'
 $plugin = Join-Path $env:HERMES_HOME 'plugins/sth-personal-operations'
 New-Item -ItemType Directory -Path $plugin -Force | Out-Null
 Copy-Item 'F:/Project/Sth/adapters/hermes_plugin/*' -Destination $plugin
-& $hermesPython -B -m hermes_cli.main plugins enable sth-personal-operations
-& $hermesPython -B -m hermes_cli.main plugins list --user --plain
 ```
 
-In that home's `config.yaml`, add `sth-personal-operations` to the `platform_toolsets` entries for the channels the test profile uses. Merge these entries with any toolsets already selected in that profile.
+In that home's `config.yaml`, enable the plugin and add its toolset to the channels the test profile uses. Merge these entries with any existing plugins and toolsets in that file.
 
 ```yaml
+plugins:
+  enabled:
+    - sth-personal-operations
 platform_toolsets:
   qqbot:
     - sth-personal-operations
@@ -100,7 +101,7 @@ Both adapters use `POST /api/v1/personal-operations/{claim,catalog,invoke,receip
 
 Install the Sth root dependencies and use the repository's Node.js 24 runtime for tests. From `adapters/`, `npm test` starts Sth on ephemeral loopback ports with a temporary SQLite database under `adapters/tests/`. The MCP tests use the SDK client over actual child-process stdio.
 
-Set `STH_TEST_HERMES_PYTHON` to the installed Hermes virtual-environment interpreter to include the Hermes integration test. `STH_TEST_HERMES_SOURCE` can point to the installed Hermes source if its layout differs from the standard venv. The fixture checks the installed CLI and exercises gateway admission, tool registration, reply hooks, pairing, and restart replay with synthetic QQ and WeChat events. It uses a temporary profile, a deterministic model stand-in, and stubbed sends.
+Set `STH_TEST_HERMES_PYTHON` to the installed Hermes virtual-environment interpreter to include the Hermes integration test. `STH_TEST_HERMES_SOURCE` can point to the installed Hermes source if its layout differs from the standard venv. The fixture checks the installed CLI's foreground gateway flag and exercises gateway admission, tool registration, reply hooks, pairing, and restart replay with synthetic QQ and WeChat events. It uses a temporary profile, a deterministic model stand-in, and stubbed sends.
 
 ```powershell
 Set-Location F:/Project/Sth/adapters
