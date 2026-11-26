@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { operationsDDL } from './core/index.ts';
-import { libraryDDL } from './library/index.ts';
+import { workspaceDDL, workspaceSchemaVersion } from './workspace.ts';
 import { connectionsDDL } from './connections.ts';
 
 const applicationId = 0x53746831;
@@ -18,11 +18,15 @@ export function openDatabase(directory = dataDir()) {
     const version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
     if (appId === 0 && version === 0 && !db.prepare('SELECT 1 FROM sqlite_schema LIMIT 1').get()) {
       db.exec(operationsDDL);
-      db.exec(libraryDDL);
+      db.exec(workspaceDDL);
       db.exec(connectionsDDL);
-      db.exec(`PRAGMA application_id=${applicationId}; PRAGMA user_version=1`);
-    } else if (appId !== applicationId || version !== 1) {
-      throw new Error('Unsupported database file or schema version.');
+      db.exec(`PRAGMA application_id=${applicationId}; PRAGMA user_version=${workspaceSchemaVersion}`);
+    } else if (appId === applicationId && (version === 2 || version === 3)) {
+      // The newer domains add tables. Existing revisions and receipts retain their identities.
+      db.exec(workspaceDDL);
+      db.exec(`PRAGMA user_version=${workspaceSchemaVersion}`);
+    } else if (appId !== applicationId || version !== workspaceSchemaVersion) {
+      throw new Error(`Unsupported database. Start Sth with a fresh STH_DATA_DIR or restore a v${workspaceSchemaVersion} snapshot.`);
     }
     db.exec('COMMIT; PRAGMA journal_mode=WAL');
     return db;

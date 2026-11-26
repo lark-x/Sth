@@ -54,6 +54,17 @@ export async function invoke(call, signal) {
   return data.result;
 }
 
+export async function retryWrite({ operationId, stepId, input }) {
+  try {
+    const data = await request('/receipt', { body: { operationId, stepId } });
+    if (data?.result && typeof data.result === 'object') return data.result;
+    throw new ApiError(502, '', '服务未返回操作回执。');
+  } catch (error) {
+    if (error.code !== 'operation_receipt_not_found') throw error;
+    return invoke({ operationId, stepId, input });
+  }
+}
+
 export const read = (operationId, input, signal) => invoke(step(operationId, input), signal);
 
 function items(data) {
@@ -112,6 +123,7 @@ export function catalog() {
 }
 
 export const connections = async signal => items(await request('/connections', { signal }));
+export const mediaProvider = signal => request('/providers/media', { signal });
 export const issueCode = () => request('/connections/code', { body: {} });
 export const revoke = id => request(`/connections/${encodeURIComponent(id)}/revoke`, { body: {} });
 

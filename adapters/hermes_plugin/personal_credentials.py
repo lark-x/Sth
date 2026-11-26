@@ -4,6 +4,7 @@ import ctypes
 import json
 import os
 import re
+import secrets
 import stat
 import tempfile
 from datetime import date
@@ -31,15 +32,24 @@ def _private(path, expected_type):
 
 
 def binding_directory():
+    from hermes_cli.config import get_env_value
     from hermes_constants import get_hermes_home
 
-    return Path(get_hermes_home()) / "sth-personal-operations"
+    name = get_env_value("STH_PERSONAL_OPERATIONS_STORAGE_DIR") or "sth-personal-operations"
+    if not re.fullmatch(r"sth-personal-operations(?:-[a-z0-9]+)*", name):
+        raise ValueError("Expected a Sth storage directory name within the Hermes profile.")
+    return Path(get_hermes_home()) / name
 
 
-def prepare_storage():
+def prepare_storage(*, check_write=False):
     directory = binding_directory()
     directory.mkdir(mode=0o700, exist_ok=True)
     _private(directory, stat.S_ISDIR)
+    if check_write:
+        probe = directory / f".write-check-{secrets.token_hex(16)}"
+        with probe.open("xb"):
+            pass
+        probe.unlink()
     return directory
 
 

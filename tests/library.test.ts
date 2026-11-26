@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { test, type TestContext } from 'node:test';
 import { Operations, operationsDDL } from '../src/core/index.ts';
+import type { CharacterEntry } from '../src/library/character-contracts.ts';
 import { libraryDDL, libraryOperations } from '../src/library/index.ts';
 
 type Project = { projectId: string; title: string };
 type CharacterSummary = { characterId: string; name: string; revision: number };
-type Character = CharacterSummary & { persona: string; projectId?: string };
+type Character = CharacterSummary & {
+  authorName?: string; description?: string; persona: string; entries: CharacterEntry[]; href: string; projectId?: string;
+};
 type Diary = {
   noteId: string; title: string; body: string; diaryDate: string; revision: number; href: string;
   projectId?: string; character?: CharacterSummary;
@@ -39,7 +42,7 @@ test('diaries retain the character version they were written with across both ki
   const { operations } = core.catalog();
   assert.deepEqual(operations.map(({ id, effect }) => [id, effect]), [
     ['project.create', 'write'], ['project.list', 'read'], ['character.create', 'write'],
-    ['character.list', 'read'], ['character.read', 'read'], ['character.revise', 'write'],
+    ['character.list', 'read'], ['character.read', 'read'], ['character.revise', 'write'], ['character.adopt-entries', 'write'], ['character.backlinks', 'read'],
     ['diary.create', 'write'], ['diary.read', 'read'], ['diary.list', 'read'], ['diary.revise', 'write'],
   ]);
   assert.deepEqual(operations.find(operation => operation.id === 'diary.create')?.interaction, {
@@ -52,7 +55,10 @@ test('diaries retain the character version they were written with across both ki
 
   const created = run<Character>('character.create', { name: ' Lin ', persona: 'A sailor.', projectId });
   const { characterId } = created;
-  assert.deepEqual(created, { characterId, name: 'Lin', persona: 'A sailor.', projectId, revision: 1 });
+  assert.deepEqual(created, {
+    characterId, name: 'Lin', authorName: 'Lin', description: 'A sailor.', persona: 'A sailor.',
+    projectId, revision: 1, entries: [], href: `/characters/${characterId}`,
+  });
   assert.deepEqual(run('character.read', { characterId }), created);
 
   const input = { ...entry, characterId, projectId, expectedCharacterRevision: 1 };
@@ -65,7 +71,7 @@ test('diaries retain the character version they were written with across both ki
 
   const newPersona = { characterId, name: 'Captain Lin', persona: 'A captain.' };
   const revised = run<Character>('character.revise', { ...newPersona, expectedRevision: 1 });
-  assert.deepEqual(revised, { ...newPersona, projectId, revision: 2 });
+  assert.deepEqual(revised, { ...created, ...newPersona, authorName: newPersona.name, description: newPersona.persona, revision: 2 });
   assert.deepEqual(run('character.read', { characterId }), revised);
   assert.throws(() => run('character.revise', { ...newPersona, expectedRevision: 1 }),
     operationError(409, 'character_revision_conflict'));

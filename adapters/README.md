@@ -51,6 +51,7 @@ Send `sth personal connect <code>` as a standalone message in an admitted QQ or 
 | Hermes profile setting | Purpose |
 | --- | --- |
 | `STH_PERSONAL_OPERATIONS_ORIGIN` | HTTPS or loopback HTTP API origin. Defaults to `http://127.0.0.1:9321`. |
+| `STH_PERSONAL_OPERATIONS_STORAGE_DIR` | Optional name such as `sth-personal-operations-qq` within the active Hermes profile. Defaults to `sth-personal-operations`. A new directory starts with an empty set of bindings. |
 | `STH_PERSONAL_OPERATIONS_TIME_ZONE` | Optional IANA zone for relative dates, such as `Asia/Shanghai`. Defaults to the host's local zone. An explicit zone needs zoneinfo data in the Hermes Python environment. |
 | `STH_PERSONAL_OPERATIONS_PORTAL_ORIGIN` | Optional browser-facing origin for saved diary links. By default the reply includes the relative `/diaries/<id>` route. |
 
@@ -93,9 +94,50 @@ Register this stdio command in the MCP host using absolute paths. Reserve its st
 
 For secret-environment mode, omit the credential file argument and provide `STH_PERSONAL_OPERATIONS_TOKEN` through the MCP host's secret storage. This mode uses `STH_PERSONAL_OPERATIONS_ORIGIN` at startup or defaults to loopback port 9321.
 
-Discover operation schemas with `sth_personal_discover`. Call `sth_personal_invoke` with `operationId`, `stepId`, and `input`. Use a stable event ID and logical step, for example `request-42:save-diary`. Use an explicit `YYYY-MM-DD` date where the operation requires one. Retry by reusing the same caller `stepId` and input. For an uncertain result, pass the same `operationId` and caller `stepId` to `sth_personal_receipt`. The tool response returns the effective `sth.mcp.v1:`-prefixed service step ID. Caller step IDs can be up to 501 characters. Successes expose the operation envelope as structured content.
+Call `sth_personal_discover` with `{}` for a compact operation index. Use `{"operationId":"source.create"}` for that operation's schemas, `{"prefix":"source"}` for a module, or `{"view":"full"}` for every schema. Call `sth_personal_invoke` with `operationId`, `stepId`, and `input`. Use a stable event ID and logical step, for example `request-42:save-diary`. Use an explicit `YYYY-MM-DD` date where the operation requires one. Retry by reusing the same caller `stepId` and input. For an uncertain result, pass the same `operationId` and caller `stepId` to `sth_personal_receipt`. The tool response returns the effective `sth.mcp.v1:`-prefixed service step ID. Caller step IDs can be up to 501 characters. Successes expose the operation envelope as structured content.
 
 Both adapters use `POST /api/v1/personal-operations/{claim,catalog,invoke,receipt}`. Claim accepts `{code,clientName}` and returns `{token,connectionId}`. The other calls use the resulting bearer token. Sth stores receipts per connection. Revoke a connection on the Sth connections page and pair again with a fresh code to replace it. A newly paired connection starts a new receipt history.
+
+## Codex CLI conversation archive
+
+`scripts/sync-codex-conversations.mjs` archives visible user and Codex messages from local Codex thread history into versioned Sth sources through the real stdio MCP server. It records one source per thread plus a project index. Hidden reasoning, tool arguments, command text, and command output stay out of the archive. A content hash prevents unchanged conversations from creating new source revisions.
+
+Run a read-only inventory first, then perform the write. Use a binding file created by the MCP pairing command above.
+
+```powershell
+node scripts/sync-codex-conversations.mjs `
+  --binding "$env:LOCALAPPDATA\SthMcp-pairing\personal-connection.json" `
+  --cwd "F:\Project\MyGame" --project-title MyGame --dry-run
+
+node scripts/sync-codex-conversations.mjs `
+  --binding "$env:LOCALAPPDATA\SthMcp-pairing\personal-connection.json" `
+  --cwd "F:\Project\MyGame" --project-title MyGame
+```
+
+By default the incremental state and JSONL log are stored under `%LOCALAPPDATA%\SthCodexSync\`. `--state` and `--log` override those paths. A lock prevents overlapping runs, and MCP write step IDs derive from the thread content hash so a lost response can be retried without creating a duplicate.
+
+The current Windows user can install the hourly task with `pwsh.exe`, `node.exe`, and a private binding file:
+
+```powershell
+$taskPath = '\Sth\'
+$taskName = 'SyncMyGameCodex'
+$node = (Get-Command node.exe -CommandType Application | Select-Object -First 1).Source
+$script = 'F:\Project\Sth\adapters\scripts\sync-codex-conversations.mjs'
+$binding = Join-Path $env:LOCALAPPDATA 'SthMcp-pairing\personal-connection.json'
+$root = Join-Path $env:LOCALAPPDATA 'SthCodexSync'
+$action = New-ScheduledTaskAction -Execute $node -WorkingDirectory 'F:\Project\Sth\adapters' `
+  -Argument "`"$script`" --binding `"$binding`" --cwd `"F:\Project\MyGame`" --project-title MyGame --state `"$root\MyGame.json`" --log `"$root\MyGame.log`""
+$trigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(2)) `
+  -RepetitionInterval (New-TimeSpan -Hours 1)
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew `
+  -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+$principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
+Register-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Action $action `
+  -Trigger $trigger -Settings $settings -Principal $principal -Force
+```
+
+Inspect the task and its latest result with `Get-ScheduledTask -TaskPath '\Sth\' -TaskName 'SyncMyGameCodex'` and `Get-ScheduledTaskInfo -TaskPath '\Sth\' -TaskName 'SyncMyGameCodex'`. The task uses an existing personal connection until that connection is revoked or replaced.
 
 ## Isolated acceptance tests
 

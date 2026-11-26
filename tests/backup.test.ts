@@ -23,6 +23,8 @@ test('backup snapshots the open database, restores content and connections, and 
     const query = { operationId: 'diary.create', stepId: 'original', input: { title: '备份', body: '写入 WAL 的正文', diaryDate: '2026-11-23' } };
     const scope = authenticate(db, 'Bearer ' + token);
     const saved = ops.invoke(scope, query);
+    db.exec('CREATE TABLE backup_payload AS SELECT randomblob(1500000) AS content');
+    const original = db.prepare('SELECT content FROM backup_payload').get()!.content;
     const roundTrip = () => promisify(execFile)(process.execPath,
       [fileURLToPath(new URL('../scripts/backup.ts', import.meta.url)), join(restore, 'sth.sqlite')],
       { env: { ...process.env, STH_DATA_DIR: live }, windowsHide: true });
@@ -32,6 +34,7 @@ test('backup snapshots the open database, restores content and connections, and 
     try {
       const result = new Operations(restored, libraryOperations).invoke(authenticate(restored, 'Bearer ' + token), query);
       assert.deepEqual(result, { ...saved, replayed: true });
+      assert.deepEqual(restored.prepare('SELECT content FROM backup_payload').get()!.content, original);
     } finally { restored.close(); }
   } finally { db.close(); await rm(root, { recursive: true, force: true }); }
 });

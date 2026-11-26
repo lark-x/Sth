@@ -1,5 +1,6 @@
 // Lucide icon paths, see lucide-LICENSE.txt.
 const icons = {
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
   diary: '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4M2 6h4m-4 4h4m-4 4h4m-4 4h4M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>',
   folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
   people: '<path d="M18 21a8 8 0 0 0-16 0M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/><circle cx="10" cy="8" r="5"/>',
@@ -10,6 +11,8 @@ const icons = {
   next: '<path d="m9 18 6-6-6-6"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8m0-5v5h-5m5 4a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m5 0H3v5"/>',
   copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  tasks: '<path d="m3 6 2 2 4-4M11 6h10M3 12l2 2 4-4m2 2h10M3 18l2 2 4-4m2 2h10"/>',
+  settings: '<path d="M21 4h-7m-4 0H3m18 8h-9m-4 0H3m18 8h-5m-4 0H3m11-18v4m-6 4v4m8 4v4"/>',
 };
 
 export const icon = name => `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
@@ -27,6 +30,8 @@ export const link = (href, label, glyph, style = '') =>
 export const button = (id, label, glyph, style = '', type = 'button') =>
   `<button class="button ${style}" id="${id}" type="${type}">${glyph ? icon(glyph) : ''}${esc(label)}</button>`;
 export const back = (href, label) => `<a class="back" href="${esc(href)}">${icon('back')}${esc(label)}</a>`;
+export const subnav = (label, links, current) => `<nav class="workspace-nav" aria-label="${esc(label)}">${links.map(([href, text]) =>
+  `<a href="${esc(href)}"${href === current ? ' aria-current="page"' : ''}>${esc(text)}</a>`).join('')}</nav>`;
 
 export function heading(title, { actions = '', meta = '', trail = '' } = {}) {
   return `${trail}<header class="masthead"><div class="heading-copy"><h1 tabindex="-1">${esc(title)}</h1>${meta}</div>${actions ? `<div class="actions">${actions}</div>` : ''}</header>`;

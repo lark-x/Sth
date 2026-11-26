@@ -20,10 +20,11 @@ function schema(properties) {
 }
 
 const tools = [
-  { name: names.catalog, description: 'Discover the Sth personal operations and their schemas.', inputSchema: schema({}) },
+  { name: names.catalog, description: 'List the operation index, then request the full schema by operationId or domain prefix.',
+    inputSchema: { ...schema({ view: { type: 'string', enum: ['index', 'full'] }, prefix: { type: 'string' }, operationId: lookupProperties.operationId }), required: [] } },
   {
     name: names.invoke,
-    description: 'Invoke a discovered operation. Use a stable event ID and logical step in stepId. Reuse the same stepId and input on retry. Use a complete ISO date for date fields.',
+    description: 'Invoke a discovered operation. Use a stable event ID and logical step in stepId. Reuse the same stepId and input on retry. Use a complete ISO date for date fields. For a generation prompt, discover generations.prompt.page and follow its cursors for the complete messages or provenance.',
     inputSchema: schema({ ...lookupProperties, input: {} }),
   },
   {
@@ -57,9 +58,9 @@ async function serve(path) {
     const args = params.arguments ?? {};
     let endpoint;
     let body;
-    if (params.name === names.catalog && Object.keys(args).length === 0) {
+    if (params.name === names.catalog && Object.keys(args).every(key => ['view', 'prefix', 'operationId'].includes(key))) {
       endpoint = 'catalog';
-      body = {};
+      body = Object.keys(args).length ? args : { view: 'index' };
     } else if (params.name === names.invoke || params.name === names.receipt) {
       endpoint = params.name === names.invoke ? 'invoke' : 'receipt';
       body = lookup(args, endpoint === 'invoke');

@@ -31,6 +31,13 @@ function nav(page, name) {
   return page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name, exact: true });
 }
 
+const settings = page => page.getByRole('navigation', { name: '应用设置' }).getByRole('link', { name: '设置' });
+
+async function openProjects(page) {
+  await nav(page, '创作').click();
+  await page.getByRole('navigation', { name: '创作工作区' }).getByRole('link', { name: '作品', exact: true }).click();
+}
+
 function row(page, title) {
   return page.getByRole('link').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
 }
@@ -50,7 +57,7 @@ async function launch(t, viewport) {
 
 async function pairThroughUi(page, origin) {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin });
-  await nav(page, '连接').click();
+  await settings(page).click();
   const pairing = page.getByRole('region', { name: '配对码' });
   const [response] = await Promise.all([
     page.waitForResponse((response) => new URL(response.url()).pathname === '/api/web/connections/code' &&
@@ -106,7 +113,7 @@ async function createScopedDiary(page, api, viewport) {
   const name = '林澈';
   const persona = '负责夜间巡逻，习惯把观察写进手记。';
 
-  await nav(page, '项目').click();
+  await openProjects(page);
   await page.getByText('还没有项目', { exact: true }).waitFor();
   await page.getByRole('link', { name: '新建项目', exact: true }).click();
   await page.getByRole('textbox', { name: '项目名称', exact: true }).fill(title);
@@ -126,7 +133,8 @@ async function createScopedDiary(page, api, viewport) {
   await heading(page, name).waitFor();
   const characterId = new URL(page.url()).pathname.split('/').at(-1);
   const character = await api.invoke('character.read', { characterId });
-  assert.deepEqual(character, { characterId, name, persona, projectId, revision: 1 });
+  assert.deepEqual(character, { characterId, name, authorName: name, persona, description: persona, entries: [], projectId,
+    revision: 1, href: `/characters/${characterId}` });
 
   await page.getByRole('link', { name: '写角色日记', exact: true }).click();
   await heading(page, '写日记').waitFor();
@@ -147,8 +155,8 @@ async function createScopedDiary(page, api, viewport) {
   await assertFitsViewport(page);
   await screenshot(page, viewport, 'character-diary');
 
-  await nav(page, '项目').click();
-  await row(page, title).click();
+  await openProjects(page);
+  await page.locator('.project-row').filter({ hasText: title }).getByRole('link', { name: '日记', exact: true }).click();
   await row(page, characterDiary.title).waitFor();
   assert.equal(await projectField(page).inputValue(), projectId);
   assert.equal(await row(page, revisedDiary.title).count(), 0, 'project view excludes the personal diary');
@@ -157,6 +165,7 @@ async function createScopedDiary(page, api, viewport) {
 for (const [name, viewport] of [['desktop', desktop], ['narrow', narrow]]) {
   test(`${name}: zero-project onboarding, personal diary edit, and project character diary`, { timeout }, async (t) => {
     const { page, origin } = await launch(t, viewport);
+    assert.deepEqual(await page.getByRole('navigation', { name: '主导航' }).getByRole('link').allTextContents(), ['日记', '创作', '角色', '资料', '任务']);
     await page.getByText('日记本还是空的', { exact: true }).waitFor();
     const api = await pairPersonalClient(origin);
     assert.deepEqual(await api.invoke('project.list', {}), { items: [] });
@@ -186,6 +195,20 @@ for (const [name, viewport] of [['desktop', desktop], ['narrow', narrow]]) {
     await createScopedDiary(page, api, name);
   });
 }
+
+test('the diary homepage links to a personal diary written through the connected API', { timeout }, async t => {
+  const origin = await startService(t);
+  const api = await pairPersonalClient(origin);
+  assert.deepEqual(await api.invoke('project.list', {}), { items: [] });
+  const saved = await api.invoke('diary.create', firstDiary);
+  const page = await openBrowser(t, origin, narrow);
+  assert.equal((await page.goto('/')).status(), 200);
+  const entry = page.locator(`#diary-list a[href="${saved.href}"]`);
+  await entry.click();
+  assert.deepEqual(await expectDiaryPage(page, firstDiary), { href: saved.href, noteId: saved.noteId });
+  await page.reload();
+  await expectDiaryPage(page, firstDiary);
+});
 
 test('desktop: pairing command, stale diary edit recovery, and connection revocation', { timeout }, async (t) => {
   const { page, origin } = await launch(t, desktop);
@@ -225,7 +248,7 @@ test('desktop: pairing command, stale diary edit recovery, and connection revoca
   assert.deepEqual(await expectDiaryPage(page, merged), identity);
   assert.deepEqual(await api.invoke('diary.read', { noteId }), { ...merged, ...identity, revision: 3 });
 
-  await nav(page, '连接').click();
+  await settings(page).click();
   await page.getByRole('button', { name: `撤销连接 ${clientName}`, exact: true }).click();
   await page.getByRole('dialog', { name: '撤销连接' }).getByRole('button', { name: '撤销连接', exact: true }).click();
   await page.getByText('已撤销', { exact: true }).waitFor();

@@ -1,16 +1,20 @@
-import { entity, listAll, revision } from './api.js';
-import { readCharacter } from './diaries.js';
+import { ApiError, catalog, entity, listAll, revision } from './api.js';
+import { bindEntries, entriesView, readCharacter, resourceKinds } from './character-blocks.js';
 import { bindEditor, editor, getDraft } from './editor.js';
-import { back, empty, esc, field, heading, icon, link, path, projectOptions, query, rowLink, rows } from './ui.js';
+import { back, button, empty, esc, field, heading, icon, link, path, projectOptions, query, rowLink, rows, subnav } from './ui.js';
+import { creationLinks, nameOf, version } from './workspace-model.js';
+import { anchor, section } from './workspace-view.js';
 
 const projectList = signal => listAll('project.list', {}, signal);
 
 export async function projectsPage(ctx) {
   const projects = await projectList(ctx.signal);
   ctx.show('项目', `${heading('项目', { actions: link('/projects/new', '新建项目', 'plus', 'primary') })}
+    ${subnav('创作工作区', creationLinks, '/projects')}
     <div class="list-bar"><p class="count">${projects.length} 个项目</p></div>
-    ${projects.length ? rows(projects, project => rowLink(query('/', { projectId: project.projectId }), project.title,
-      '<p class="row-meta">查看项目日记</p>', `<span class="row-icon">${icon('folder')}</span>`)) : empty('folder', '还没有项目')}`);
+    ${projects.length ? rows(projects, project => `<div class="project-row">${rowLink(query('/chapters', { projectId: project.projectId }), project.title,
+      '<p class="row-meta">查看作品章节</p>', `<span class="row-icon">${icon('folder')}</span>`)}
+      <div class="actions">${link(query('/scenes', { projectId: project.projectId }), '场景', null, 'quiet')}${link(query('/', { projectId: project.projectId }), '日记', null, 'quiet')}</div></div>`) : empty('folder', '还没有项目')}`);
 }
 
 export async function newProject(ctx) {
@@ -45,20 +49,32 @@ export async function charactersPage(ctx) {
 }
 
 export async function characterPage(ctx, characterId) {
-  const [character, projects] = await Promise.all([
-    readCharacter(characterId, ctx.signal), projectList(ctx.signal).catch(() => []),
+  const requested = ctx.url.searchParams.get('revision');
+  const pinned = Number(requested);
+  if (requested !== null && (!/^[1-9]\d*$/.test(requested) || !Number.isSafeInteger(pinned))) {
+    throw new ApiError(400, 'invalid_revision', '版本号必须为正整数。');
+  }
+  const [character, projects, operations] = await Promise.all([
+    readCharacter(characterId, ctx.signal, pinned), projectList(ctx.signal).catch(() => []), catalog(),
   ]);
   const href = path('characters', characterId);
   const projectTitle = projects.find(project => project.projectId === character.projectId)?.title;
-  const meta = `<p class="masthead-meta">${esc(projectTitle ?? (character.projectId ? '项目角色' : '独立角色'))}</p>`;
-  if (ctx.url.searchParams.get('edit') === '1') {
+  const meta = `<p class="masthead-meta">${esc(projectTitle ?? (character.projectId ? '项目角色' : '独立角色'))} · ${esc(version(character.revision))}</p>`;
+  if (!pinned && ctx.url.searchParams.get('edit') === '1') {
     revision(character);
     return characterEditor(ctx, { character, cancel: href, trail: back(href, '返回角色'), meta });
   }
-  const actions = link(query(href, { edit: '1' }), '编辑设定', 'pen', 'secondary') +
-    link(query('/diaries/new', { characterId }), '写角色日记', 'diary', 'primary');
+  const actions = pinned ? link(href, '查看当前版本', null, 'secondary') :
+    link(query(href, { edit: '1' }), '编辑设定', 'pen', 'secondary') + link(query('/diaries/new', { characterId }), '写角色日记', 'diary', 'primary');
+  const canPin = operations.get('character.read')?.inputSchema?.properties?.revision;
+  const latest = pinned && canPin ? await readCharacter(characterId, ctx.signal) : character;
+  const history = canPin ? section('版本历史', `<ul class="workspace-history" role="list">${Array.from({ length: latest.revision }, (_, index) => {
+    const number = latest.revision - index;
+    return `<li>${anchor(query(href, { revision: number }), version(number))}${number === character.revision ? '<span class="row-meta">正在阅读</span>' : ''}</li>`;
+  }).join('')}</ul>`) : '';
   ctx.show(character.name, `${heading(character.name, { trail: back(query('/characters', { projectId: character.projectId }), '角色'), meta, actions })}
-    <article class="entry"><h2>角色设定</h2><div class="prose">${esc(character.persona)}</div></article>`);
+    ${character.persona ? `<article class="entry"><h2>角色设定</h2><div class="prose">${esc(character.persona)}</div></article>` : ''}
+    ${entriesView(character.entries)}${history}`);
 }
 
 export async function newCharacter(ctx) {
@@ -69,29 +85,67 @@ export async function newCharacter(ctx) {
   return characterEditor(ctx, { projects, projectId, cancel, trail: back(cancel, '角色') });
 }
 
-const characterValues = character => ({ name: character.name, persona: character.persona });
+async function resourceChoices(operations, signal) {
+  const choices = await Promise.all(Object.entries(resourceKinds).filter(([kind]) => !['draft', 'event', 'narrative'].includes(kind) && operations.has(`${kind}.list`))
+    .map(async ([kind, [, , id]]) => [kind, (await listAll(`${kind}.list`, {}, signal)).map(record =>
+      [record[id], `${nameOf(record)} · ${version(record.revision)}`, record])]));
+  const result = Object.fromEntries(choices);
+  if (operations.has('draft.list')) {
+    result.draft = [];
+    const scenes = result.scene ?? [];
+    for (let offset = 0; offset < scenes.length; offset += 8) {
+      const drafts = await Promise.all(scenes.slice(offset, offset + 8).map(async ([sceneId, , scene]) =>
+        (await listAll('draft.list', { sceneId }, signal)).map(draft =>
+          [draft.draftId, `${draft.title} · ${scene.title} · ${version(draft.revision)}`, draft])));
+      result.draft.push(...drafts.flat());
+    }
+  }
+  return result;
+}
 
 async function characterEditor(ctx, { character, projects, projectId, cancel, trail, meta }) {
   const label = character ? '保存设定' : '创建角色';
   const title = character ? '编辑角色' : '新建角色';
   const operation = character ? 'character.revise' : 'character.create';
+  const operations = await catalog();
   const schema = await ctx.fields(operation);
-  const draft = getDraft(ctx.key, character, character ? characterValues(character) : { name: '', projectId, persona: '' });
+  const extended = Boolean(schema.entries);
+  const required = operations.get(operation)?.inputSchema?.required ?? [];
+  const choices = extended ? await resourceChoices(operations, ctx.signal) : {};
+  const characterValues = record => ({ name: extended ? record.authorName ?? '' : record.name, persona: record.persona ?? '',
+    ...(extended ? { entries: JSON.stringify(record.entries ?? []) } : {}) });
+  const draft = getDraft(ctx.key, character, character ? characterValues(character) : {
+    name: '', projectId, persona: '', ...(extended ? { entries: '[]' } : {}),
+  });
   const { values } = draft;
-  const fields = field('name', '角色名称', { value: values.name, schema: schema.name }) +
+  const fields = field('name', '角色名称', { value: values.name, schema: schema.name, required: required.includes('name') }) +
     (character ? '' : field('projectId', '项目', { value: values.projectId, required: false, options: projectOptions(projects, '不归入项目') })) +
-    field('persona', '角色设定', { value: values.persona, type: 'textarea', rows: 10, schema: schema.persona });
-  if (!ctx.show(title, `${heading(title, { trail, meta })}${editor(fields, { label, cancel })}`)) return;
+    field('persona', '角色设定', { value: values.persona, type: 'textarea', rows: 5, schema: schema.persona, required: required.includes('persona') }) +
+    (extended ? `<fieldset class="workspace-fieldset" id="character-entries"><legend>自定义条目</legend>
+      <div class="character-entry-list"></div>${button('add-character-entry', '添加条目', 'plus', 'secondary')}</fieldset>
+      <input type="hidden" name="entries" value="${esc(values.entries)}">` : '');
+  if (!ctx.show(title, `${heading(title, { trail, meta })}${editor(fields, { label, cancel, required: !extended })}`)) return;
+  const entryRegion = ctx.main.querySelector('#character-entries');
+  const entryValue = ctx.main.querySelector('input[name="entries"]');
+  const entries = entryRegion && bindEntries(entryRegion, JSON.parse(entryValue.value), choices, {
+    canUpload: operations.has('asset.import'),
+    retain() {
+      entryValue.value = JSON.stringify(entries.get());
+      entryValue.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+  });
   bindEditor(ctx, draft, {
     label, operation, success: character ? '角色设定已保存' : '角色已创建', result: result => entity(result, 'characterId'),
     href: result => path('characters', result.characterId),
     input(current) {
       const { name, persona, projectId } = current.values;
-      const input = { name: name.trim(), persona };
+      const input = { name: name.trim(), persona, ...(extended ? { entries: JSON.parse(current.values.entries) } : {}) };
       if (character) return { ...input, characterId: character.characterId, expectedRevision: revision(current.record) };
       return projectId ? { ...input, projectId } : input;
     },
     latestValues: character ? characterValues : undefined,
+    applied: () => entries?.render(JSON.parse(entryValue.value)),
+    lock: locked => { if (entryRegion) entryRegion.inert = locked; },
     conflictText: '角色设定已有新版。请核对最新设定，再决定如何继续。',
     async readLatest(_, signal) {
       const latest = await readCharacter(character.characterId, signal);

@@ -182,7 +182,9 @@ export class Operations {
       }
       const normalizedInput: unknown = JSON.parse(inputJson);
       if (!Value.Check(operation.inputSchema, normalizedInput)) {
-        throw new OperationError(400, 'operation_invalid_input', `Input does not match the schema for ${operationId}.`);
+        const issue = Value.Errors(operation.inputSchema, normalizedInput).First();
+        const location = issue?.path || '(input)';
+        throw new OperationError(400, 'operation_invalid_input', `${operationId} ${location}: ${issue?.message ?? 'Invalid input'}.`);
       }
       const output: unknown = operation.run(normalizedInput, { db: this.db });
       if (isPromise(output)) {

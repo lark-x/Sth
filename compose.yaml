@@ -5,22 +5,35 @@ services:
       context: .
       args:
         STH_REVISION: ${STH_REVISION:-local}
-    image: sth-local:workspace
+    image: ${STH_IMAGE:-sth-local:workspace}
     init: true
     restart: unless-stopped
     ports:
-      - '127.0.0.1:9321:9321'
+      - '127.0.0.1:${STH_HOST_PORT:-9321}:${STH_HOST_PORT:-9321}'
     environment:
+      STH_PORT: ${STH_HOST_PORT:-9321}
       STH_PUBLIC_ORIGIN: ${STH_PUBLIC_ORIGIN:-}
       STH_WEB_PASSWORD: ${STH_WEB_PASSWORD:-}
+      STH_GENERATION_PROVIDERS_JSON: ${STH_GENERATION_PROVIDERS_JSON:-}
+      STH_COMFY_URL: ${STH_COMFY_URL:-}
+      STH_COMFY_WORKFLOW: ${STH_COMFY_WORKFLOW:-}
+      STH_COMFY_PROMPT_NODE: ${STH_COMFY_PROMPT_NODE:-}
+      STH_COMFY_OUTPUT_NODE: ${STH_COMFY_OUTPUT_NODE:-}
+      STH_RESEARCH_AKASHA_URL: ${STH_RESEARCH_AKASHA_URL:-}
+      STH_RESEARCH_AKASHA_AUTHORIZATION: ${STH_RESEARCH_AKASHA_AUTHORIZATION:-}
+      STH_RESEARCH_MEDIAWIKI_URL: ${STH_RESEARCH_MEDIAWIKI_URL:-}
+      STH_RESEARCH_MEDIAWIKI_ID: ${STH_RESEARCH_MEDIAWIKI_ID:-}
+      STH_RESEARCH_MEDIAWIKI_LABEL: ${STH_RESEARCH_MEDIAWIKI_LABEL:-}
+      STH_RESEARCH_MEDIAWIKI_LICENSE: ${STH_RESEARCH_MEDIAWIKI_LICENSE:-}
+      STH_RESEARCH_MEDIAWIKI_USER_AGENT: ${STH_RESEARCH_MEDIAWIKI_USER_AGENT:-}
     volumes:
-      - data:/app/.data
+      - workspace:/app/.data
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9321/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.STH_PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       start_interval: 2s
       start_period: 15s
       timeout: 5s
       retries: 3
 volumes:
-  data: {}
+  workspace: {}

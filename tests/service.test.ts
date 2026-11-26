@@ -33,6 +33,31 @@ function post(origin: string, route: string, data: object, token?: string) {
   } });
 }
 
+test('Web and paired clients share scoped discovery and worker diagnostics', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'sth-discovery-'));
+  const app = await start(directory);
+  t.after(async () => { await app.stop(); await rm(directory, { recursive: true, force: true }); });
+  const { code } = await (await post(app.origin, '/api/web/connections/code', {})).json();
+  const { token } = await (await post(app.origin, root + '/claim', { code, clientName: 'contract test' })).json();
+  const query = (args: object) => post(app.origin, root + '/catalog', args, token);
+  const index = await (await fetch(app.origin + '/api/web/catalog?view=index')).json();
+  assert.deepEqual(await (await query({ view: 'index' })).json(), index);
+  assert.ok(index.resourcePaths.includes('sources') && index.resourcePaths.includes('generation-batches'));
+  assert.ok(index.operations.some((op: { id: string }) => op.id === 'generation.batches.create'));
+  assert.ok(index.operations.every((op: object) => !('inputSchema' in op)));
+  const exact = await (await query({ operationId: 'scene.adopt' })).json();
+  assert.deepEqual(exact.operations.map((op: { id: string }) => op.id), ['scene.adopt']);
+  assert.ok(exact.operations[0].inputSchema.required.includes('draftRevision'));
+  const filtered = await (await query({ prefix: 'generation.plans' })).json();
+  assert.ok(filtered.operations.length && filtered.operations.every((op: { id: string }) => op.id.startsWith('generation.plans.')));
+  assert.equal((await query({ prefix: 'scene', operationId: 'scene.read' })).status, 400);
+  assert.equal((await query({ operationId: 'missing.read' })).status, 404);
+  assert.equal((await post(app.origin, root + '/providers/media', {})).status, 401);
+  const web = await (await fetch(app.origin + '/api/web/providers/media')).json();
+  assert.equal(web.status, 'unconfigured');
+  assert.deepEqual(await (await post(app.origin, root + '/providers/media', {}, token)).json(), web);
+});
+
 test('zero-project pairing survives restart, works across resources and revokes immediately', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'sth-service-'));
   let app = await start(dir);

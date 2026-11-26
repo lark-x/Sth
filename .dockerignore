@@ -6,3 +6,6 @@
 !web/**
 !scripts/
 !scripts/**
+!examples/
+!examples/comfyui/
+!examples/comfyui/*.json

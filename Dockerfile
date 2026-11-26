@@ -7,6 +7,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && mkdir -p /app/.data && chown node:
 COPY src/ ./src/
 COPY web/ ./web/
 COPY scripts/ ./scripts/
+COPY examples/ ./examples/
 USER node
 ENV NODE_ENV=production STH_CONTAINER=1
 EXPOSE 9321

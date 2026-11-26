@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 const root = resolve(import.meta.dirname, '../..');
 const artifacts = join(import.meta.dirname, '.artifacts');
 
-export async function startService(t) {
+export async function startService(t, environment = {}) {
   const tempRoot = resolve(tmpdir());
   const dataDir = await mkdtemp(join(tempRoot, 'sth-browser-'));
   const server = spawn(process.execPath, ['src/main.ts'], {
@@ -20,6 +20,7 @@ export async function startService(t) {
       STH_DATA_DIR: dataDir,
       STH_PUBLIC_ORIGIN: '',
       STH_WEB_PASSWORD: '',
+      ...environment,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,

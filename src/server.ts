@@ -5,8 +5,11 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 import { Operations, OperationError } from './core/index.ts';
-import { libraryOperations } from './library/index.ts';
+import { discoverOperations } from './core/discovery.ts';
+import { workspaceOperations, workspaceResourcePaths, workspaceSchemaVersion } from './workspace.ts';
+import { getMediaProviderStatus, readMediaBinary, type MediaProvider } from './jobs/index.ts';
 import { authenticate, claim, issueCode, listConnections, revoke } from './connections.ts';
+import { maxAssetBytes, readAssetBinary, readAssetMetadata } from './assets/index.ts';
 
 const webRoot = fileURLToPath(new URL('../web/', import.meta.url));
 const personal = '/api/v1/personal-operations/';
@@ -16,22 +19,50 @@ function fail(status: number, code: string, message: string): never {
   throw new OperationError(status, code, message);
 }
 
-async function body(req: IncomingMessage) {
+async function body(req: IncomingMessage, invocation = false) {
   if (req.headers['content-type']?.split(';')[0]?.trim().toLowerCase() !== 'application/json') {
     fail(415, 'json_required', '请求需要 JSON 格式。');
   }
   const parts: Buffer[] = [];
+  const normalLimit = 1024 * 1024;
+  const limit = invocation ? 4 * Math.ceil(maxAssetBytes / 3) + 8192 : normalLimit;
   let size = 0;
   for await (const part of req) {
     size += part.length;
-    if (size > 1024 * 1024) fail(413, 'request_too_large', '内容超过大小限制。');
+    if (size > limit) fail(413, 'request_too_large', '内容超过大小限制。');
     parts.push(part);
   }
-  try {
-    const value = JSON.parse(Buffer.concat(parts).toString('utf8'));
-    if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
-  } catch { /* Converted to the common request error below. */ }
-  return fail(400, 'invalid_json', '请求必须是 JSON 对象。');
+  let value;
+  try { value = JSON.parse(Buffer.concat(parts).toString('utf8')); } catch { fail(400, 'invalid_json', '请求必须是 JSON 对象。'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(400, 'invalid_json', '请求必须是 JSON 对象。');
+  if (size > normalLimit && value.operationId !== 'asset.import') fail(413, 'request_too_large', '内容超过大小限制。');
+  return value as Record<string, unknown>;
+}
+
+function serveAsset(db: DatabaseSync, assetId: string, req: IncomingMessage, res: ServerResponse) {
+  const { contentType, byteLength, sha256 } = readAssetMetadata(db, assetId);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('ETag', `"${sha256}"`);
+  res.setHeader('Content-Type', contentType);
+  let start = 0;
+  let end = byteLength - 1;
+  const requestedRange = req.headers.range;
+  if (requestedRange) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(requestedRange);
+    if (match && (match[1] || match[2])) {
+      if (match[1]) {
+        start = Number(match[1]);
+        if (match[2]) end = Math.min(end, Number(match[2]));
+      } else start = Math.max(0, byteLength - Number(match[2]));
+    } else start = byteLength;
+    if (start > end || start >= byteLength) {
+      res.writeHead(416, { 'Content-Range': `bytes */${byteLength}` });
+      return res.end();
+    }
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${byteLength}`);
+  }
+  res.writeHead(requestedRange ? 206 : 200, { 'Content-Length': end - start + 1 });
+  res.end(req.method === 'HEAD' ? undefined : readAssetBinary(db, assetId).bytes.subarray(start, end + 1));
 }
 
 function json(res: ServerResponse, data: unknown, status = 200) {
@@ -57,10 +88,14 @@ async function page(path: string, res: ServerResponse, head: boolean) {
 export interface ServerSettings {
   publicOrigin?: string;
   webPassword?: string;
+  mediaProvider?: MediaProvider;
+  invalidMediaConfig?: boolean;
 }
 
 export function createApp(db: DatabaseSync, settings: ServerSettings = {}) {
-  const operations = new Operations(db, libraryOperations);
+  const operations = new Operations(db, workspaceOperations);
+  const descriptors = operations.catalog().operations;
+  const catalog = (query: unknown) => ({ ...discoverOperations(descriptors, query), resourcePaths: workspaceResourcePaths });
   const publicUrl = settings.publicOrigin ? new URL(settings.publicOrigin) : undefined;
   if (publicUrl && (publicUrl.protocol !== 'https:' || publicUrl.origin !== settings.publicOrigin || !settings.webPassword)) {
     throw new Error('STH_PUBLIC_ORIGIN requires an HTTPS origin and STH_WEB_PASSWORD.');
@@ -80,15 +115,17 @@ export function createApp(db: DatabaseSync, settings: ServerSettings = {}) {
       if (req.headers.origin && req.headers.origin !== origin) fail(403, 'cross_origin', '请求来源不匹配。');
       const rawPath = req.url || '/';
       if (!rawPath.startsWith('/') || rawPath.startsWith('//')) fail(400, 'invalid_path', '路径无效。');
-      const path = new URL(rawPath, origin).pathname;
-      if (req.method === 'GET' && path === '/api/health') return json(res, { name: 'Sth', status: 'ok', schemaVersion: 1 });
+      const url = new URL(rawPath, origin);
+      const path = url.pathname;
+      if (req.method === 'GET' && path === '/api/health') return json(res, { name: 'Sth', status: 'ok', schemaVersion: workspaceSchemaVersion });
       if (path.startsWith(personal)) {
         if (req.method !== 'POST') fail(405, 'method', '此操作需要 POST 请求。');
         const action = path.slice(personal.length);
         if (action === 'claim') return json(res, claim(db, await body(req)));
-        const input = await body(req);
         const namespace = authenticate(db, req.headers.authorization);
-        if (action === 'catalog') return json(res, operations.catalog());
+        const input = await body(req, action === 'invoke');
+        if (action === 'providers/media') return json(res, await getMediaProviderStatus(settings.mediaProvider, settings.invalidMediaConfig));
+        if (action === 'catalog') return json(res, catalog(input));
         if (action === 'invoke') return json(res, operations.invoke(namespace, input));
         if (action === 'receipt') return json(res, operations.receipt(namespace, input));
         fail(404, 'missing_endpoint', '接口不存在。');
@@ -103,10 +140,21 @@ export function createApp(db: DatabaseSync, settings: ServerSettings = {}) {
         }
       }
       if (path.startsWith('/api/')) {
-        if (req.method === 'GET' && path === '/api/web/catalog') return json(res, operations.catalog());
+        if (req.method === 'GET' && path === '/api/web/providers/media') {
+          return json(res, await getMediaProviderStatus(settings.mediaProvider, settings.invalidMediaConfig));
+        }
+        const asset = /^\/api\/web\/assets\/([a-f0-9-]{36})\/content$/.exec(path);
+        if (asset && (req.method === 'GET' || req.method === 'HEAD')) return serveAsset(db, asset[1], req, res);
+        const media = /^\/api\/web\/media\/([a-f0-9-]{36})\/content$/.exec(path);
+        if (media && (req.method === 'GET' || req.method === 'HEAD')) {
+          const image = readMediaBinary(db, media[1]);
+          res.writeHead(200, { 'Content-Type': image.contentType, 'Content-Length': image.byteLength, ETag: `"${image.sha256}"` });
+          return res.end(req.method === 'GET' ? image.bytes : undefined);
+        }
+        if (req.method === 'GET' && path === '/api/web/catalog') return json(res, catalog(Object.fromEntries(url.searchParams)));
         if (req.method === 'GET' && path === '/api/web/connections') return json(res, listConnections(db));
         if (req.method === 'POST') {
-          const input = await body(req);
+          const input = await body(req, path === '/api/web/invoke');
           if (path === '/api/web/invoke') return json(res, operations.invoke('web:owner', input));
           if (path === '/api/web/receipt') return json(res, operations.receipt('web:owner', input));
           if (path === '/api/web/connections/code') return json(res, issueCode(db));

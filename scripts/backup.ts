@@ -13,7 +13,9 @@ const db = new DatabaseSync(source, { readOnly: true });
 const directory = await mkdtemp(join(tmpdir(), 'sth-backup-'));
 const snapshot = join(directory, 'snapshot.sqlite');
 try {
-  await backup(db, snapshot);
+  // Finish in one SQLite backup step on a separate read connection. Node 24.15 can
+  // report SQLITE_OK as an error between page batches on larger WAL databases.
+  await backup(db, snapshot, { rate: -1 });
   const check = new DatabaseSync(snapshot, { readOnly: true });
   try {
     if (check.prepare('PRAGMA quick_check').get()?.quick_check !== 'ok') throw new Error('Snapshot integrity check failed');

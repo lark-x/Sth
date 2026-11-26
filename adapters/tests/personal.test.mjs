@@ -17,6 +17,12 @@ const discover = 'sth_personal_discover';
 const invoke = 'sth_personal_invoke';
 const receipt = 'sth_personal_receipt';
 const python = process.env.STH_TEST_HERMES_PYTHON;
+const workspaceOperations = [
+  ['source', 'sources', 'source.create', 'source.read'],
+  ['scene', 'scenes', 'scene.create', 'scene.read'],
+  ['templates', 'templates', 'templates.create', 'templates.get'],
+  ['jobs', 'jobs', 'jobs.create', 'jobs.read'],
+];
 
 function pair(origin, path, code) {
   return new Promise((resolvePair, reject) => {
@@ -46,6 +52,13 @@ function toolError(response, code) {
   assert.equal(JSON.parse(response.content[0].text).error, code);
 }
 
+async function mcpOperation(call, operationId, stepId, input) {
+  const response = await call(invoke, { operationId, stepId, input });
+  assert.ok(response.structuredContent, response.content[0].text);
+  assert.equal(response.structuredContent.replayed, false);
+  return response.structuredContent.result;
+}
+
 test('SDK stdio pairs independently and round-trips real Sth writes, replay, receipts and revocation', { timeout: 30_000 }, async t => {
   const f = await setupService(t);
   const code = await f.code();
@@ -69,7 +82,21 @@ test('SDK stdio pairs independently and round-trips real Sth writes, replay, rec
   assert.equal(client.getServerVersion().name, 'sth-personal-mcp');
   assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), [discover, invoke, receipt]);
   const call = (name, args = {}) => client.callTool({ name, arguments: args });
-  const { operations } = (await call(discover)).structuredContent;
+  const index = (await call(discover)).structuredContent;
+  const byId = new Map(index.operations.map(item => [item.id, item]));
+  assert.equal(byId.get('diary.create').effect, 'write');
+  assert.ok(index.operations.every(item => !item.inputSchema && !item.outputSchema));
+  for (const [prefix, route, write, read] of workspaceOperations) {
+    assert.ok(index.resourcePaths.includes(route));
+    assert.equal(byId.get(write)?.effect, 'write');
+    assert.equal(byId.get(read)?.effect, 'read');
+    const details = (await call(discover, { prefix })).structuredContent.operations;
+    assert.ok(details.some(item => item.id === write));
+    assert.ok(details.some(item => item.id === read));
+    assert.ok(details.every(item => item.id.startsWith(`${prefix}.`) && item.inputSchema && item.outputSchema));
+  }
+  const { operations } = (await call(discover, { operationId: 'diary.create' })).structuredContent;
+  assert.equal(operations.length, 1);
   const descriptor = operations.find(item => item.id === 'diary.create');
   assert.equal(descriptor.interaction.localDateField, 'diaryDate');
   assert.equal(descriptor.inputSchema.properties.diaryDate.type, 'string');
@@ -89,6 +116,18 @@ test('SDK stdio pairs independently and round-trips real Sth writes, replay, rec
   for (const args of [{ ...lookup, input, stepId: 'x'.repeat(502) }, { ...lookup, input, projectId: 'forced' }]) {
     toolError(await call(invoke, args), 'invalid_tool_call');
   }
+  const source = await mcpOperation(call, 'source.create', 'save-source', {
+    kind: 'setting', title: 'MCP source', body: 'An original source saved via stdio.',
+  });
+  assert.equal(source.href, `/sources/${source.sourceId}?revision=1`);
+  const oldPin = { sourceId: source.sourceId, revision: source.revision };
+  assert.deepEqual(await f.invoke('source.read', 'web-read-stdio-source', oldPin), source);
+  const changed = await f.invoke('source.revise', 'web-update-source', {
+    sourceId: source.sourceId, expectedRevision: source.revision, body: 'Edited on the web.',
+  });
+  assert.equal(changed.href, `/sources/${source.sourceId}?revision=2`);
+  assert.deepEqual(await mcpOperation(call, 'source.read', 'read-source-old', oldPin), source);
+  assert.deepEqual(await mcpOperation(call, 'source.read', 'read-source-new', { sourceId: source.sourceId }), changed);
   const env = { STH_PERSONAL_OPERATIONS_TOKEN: token, STH_PERSONAL_OPERATIONS_ORIGIN: origin };
   const restarted = await mcp(t, undefined, env);
   assert.deepEqual((await restarted(receipt, lookup)).structuredContent, { ...saved, replayed: true });
@@ -99,6 +138,74 @@ test('SDK stdio pairs independently and round-trips real Sth writes, replay, rec
   toolError(await restarted(discover), 'connection_unauthorized');
   assert.equal(f.diaryCount(), 1);
   assert.ok(f.calls.every(call => call.method === 'POST' && call.bearer === (call.action !== 'claim')));
+});
+
+test('installed Hermes QQ and WeChat continue one source with the web and MCP stdio', {
+  skip: !python && 'Set STH_TEST_HERMES_PYTHON to the installed Hermes interpreter', timeout: 90_000,
+}, async t => {
+  const f = await setupService(t);
+  const { run } = await hermesProfile(f);
+  const portal = 'https://portal.example.test';
+  const sourceInput = { kind: 'setting', title: '北港渡船', body: '北港末班渡船是晚上十点。' };
+  const qq = await run('workspace-qq', { code: await f.code(), portal, sourceInput });
+  const { portalUrl, ...source } = qq.write.result;
+  const { sourceId, revision } = source;
+  const sourcePin = { sourceId, revision };
+  assert.equal(portalUrl, `${portal}/sources/${sourceId}?revision=1`);
+  assert.deepEqual(await f.invoke('source.read', 'read-qq-source', sourcePin), source);
+  const currentSource = await f.invoke('source.revise', 'revise-qq-source', {
+    sourceId, expectedRevision: revision, body: '北港末班渡船是晚上九点。',
+  });
+
+  const issued = await pair(f.origin, join(f.directory, 'workspace-mcp'), await f.code());
+  assert.equal(issued.status, 0, issued.stderr);
+  const call = await mcp(t, JSON.parse(issued.stdout).file);
+  assert.deepEqual(await mcpOperation(call, 'source.read', 'read-qq-source', sourcePin), source);
+  const sceneCreated = await mcpOperation(call, 'scene.create', 'save-scene', {
+    title: '北港那一晚', place: '北港渡口', sources: [{ ...sourcePin, excerpt: '晚上十点' }],
+  });
+  const { sceneId } = sceneCreated;
+  const { projectId } = await f.invoke('project.create', 'workspace-project', { title: '北港故事' });
+  const chapter = await f.invoke('chapter.create', 'workspace-chapter', { projectId, title: '第一章' });
+  await f.invoke('chapter.arrange', 'place-stdio-scene', {
+    chapterId: chapter.chapterId, expectedRevision: chapter.revision, sceneIds: [sceneId],
+  });
+  const scene = await f.invoke('scene.read', 'read-stdio-scene', { sceneId, revision: sceneCreated.revision });
+  assert.equal(scene.placement.projectId, projectId);
+  assert.deepEqual(scene.sources, [{ ...sourcePin, excerpt: '晚上十点', href: source.href }]);
+
+  const templateCreated = await mcpOperation(call, 'templates.create', 'save-template', {
+    title: '北港场景模板', kind: 'short-story', fields: [{ key: 'body', label: '正文', type: 'text' }],
+  });
+  const template = await f.invoke('templates.get', 'read-stdio-template', {
+    templateId: templateCreated.templateId, revision: templateCreated.revision,
+  });
+  assert.deepEqual(template.fields, templateCreated.fields);
+
+  const composition = await f.invoke('composition.create', 'workspace-composition', {
+    projectId, sceneId, sceneRevision: scene.revision, candidates: [{ title: '渡口远景', prompt: 'Ferry dock at night' }],
+  });
+  const choice = { compositionId: composition.compositionId, candidateId: composition.candidates[0].candidateId };
+  await f.invoke('composition.select', 'workspace-select', { ...choice, expectedSelectionRevision: composition.selectionRevision });
+  const job = await mcpOperation(call, 'jobs.create', 'queue-job', { projectId, title: '渡口插图', items: [choice] });
+  assert.equal(job.items[0].scene.href, scene.href);
+  assert.equal(job.items[0].status, 'queued');
+  assert.deepEqual(await f.invoke('jobs.read', 'read-stdio-job', { jobId: job.jobId }), job);
+
+  const newBody = '北港末班渡船是晚上八点。';
+  const wechat = await run('workspace-wechat', { code: await f.code(), portal, source, currentSource, scene, template, job, newBody });
+  assert.equal(wechat.writes.length, 1);
+  const { portalUrl: revisedUrl, ...revised } = wechat.write.result;
+  assert.equal(revisedUrl, `${portal}/sources/${sourceId}?revision=3`);
+  assert.equal(revised.sourceId, sourceId);
+  assert.deepEqual(await f.invoke('source.read', 'read-wechat-source', { sourceId, revision: 3 }), revised);
+  assert.deepEqual(await mcpOperation(call, 'source.read', 'read-wechat-source', { sourceId }), revised);
+  assert.deepEqual(await mcpOperation(call, 'source.read', 'preserve-qq-source', sourcePin), source);
+  const restricted = wechat.restrictedSource;
+  assert.deepEqual(await f.invoke('source.read', 'read-unlisted-source', { sourceId: restricted.sourceId }), restricted);
+  assert.deepEqual((await f.connections()).map(connection => connection.clientName).sort(),
+    ['Sth Hermes QQ', 'Sth Hermes WeChat', 'Sth MCP']);
+  assert.equal(f.diaryCount(), 0);
 });
 
 test('MCP redacts echoed credentials and refuses redirected authenticated requests', { timeout: 20_000 }, async t => {

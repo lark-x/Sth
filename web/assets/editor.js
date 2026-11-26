@@ -1,4 +1,4 @@
-import { errorText, invoke, step } from './api.js';
+import { errorText, invoke, retryWrite, step } from './api.js';
 import { button, esc, link } from './ui.js';
 
 const drafts = new Map();
@@ -52,6 +52,7 @@ export function bindEditor(ctx, draft, config) {
   function sync() {
     const locked = draft.busy || draft.uncertain;
     for (const control of controls) control.disabled = Boolean(locked);
+    config.lock?.(Boolean(locked));
     save.disabled = Boolean(draft.busy || draft.conflict);
     save.textContent = draft.busy ? '正在保存…' : draft.call ? '重试保存' : config.label;
     discard.hidden = Boolean(locked) || !dirty(draft);
@@ -82,6 +83,7 @@ export function bindEditor(ctx, draft, config) {
       draft.values = values;
       draft.record = latest;
       for (const control of controls) control.value = values[control.name];
+      config.applied?.();
     } else {
       draft.character = latest;
     }
@@ -151,8 +153,9 @@ export function bindEditor(ctx, draft, config) {
     // Start on user action, independent of the route's read cancellation.
     draft.flight = (async () => {
       try {
+        const retry = Boolean(draft.call);
         draft.call ??= step(config.operation, await config.input(draft));
-        const result = config.result(await invoke(draft.call));
+        const result = config.result(await (retry ? retryWrite(draft.call) : invoke(draft.call)));
         drafts.delete(ctx.key);
         ctx.saved(config.href(result), config.success);
       } catch (error) {
