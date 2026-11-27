@@ -531,7 +531,10 @@ test('library refreshes stale creation caches once and isolates rapid project ch
     assert.deepEqual(await titles(page), [scene.title]);
     assert.equal(treeReads(), reads + 2, 'a newly created chapter also refreshes a stale tree once');
     assert.equal(await page.locator('.library-chapter-link[aria-current="page"]').textContent(), `${chapter.title}1`);
-    assert.equal(await page.evaluate(() => window.libraryEvents.at(-1)?.href), fromShelf(scene.sceneId, `/projects/${project.projectId}?chapterId=${chapter.chapterId}`));
+    const expectedPreview = fromShelf(scene.sceneId, `/projects/${project.projectId}?chapterId=${chapter.chapterId}`);
+    // Rows precede the asynchronous candidate lookup; wait for its exact preview.
+    await page.waitForFunction(href => window.libraryEvents.at(-1)?.href === href, expectedPreview);
+    assert.equal(await page.evaluate(() => window.libraryEvents.at(-1)?.href), expectedPreview);
   });
 
   await t.test('an absent project waits for a successful fresh tree before reporting not found', async () => {

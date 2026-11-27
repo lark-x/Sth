@@ -54,6 +54,12 @@ const fill = (page, name, text) => control(page, name).fill(text);
 const choose = (page, name, label) => control(page, name).selectOption({ label });
 const idAt = page => new URL(page.url()).pathname.split('/').at(-1);
 
+async function expand(page, label) {
+  const summary = page.locator('summary').filter({ hasText: new RegExp(`^${RegExp.escape(label)}$`) });
+  await summary.waitFor();
+  if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
+}
+
 async function toolLink(page, name) {
   const tools = page.getByRole('navigation', { name: '读写工具', exact: true });
   await tools.getByRole('button', { name: '更多', exact: true }).click();
@@ -109,20 +115,24 @@ test('workspace phase 1: create and search sources, revise, and follow exact dia
   await clickLink(page, '查看资料原文 · 第 1 版');
   await heading(page, '北港渡船').waitFor();
   assert.match(page.url(), /\/sources\/[^?]+\?revision=1$/);
+  await expand(page, '更多');
   await clickLink(page, '修订资料');
   await fill(page, '正文', '北港末班渡船是晚上九点。');
   await click(page, '保存修订');
   await page.getByText('北港末班渡船是晚上九点。', { exact: true }).waitFor();
   assert.equal((await invoke('source.read', { sourceId })).revision, 2);
+  await expand(page, '版本历史');
   await clickLink(page, '第 1 版');
   await page.getByText('北港末班渡船是晚上十点。', { exact: true }).waitFor();
   await assertFitsViewport(page);
   await screenshot(page, 'narrow', 'workspace-source-history');
+  await expand(page, '引用这条资料的内容');
   await clickLink(page, '日记 · 最后一班船 · 第 1 版');
   await heading(page, '最后一班船').waitFor();
   assert.equal(new URL(page.url()).searchParams.get('revision'), '1');
 
   await goto(page, '/sources', '资料');
+  await expand(page, '筛选');
   await fill(page, '关键词', '晚上九点');
   await page.getByLabel('关键词').press('Enter');
   await page.getByRole('link', { name: /北港渡船/ }).waitFor();
@@ -392,6 +402,7 @@ test('research: disambiguate a repeated excerpt and keep historical evidence thr
   const source = await invoke('source.create', { title: '北港通告', kind: 'excerpt', body, origin: '码头公告牌' });
   const character = await invoke('character.create', { name: '守船人' });
   await goto(page, '/sources', '资料');
+  await expand(page, '筛选');
   await fill(page, '关键词', excerpt);
   await click(page, '搜索');
   await clickLink(page, '北港通告');
@@ -420,6 +431,7 @@ test('research: disambiguate a repeated excerpt and keep historical evidence thr
   await clickLink(page, '查看资料原文 · 第 1 版');
   assert.equal(await page.locator('#passage-body mark').textContent(), excerpt);
   assert.deepEqual((await invoke('diary.read', { noteId })).sourcePins[0].range, range);
+  await expand(page, '引用这条资料的内容');
   await page.getByRole('link', { name: '判断 · 夜航时刻 · 第 1 版' }).waitFor();
 
   const scene = await invoke('scene.create', { title: '船边' });
@@ -501,6 +513,7 @@ test('story: record partial event order, save a limited telling and resume its I
   await page.locator('#event-summary-body mark').getByText('船已经离岸。', { exact: true }).waitFor();
   await clickLink(page, '资料 · 第 1 版');
   await page.locator('#passage-body mark').getByText('船已启程。', { exact: true }).waitFor();
+  await expand(page, '更多');
   await clickLink(page, '查看影响');
   await choose(page, '资源类型', '讲述');
   await click(page, '筛选');
@@ -611,6 +624,7 @@ test('external research: choose a repeated passage and reopen the archive after 
   });
   const page = await openBrowser(t, service, narrow);
   await goto(page, '/sources', '资料');
+  await expand(page, '资料工作区');
   await clickLink(page, '外部检索');
   await fill(page, '检索词', '渡船');
   await click(page, '搜索外部资料');
@@ -639,6 +653,7 @@ test('external research: choose a repeated passage and reopen the archive after 
   await page.reload();
   assert.equal(page.url(), archive);
   await page.locator('#passage-body').getByText(excerpt, { exact: true }).waitFor();
+  await expand(page, '资料信息');
   await page.getByText('https://example.test/wiki/77 · revision 902', { exact: true }).waitFor();
   await assertFitsViewport(page);
   await screenshot(page, 'narrow', 'external-archive');
@@ -650,6 +665,7 @@ test('source impact: page and filter historical version links', { timeout }, asy
   const pin = { sourceId: source.sourceId, revision: 1, excerpt: '泊船。', range: { start: 0, end: 3 } };
   for (let index = 0; index < 21; index++) await invoke('diary.create', { title: `记录 ${index}`, body: '已泊船。', diaryDate: '2026-11-24', sourcePins: [pin] });
   await goto(page, source.href, '来源影响');
+  await expand(page, '更多');
   await clickLink(page, '查看影响');
   await choose(page, '资源类型', '日记');
   await choose(page, '版本范围', '当前版本');

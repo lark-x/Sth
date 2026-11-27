@@ -97,7 +97,15 @@ test('a chapter scene appends in order and opens the existing draft editor in on
   assert.equal(await back.getAttribute('href'), params.get('returnTo'));
   await back.click();
   await page.waitForURL(url => url.searchParams.get('selected') === sceneId);
-  await heading(page, scene.title).waitFor();
+  await heading(page, '未采用的候选稿').waitFor();
+  const selected = page.locator('.library-sheet[aria-current="page"]');
+  assert.equal(await selected.locator('.library-sheet-title').innerText(), scene.title);
+  assert.match(await selected.innerText(), /候选稿 · 未采用的候选稿 · 第 1 版/);
+  const preview = new URL(await selected.getAttribute('href'), origin);
+  assert.equal(preview.pathname, new URL(draftUrl).pathname);
+  assert.equal(preview.searchParams.get('revision'), '1');
+  assert.equal(preview.searchParams.get('returnTo'), params.get('returnTo'));
+  assert.equal(await page.locator('#passage-body').innerText(), '第三声钟响，潮水越过旧缆桩。');
 });
 
 for (const [operationId, committed] of [['scene.create', true], ['chapter.arrange', true], ['scene.create', false]]) {

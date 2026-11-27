@@ -31,6 +31,12 @@ const currentPath = page => new URL(page.url()).pathname;
 const idAt = page => currentPath(page).split('/').at(-1);
 const timeout = 45_000;
 
+async function expand(page, label) {
+  const summary = page.locator('summary').filter({ hasText: new RegExp(`^${RegExp.escape(label)}$`) });
+  await summary.waitFor();
+  if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
+}
+
 async function launch(t, viewport = narrow) {
   const origin = await startService(t);
   const page = await openBrowser(t, origin, viewport);
@@ -78,6 +84,7 @@ test('character cards upload real media, preserve order and revisions, and link 
   await audio.evaluate(async player => { await player.play(); });
   assert.equal(await audio.evaluate(player => player.duration), 1);
 
+  await expand(page, '更多');
   await link(page, '写角色日记').click();
   await title(page, '写日记').waitFor();
   await page.getByLabel('标题').fill('晚班日记');
@@ -89,7 +96,9 @@ test('character cards upload real media, preserve order and revisions, and link 
   await link(page, '查看角色证据 · 第 1 版').click();
   await title(page, '未命名角色').waitFor();
   assert.match(page.url(), /\?revision=1$/);
+  await expand(page, '更多');
   await link(page, '查看当前版本').click();
+  await expand(page, '更多');
   await link(page, '编辑设定').click();
   await page.getByLabel('角色名称').fill('渡船领航员');
   await page.getByLabel('角色设定').fill('只上夜班。');
