@@ -37,3 +37,4 @@
 - 在独立服务运行 `scripts/accept-research.py host-continuity`，Hermes 的 `codex/gpt-6.2-sol` 通过 MCP 写下个人日记 `ac700d65-f928-40c2-91a4-4c09ab8d6ab6`。390px Chromium 通过可见编辑入口保存第二版，刷新后再次打开。全新 Codex CLI 会话使用自己的配对连接，分别显式读取第 1 版和省略版本读取最新版。两条服务端回执的 ID、正文和修订号均与真实回复一致。两个临时连接均已撤销。
 - 复现以上路径需要 Node 24.15+、根目录及 `adapters` 的依赖、已构建前端、Playwright Chromium、已登录的 Codex CLI，以及已配置模型的 Hermes Python。用 Hermes 的 Python 运行 `scripts/accept-research.py host-continuity`，可用 `--hermes-home`、`--provider`、`--model` 选择现有配置。运行记录写入仓库外的私有临时目录。该结果覆盖桌面上的手机宽度网页与 Hermes MCP 连接。原生 Hermes 插件安装、第三宿主和真机体验分别验收。
 - 新增作者上下文的手机浏览器用例验证作者在页面署名并确认提案后，另一连接能读到同一决定；打开固定旧版链接仍可查看当时尚未确认的提案。工作区生命周期及 story 决定的 31 项聚焦用例通过。
+- 9322 运行中的原卷已导出一致性快照。用开发版本单独打开快照副本，核对原有 50 张表、955 行数据，逐表行数与双向差集均一致，完整性检查为 `ok`，外键违规为零。此次演练使用的原始快照 SHA-256 为 `9e5e847675bc41abbd6ff17d8873ca2d170ebec213a171c47c3c8beef4b19d40`。发布前还要复测最终候选版本和已归档媒体。
