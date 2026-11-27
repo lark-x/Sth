@@ -1,10 +1,5 @@
 .sth-app .manuscript-frame {
-  --paper: #fff;
-  --sheet: #fff;
-  --ink: #242925;
-  --muted: #58635c;
-  --line: #e1e5e1;
-  --ms-evidence-width: clamp(17rem,34vw,21rem);
+  --ms-evidence-width: min(320px, 40vw);
   display: grid;
   grid-template-columns: 13rem 17rem minmax(0, 1fr);
   min-block-size: 100dvh;
@@ -21,8 +16,8 @@
   overscroll-behavior: contain;
   border-inline-end: 1px solid var(--line);
 }
-.manuscript-library { grid-column: 1; grid-row: 1; background: #f1f3f2; }
-.manuscript-sheets { grid-column: 2; grid-row: 1; background: #fafbfa; }
+.manuscript-library { grid-column: 1; grid-row: 1; background: var(--sidebar); }
+.manuscript-sheets { grid-column: 2; grid-row: 1; background: #fafafa; }
 .sth-app .ms-editor { grid-column: -2/-1; grid-row: 1; min-inline-size: 0; inline-size: 100%; margin: 0; padding: 0 0 4rem; }
 .ms-view-tools, .ms-sheets-bar { display: flex; align-items: center; gap: .65rem; padding: .45rem 1rem; min-block-size: 2.85rem; border-block-end: 1px solid var(--line); }
 .ms-sheets-bar, .ms-tablet-library, .ms-phone-sheets { display: none; }
@@ -30,11 +25,11 @@
   align-items: center; gap: .42rem; border: 0; border-radius: .3rem; background: transparent; padding: .25rem .45rem; min-block-size: 2rem; color: var(--muted); font: 500 .8125rem/1.4 var(--sans); text-decoration: none;
 }
 .ms-wide-focus { display: inline-flex; }
-.ms-view-tools :is(button,a):hover, .ms-sheets-bar button:hover { color: var(--ink); background: #f0f3f0; }
+.ms-view-tools :is(button,a):hover, .ms-sheets-bar button:hover { color: var(--ink); background: var(--selection); }
 .ms-view-tools .icon, .ms-sheets-bar .icon { inline-size: 1rem; block-size: 1rem; }
 .ms-view-controls { display: inline-flex; align-items: center; gap: .25rem; }
 .ms-view-controls .ms-tool { align-items: center; justify-content: center; inline-size: 2.5rem; min-block-size: 2.5rem; border: 0; border-radius: 4px; padding: 0; background: transparent; color: var(--muted); }
-.ms-view-controls .ms-tool:hover, .ms-view-controls .ms-tool[aria-pressed=true] { background: #edf1ee; color: var(--accent); }
+.ms-view-controls .ms-tool:hover, .ms-view-controls .ms-tool[aria-pressed=true] { background: var(--selection); color: var(--ink); }
 .ms-view-controls .icon { inline-size: 1.15rem; block-size: 1.15rem; }
 .ms-editor:has(.wr-reader-toolbar .ms-view-controls, .diary-toolbar .ms-view-controls) > .ms-view-tools { display: none; }
 .ms-empty-editor { margin: 15vh auto 2rem; padding: 1.5rem; text-align: center; }
@@ -63,6 +58,10 @@
   .ms-phone-sheets { display: inline-flex; }
   .ms-view-tools { padding-block: .1rem; min-block-size: 2.75rem; }
   .ms-wide-focus { display: none; }
+}
+
+@media (pointer: coarse), (width < 640px) {
+  .ms-view-tools .ms-tool, .ms-sheets-bar .ms-tool, .ms-view-controls .ms-tool { min-block-size: 2.75rem; min-inline-size: 2.75rem; }
 }
 
 @media (width >= 640px) {
