@@ -132,6 +132,8 @@ function rememberSelection() {
 }
 async function openPanel(source?: HTMLElement) {
   if (open.value) return;
+  // A viewport resize can precede delivery of the media query's change event.
+  compact.value = compactQuery.matches;
   rememberEditor(); rememberSelection();
   opener = source ?? (document.activeElement instanceof HTMLElement ? document.activeElement : trigger.value);
   position = { x: window.scrollX, y: window.scrollY };

@@ -36,7 +36,7 @@ for (const [name, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     page.on('request', request => { if (new URL(request.url()).origin !== origin) offsite.push(request.url()); });
     await page.goto('/');
     await page.getByRole('heading', { name: '记一句', exact: true }).waitFor();
-    await page.getByRole('heading', { name: saved.title, exact: true }).waitFor();
+    await page.getByRole('region', { name: '日记接续' }).getByRole('heading', { name: saved.title, exact: true }).waitFor();
     assert.match(await page.locator('#diary-list').innerText(), /今天的水声/);
     assert.equal(await page.locator('#app .sth-app').count(), 1);
     await assertFitsViewport(page);

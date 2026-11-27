@@ -13,6 +13,7 @@ const artifacts = join(root, 'frontend/.artifacts/evidence-ai');
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const panel = page => page.getByRole('complementary', { name: '本次依据', exact: true })
   .or(page.getByRole('dialog', { name: '本次依据', exact: true }));
+const responsivePanel = (page, width) => page.getByRole(width < 640 ? 'dialog' : 'complementary', { name: '本次依据', exact: true });
 
 async function fixture(t) {
   const backend = await startService(t);
@@ -289,6 +290,53 @@ test('prop changes cancel an older snapshot and isolate ordinary drafts and scop
   await panel(page).getByRole('alert').filter({ hasText: '稿件与场景版本不匹配' }).waitFor();
 });
 
+test('opening uses the current viewport before a delayed media change reaches the component', async t => {
+  const fx = await fixture(t);
+  const page = await openBrowser(t, fx.origin, { width: 640, height: 800 });
+  await page.addInitScript(() => {
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    const pending = [];
+    window.pendingEvidenceMediaChanges = () => pending.length;
+    window.releaseEvidenceMediaChanges = () => pending.splice(0).forEach(deliver => deliver());
+    window.matchMedia = query => {
+      const media = nativeMatchMedia(query);
+      if (query !== '(width < 640px)') return media;
+      const add = media.addEventListener.bind(media);
+      const remove = media.removeEventListener.bind(media);
+      const listeners = new Map();
+      media.addEventListener = (type, listener, options) => {
+        if (type !== 'change') return add(type, listener, options);
+        const deferred = event => pending.push(() => listener.call(media, event));
+        listeners.set(listener, deferred);
+        add(type, deferred, options);
+      };
+      media.removeEventListener = (type, listener, options) => remove(type, listeners.get(listener) ?? listener, options);
+      return media;
+    };
+  });
+  await page.goto(fx.path());
+  await button(page, '工具栏依据').click();
+  await responsivePanel(page, 640).getByText(/此稿尚无明确关联的组稿记录/).waitFor();
+  await panel(page).press('Escape');
+  for (const width of [390, 640, 639, 640, 390, 640]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.waitForFunction(() => window.pendingEvidenceMediaChanges() > 0);
+    assert.equal(await page.evaluate(() => matchMedia('(width < 640px)').matches), width < 640);
+    await button(page, '工具栏依据').press('Enter');
+    const current = responsivePanel(page, width);
+    await current.waitFor();
+    assert.equal(await current.getAttribute('aria-modal'), width < 640 ? 'true' : null);
+    assert.equal(await page.locator('.fixture-toolbar').evaluate(node => node.inert), width < 640);
+    assert.equal(await page.evaluate(() => document.body.style.position), width < 640 ? 'fixed' : '');
+    await current.press('Escape');
+    await page.evaluate(() => window.releaseEvidenceMediaChanges());
+    assert.equal(await panel(page).count(), 0);
+    assert.equal(await page.locator('.fixture-toolbar').evaluate(node => node.inert), false);
+    assert.equal(await page.evaluate(() => document.body.style.position), '');
+    assert.equal(await button(page, '工具栏依据').evaluate(node => document.activeElement === node), true);
+  }
+});
+
 test('toolbar opens a fixed independently scrolling side panel and mobile screen, restoring the reading position', async t => {
   const fx = await fixture(t);
   const longText = Array.from({ length: 70 }, (_, index) => `第 ${index + 1} 段。灯火落在水面，等船的人仍然望着远岸。`).join('\n\n');
@@ -306,7 +354,7 @@ test('toolbar opens a fixed independently scrolling side panel and mobile screen
     await button(page, '工具栏依据').focus();
     const before = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
     await button(page, '工具栏依据').press('Enter');
-    await panel(page).getByRole('region', { name: '组稿固定输入' }).waitFor();
+    await responsivePanel(page, width).getByRole('region', { name: '组稿固定输入' }).waitFor();
     const bounds = await panel(page).boundingBox();
     assert.ok(bounds);
     assert.equal(bounds.y, 0);
@@ -348,12 +396,13 @@ test('toolbar opens a fixed independently scrolling side panel and mobile screen
   await page.locator('main').evaluate(node => node.style.setProperty('--ms-evidence-width', 'clamp(17rem, 34vw, 21rem)'));
   await button(page, '工具栏依据').click();
   assert.equal((await panel(page).boundingBox()).width, 272, 'panel consumes the same width variable as the frame');
-  await page.setViewportSize({ width: 390, height: 800 });
-  await page.getByRole('dialog', { name: '本次依据', exact: true }).waitFor();
-  assert.equal(await page.locator('.fixture-toolbar').evaluate(node => node.inert), true);
-  await page.setViewportSize({ width: 768, height: 800 });
-  await page.getByRole('complementary', { name: '本次依据', exact: true }).waitFor();
-  assert.equal(await page.locator('.fixture-toolbar').evaluate(node => node.inert), false);
-  assert.equal(await page.evaluate(() => document.body.style.position), '');
+  for (const width of [640, 390, 640, 639, 640, 390, 768]) {
+    await page.setViewportSize({ width, height: 800 });
+    await responsivePanel(page, width).waitFor();
+    assert.equal(await panel(page).getAttribute('aria-modal'), width < 640 ? 'true' : null);
+    assert.equal(await page.locator('.fixture-toolbar').evaluate(node => node.inert), width < 640);
+    assert.equal(await page.evaluate(() => document.body.style.position), width < 640 ? 'fixed' : '');
+    assert.equal(await panel(page).evaluate(node => node.contains(document.activeElement)), true);
+  }
   await panel(page).press('Escape');
 });
