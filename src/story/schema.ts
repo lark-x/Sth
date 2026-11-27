@@ -1,3 +1,5 @@
+import { decisionsDDL } from './decision-schema.ts';
+
 export const sceneDDL = `
 CREATE TABLE IF NOT EXISTS story_chapters (
   chapter_id TEXT PRIMARY KEY,
@@ -167,4 +169,4 @@ CREATE TABLE IF NOT EXISTS story_branch_checkpoints (
 ) STRICT, WITHOUT ROWID;
 `;
 
-export const storyDDL = sceneDDL + narrativeDDL;
+export const storyDDL = sceneDDL + narrativeDDL + decisionsDDL;

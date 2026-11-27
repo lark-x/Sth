@@ -10,6 +10,7 @@ import {
 } from './contracts.ts';
 import { branchScope, eventRefs, narrativeRef } from './narrative-contracts.ts';
 import { narrativeOperations } from './narrative-operations.ts';
+import { decisionOperations } from './decision-operations.ts';
 import { readNarrative, sharedEventsAtFork } from './narrative-storage.ts';
 import {
   assertText, chapterRows, currentDraft, currentScene, insertScene, readChapter, readDraft, readScene,
@@ -21,6 +22,7 @@ export { storyDDL } from './schema.ts';
 export { branchHref, readBranch } from './branches.ts';
 export { eventHref, narrativeHref, projectNarrativeForGeneration, readEvent, readNarrative } from './narrative-storage.ts';
 export type { Branch, Event, EventRef, Narrative, NarrativeProjectionRef, NarrativeRef, ProjectedCheckpoint } from './narrative-contracts.ts';
+export type { Decision, DecisionBasis, DecisionScope, DecisionSummary, Question, QuestionSummary, StoryContext } from './decision-contracts.ts';
 
 const sceneIdentity = { sceneId: id };
 const sceneVersion = { ...sceneIdentity, revision };
@@ -353,4 +355,5 @@ export const storyOperations = [
     },
   }),
   ...narrativeOperations,
+  ...decisionOperations,
 ];
