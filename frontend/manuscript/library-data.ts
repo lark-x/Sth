@@ -1,4 +1,4 @@
-import type { Draft, Scene, SceneSummary } from '../../src/story/contracts.ts';
+import type { Draft, DraftRef, Scene, SceneSummary } from '../../src/story/contracts.ts';
 import type { Diary, Project } from '../workspace/api.ts';
 import { all, href, read, recordHref } from '../workspace/api.ts';
 import { revisionParam, type DraftSummary } from '../writing/api.ts';
@@ -218,8 +218,13 @@ export function matchesSheet(sheet: LibrarySheet, query: string, chapters: Libra
 
 function excerpt(text: string) { return text.replace(/\s+/g, ' ').trim().slice(0, 240); }
 
-export function draftSheetContent(draft: Draft, adopted: boolean) {
-  return { preview: excerpt(draft.body), status: `${adopted ? '采用稿' : '候选稿'} · ${draft.title} · 第 ${draft.revision} 版` };
+export function isAdoptedDraft(draft: DraftRef, adopted?: DraftRef) {
+  return draft.draftId === adopted?.draftId && draft.revision === adopted.revision;
+}
+
+export function draftSheetContent(draft: Draft, adopted: boolean | undefined) {
+  const label = adopted === undefined ? '稿件' : adopted ? '采用稿' : '候选稿';
+  return { preview: excerpt(draft.body), status: `${label} · ${draft.title} · 第 ${draft.revision} 版` };
 }
 
 function sceneSheet(scene: SceneSummary | Scene): LibrarySheet {
@@ -295,9 +300,11 @@ async function loadRecentSheets(recent: RecentManuscript[], url: URL, signal: Ab
         sheet = diarySheet(await read<Diary>('diary.read', { noteId: item.id, ...version }, signal));
       } else if (item.kind === 'draft') {
         const draft = await read<Draft>('draft.read', { draftId: item.id, ...version }, signal);
+        const scene = await read<{ items: SceneSummary[] }>('scene.revisions', { sceneId: draft.sceneId, limit: 1 }, signal)
+          .then(result => result.items[0], error => { if (signal.aborted) throw error; });
         sheet = {
           key: `scene:${draft.sceneId}`, kind: 'scene', id: draft.sceneId, title: item.title || draft.title,
-          href: link, ...draftSheetContent(draft, false), searchText: draft.body,
+          href: link, ...draftSheetContent(draft, scene ? isAdoptedDraft(draft, scene.adopted) : undefined), searchText: draft.body,
         };
       } else {
         sheet = sceneSheet(await read<Scene>('scene.read', { sceneId: item.id, ...version }, signal));

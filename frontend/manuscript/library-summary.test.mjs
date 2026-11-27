@@ -217,3 +217,110 @@ test('full-text search waits for off-screen candidates and reports failed reads 
     await page.unrouteAll({ behavior: 'wait' });
   }
 });
+
+test('L1 review regressions through the real workspace', { skip: baseline, timeout: 90_000 }, async t => {
+  const origin = await startService(t);
+  const fixture = await seed(origin);
+  const project = `/projects/${fixture.book.projectId}`;
+  const viewport = { width: 1280, height: 800 };
+  const search = page => page.getByRole('searchbox', { name: '搜索文稿' });
+  const footerCount = page => page.locator('.library-sheets-footer > span').first();
+
+  await t.test('an adopted match previews while an off-screen candidate is still loading', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    const release = Promise.withResolvers();
+    const slowCandidate = request => {
+      if (!request.url().endsWith('/api/web/invoke')) return false;
+      const call = request.postDataJSON();
+      return call.operationId === 'draft.list' && call.input.sceneId === fixture.scenes[18].sceneId;
+    };
+    await page.route('**/api/web/invoke', async route => {
+      if (slowCandidate(route.request())) await release.promise;
+      await route.continue();
+    });
+    try {
+      await page.goto(project);
+      await ready(page);
+      await page.locator('#passage-body').getByText(/海盐结在信封边上/).waitFor();
+      await Promise.all([page.waitForRequest(slowCandidate), search(page).fill('深处标记暮钟')]);
+      await row(page, fixture.last.title).waitFor();
+      await page.locator('#passage-body').getByText(/深处标记暮钟/).waitFor();
+      assert.equal(await footerCount(page).textContent(), '已找到 1 幕 · 正在搜索正文…');
+      release.resolve();
+      await footerCount(page).getByText('1 / 24 幕', { exact: true }).waitFor();
+    } finally {
+      release.resolve();
+      await page.unrouteAll({ behavior: 'wait' });
+    }
+  });
+
+  await t.test('an incomplete search with no matches removes the previous reader and its actions', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    await page.route('**/api/web/invoke', route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId !== 'draft.list' || call.input.sceneId !== fixture.scenes[18].sceneId) return route.continue();
+      return route.fulfill({ status: 503, json: { error: 'unavailable' } });
+    });
+    await page.goto(project);
+    await ready(page);
+    await page.locator('#passage-body').getByText(/海盐结在信封边上/).waitFor();
+    await search(page).fill('没有这段原文');
+    await page.getByText('搜索未完成，部分正文无法读取。', { exact: true }).waitFor();
+    assert.equal(await page.locator('#passage-body').count(), 0);
+    assert.equal(await page.locator('.ms-editor .wr-reader-toolbar').count(), 0);
+  });
+
+  await t.test('inline save in a current draft refreshes the project shelf without navigating', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    const { candidate } = fixture;
+    const destination = `/drafts/${candidate.draftId}?${new URLSearchParams({ returnTo: project })}`;
+    const revisedBody = '第三版，守夜人走上防波堤。';
+    await page.goto(destination);
+    await ready(page);
+    await row(page, fixture.scenes[1].title).getByText(`候选稿 · ${candidate.title} · 第 2 版`, { exact: true }).waitFor();
+    await page.locator('#passage-body').getByText(candidate.body, { exact: true }).waitFor();
+    await page.getByRole('button', { name: '编辑', exact: true }).click();
+    await page.getByRole('textbox', { name: '正文', exact: true }).fill(revisedBody);
+    await page.getByRole('button', { name: '保存修订', exact: true }).click();
+    await page.locator('#passage-body').getByText(revisedBody, { exact: true }).waitFor();
+    assert.equal(page.url(), new URL(destination, origin).href);
+    const currentRow = row(page, fixture.scenes[1].title);
+    await currentRow.getByText(`候选稿 · ${candidate.title} · 第 3 版`, { exact: true }).waitFor();
+    assert.match(await currentRow.innerText(), new RegExp(revisedBody));
+    assert.equal(await currentRow.getAttribute('href'), destination);
+  });
+
+  await t.test('recent drafts identify the adopted revision without relabeling a newer revision', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    const scene = await fixture.invoke('scene.read', { sceneId: fixture.scenes[0].sceneId });
+    const latest = await fixture.invoke('draft.read', { draftId: scene.adopted.draftId });
+    for (const [draft, label] of [[scene.adopted, '采用稿'], [latest, '候选稿']]) {
+      const destination = `/drafts/${draft.draftId}?revision=${draft.revision}&start=0&end=2`;
+      await page.goto(destination);
+      await page.locator('#passage-body').waitFor();
+      await page.getByRole('link', { name: '最近写过', exact: true }).click();
+      await ready(page);
+      const recentRow = row(page, draft.title);
+      await recentRow.getByText(`${label} · ${draft.title} · 第 ${draft.revision} 版`, { exact: true }).waitFor();
+      assert.equal(await recentRow.getAttribute('href'), destination);
+    }
+  });
+
+  await t.test('a failed chapter list cannot yield a conclusive zero for a chapter title', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    let chapterListAvailable = false;
+    await page.route('**/api/web/invoke', route => {
+      if (route.request().postDataJSON().operationId !== 'chapter.list' || chapterListAvailable) return route.continue();
+      return route.fulfill({ status: 503, json: { error: 'unavailable' } });
+    });
+    await page.goto('/create');
+    await ready(page);
+    await search(page).fill(fixture.chapter.title);
+    await footerCount(page).getByText('搜索未完成', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('heading', { name: '没有匹配的文稿', exact: true }).count(), 0);
+    chapterListAvailable = true;
+    await page.getByRole('button', { name: '重试章节', exact: true }).click();
+    await footerCount(page).getByText('24 / 24 幕', { exact: true }).waitFor();
+    assert.equal(await page.locator('.library-sheet').count(), 24);
+  });
+});

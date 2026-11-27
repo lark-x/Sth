@@ -6,8 +6,9 @@ import bookMark from '../../web/assets/book.svg';
 import { all, href, message, recordHref } from '../workspace/api.ts';
 import { retain, savedText } from '../workspace/useSubmission.ts';
 import { ApiError } from '../api.ts';
+import { writingRoute } from '../writing/routes.ts';
 import {
-  chapterOrder, draftSheetContent, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadCandidateSummary, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
+  chapterOrder, draftSheetContent, isAdoptedDraft, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadCandidateSummary, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
   resolveLibraryContext, shelfKey, unplacedShelfHref,
 } from './library-data.ts';
 import type { LibraryChapter, LibraryContext, LibrarySheet, Project, RecentManuscript } from './library-data.ts';
@@ -27,6 +28,7 @@ const expanded = ref(new Set<string>());
 const treeBusy = ref(false);
 const busy = ref(false);
 const treeError = ref('');
+const chaptersUnavailable = ref(false);
 const error = ref('');
 const listIncomplete = ref(false);
 const query = ref('');
@@ -84,6 +86,8 @@ watch(collectionTitle, value => {
 }, { immediate: true });
 const searching = computed(() => Boolean(query.value.trim()));
 const incomplete = computed(() => listIncomplete.value || sheets.value.some(sheet => sheet.unavailable));
+const chapterSearchIncomplete = computed(() => chaptersUnavailable.value && sheets.value.some(sheet => sheet.chapterId));
+const searchIncomplete = computed(() => incomplete.value || chapterSearchIncomplete.value);
 const sortedSheets = computed(() => orderedSheets(sheets.value, context.value, chapters.value));
 const visibleSheets = computed(() => searching.value
   ? sortedSheets.value.filter(sheet => matchesSheet(sheet, query.value, chapters.value)) : sortedSheets.value);
@@ -109,9 +113,9 @@ const subtitle = computed(() => context.value.shelf === 'recent' ? '按最近编
 const count = computed(() => {
   const unit = context.value.shelf === 'diaries' ? '篇日记' : context.value.shelf === 'recent' ? '篇文稿' : '幕';
   if (!searching.value) return `${sheets.value.length} ${unit}`;
-  if (searchPending.value || incomplete.value) {
-    if (visibleSheets.value.length) return `已找到 ${visibleSheets.value.length} ${unit}`;
-    return searchPending.value ? '正在搜索正文…' : '搜索未完成';
+  if (searchPending.value || searchIncomplete.value) {
+    const status = searchPending.value ? '正在搜索正文…' : '搜索未完成';
+    return visibleSheets.value.length ? `已找到 ${visibleSheets.value.length} ${unit} · ${status}` : status;
   }
   return `${visibleSheets.value.length} / ${sheets.value.length} ${unit}`;
 });
@@ -157,6 +161,7 @@ function loadTree() {
     if (request.signal.aborted) return;
     if (results[0].status === 'fulfilled') projects.value = results[0].value;
     if (results[1].status === 'fulfilled') chapters.value = results[1].value;
+    chaptersUnavailable.value = results[1].status === 'rejected';
     const failure = results.find(result => result.status === 'rejected');
     if (failure?.status === 'rejected') treeError.value = message(failure.reason);
     treeBusy.value = false;
@@ -257,9 +262,10 @@ function readCandidates() {
 }
 
 function publishPreview() {
-  if (busy.value || searchPending.value || (searching.value && incomplete.value && !visibleSheets.value.length)
-    || selectedSheet.value?.needsCandidate || !isLibraryCollection(props.url)) return;
-  const first = error.value || !selectedSheet.value ? '' : sheetHref(selectedSheet.value);
+  if (busy.value || !isLibraryCollection(props.url)) return;
+  const selection = selectedSheet.value;
+  if (selection?.needsCandidate && !searching.value) return;
+  const first = error.value || !selection || selection.needsCandidate ? '' : sheetHref(selection);
   const key = `${props.url.href}\n${first}`;
   if (lastPreview === key) return;
   lastPreview = key;
@@ -288,7 +294,7 @@ function sheetHref(sheet: LibrarySheet) {
 const currentDraftContent = computed(() => {
   const adopted = context.value.scene?.adopted;
   const draft = context.value.draft;
-  if (draft) return draftSheetContent(draft, draft.draftId === adopted?.draftId && draft.revision === adopted.revision);
+  if (draft) return draftSheetContent(draft, isAdoptedDraft(draft, adopted));
   if (adopted) return draftSheetContent(adopted, true);
 });
 function currentContent(sheet: LibrarySheet) {
@@ -327,11 +333,15 @@ async function clearSearch() {
   searchInput.value?.focus();
 }
 function refresh() { void loadTree(); void loadSheets(); }
-function recentChanged() { if (context.value.shelf === 'recent') void loadSheets(); }
+function manuscriptsChanged() {
+  const route = writingRoute(props.url);
+  if (context.value.shelf === 'recent'
+    || (route?.kind === 'draft' && route.page === 'read' && !props.url.searchParams.has('revision'))) void loadSheets();
+}
 void loadTree();
 watch(() => props.url.href, () => { lastPreview = undefined; void loadSheets(); }, { immediate: true });
-watch([query, busy], readCandidates, { flush: 'post' });
-watch([query, chapters, searchPending, selectedSheet], publishPreview, { flush: 'post' });
+watch([query, busy, chapters], readCandidates, { flush: 'post' });
+watch([query, chapters, selectedSheet], publishPreview, { flush: 'post' });
 watch(footerCount, text => {
   clearTimeout(countTimer);
   announcement.value = '';
@@ -340,7 +350,7 @@ watch(footerCount, text => {
 onMounted(() => {
   previewViewport.addEventListener('change', readCandidates);
   window.addEventListener('focus', refresh);
-  window.addEventListener('sth:manuscripts-changed', recentChanged);
+  window.addEventListener('sth:manuscripts-changed', manuscriptsChanged);
 });
 onScopeDispose(() => {
   titleObserver.disconnect();
@@ -350,7 +360,7 @@ onScopeDispose(() => {
   clearTimeout(countTimer);
   previewViewport.removeEventListener('change', readCandidates);
   window.removeEventListener('focus', refresh);
-  window.removeEventListener('sth:manuscripts-changed', recentChanged);
+  window.removeEventListener('sth:manuscripts-changed', manuscriptsChanged);
 });
 </script>
 
@@ -450,6 +460,10 @@ onScopeDispose(() => {
         <p>部分摘要暂时无法读取，仍可打开文稿。</p>
         <button type="button" class="library-text-button" :disabled="busy" @click="loadSheets">重试摘要</button>
       </div>
+      <div v-if="searching && chapterSearchIncomplete" class="library-state library-warning">
+        <p>部分章节名称暂时无法读取。</p>
+        <button type="button" class="library-text-button" :disabled="treeBusy" @click="loadTree">重试章节</button>
+      </div>
       <ul :id="`${id}-sheets`" class="library-sheet-list" aria-label="文稿" @keydown="listKeydown">
         <li v-for="sheet in visibleSheets" :key="sheet.key" v-track-sheet :data-sheet-key="sheet.key">
           <a class="library-sheet" :href="sheetHref(sheet)" :aria-current="selected(sheet) ? 'page' : undefined" @click="rememberSelection(sheet)">
@@ -465,7 +479,7 @@ onScopeDispose(() => {
       </ul>
       <div v-if="!busy && !error && !visibleSheets.length" class="library-empty">
         <p v-if="searchPending" role="status">正在搜索正文…</p>
-        <p v-else-if="searching && incomplete">搜索未完成，部分正文无法读取。</p>
+        <p v-else-if="searching && searchIncomplete">{{ incomplete ? '搜索未完成，部分正文无法读取。' : '搜索未完成。' }}</p>
         <template v-else-if="searching">
           <h3>没有匹配的文稿</h3><p>试试其他标题、正文片段或章节名。</p>
           <button type="button" class="library-text-button" @click="clearSearch">清除搜索</button>
