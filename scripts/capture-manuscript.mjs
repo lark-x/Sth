@@ -194,6 +194,12 @@ async function runCase(run, session, id, fixture, execute) {
   };
   const clickControl = async (names, description = names.join(' / ')) => {
     if (!await firstVisible(controls(page, names))) {
+      const navigation = await firstVisible(controls(page, ['打开资料库导航']));
+      if (navigation && names.some(name => ['文稿库', '资料库', '创作', '作品', '日记', '角色', '资料', '任务', '设置'].includes(name))) {
+        await click(navigation, '打开手机资料库导航');
+      }
+    }
+    if (!await firstVisible(controls(page, names))) {
       const more = await firstVisible(controls(page, ['更多']));
       if (more) await click(more, '打开更多稿件操作');
     }
@@ -211,7 +217,14 @@ async function runCase(run, session, id, fixture, execute) {
     await locator.fill(value);
     actions.push({ type: 'fill', description, value });
   };
+  const openVersions = async () => {
+    const trigger = await firstVisible(controls(page, ['稿件与版本']));
+    if (trigger && !await firstVisible([page.getByRole('combobox', { name: /切换稿件|切换场景版本/ })])) {
+      await click(trigger, '打开稿件与版本');
+    }
+  };
   const select = async (locator, value, description) => {
+    if (!await locator.isVisible()) await openVersions();
     await locator.selectOption(value);
     actions.push({ type: 'select', description, value });
     await settled(page);
@@ -257,7 +270,7 @@ async function runCase(run, session, id, fixture, execute) {
     await settled(page);
   };
   try {
-    await execute({ page, goto, click, clickControl, clickHref, fill, select, scroll, capture, check, back, actions, record });
+    await execute({ page, goto, click, clickControl, clickHref, fill, openVersions, select, scroll, capture, check, back, actions, record });
     check(session.errors.length === errorStart, 'No uncaught browser errors in this case', session.errors.slice(errorStart));
     if (run.strict) check(record.observations.length === 0, 'Layout and first-screen observations pass', record.observations);
     record.status = 'passed';
@@ -326,8 +339,9 @@ async function populatedCases(run, session, fixture) {
     check(await mark.innerText() === f.target.excerpt, 'Assistant link highlights the exact historical UTF-16 passage');
     await capture('assistant-link');
   });
-  await makeCase('history', async ({ page, goto, click, clickControl, select, capture, check }) => {
+  await makeCase('history', async ({ page, goto, click, clickControl, openVersions, select, capture, check }) => {
     await goto(f.links.latestDraft);
+    await openVersions();
     const picker = await firstVisible([page.getByRole('combobox', exact('切换稿件版本'))]);
     if (picker) await select(picker, '1', '选择第 1 版');
     else {
@@ -358,10 +372,11 @@ async function populatedCases(run, session, fixture) {
     await clickControl(['显示目录', '退出专注', '退出专注阅读', '返回文稿']);
     await capture('focus-returned');
   });
-  await makeCase('candidates', async ({ page, goto, click, select, capture, check }) => {
+  await makeCase('candidates', async ({ page, goto, click, openVersions, select, capture, check }) => {
     await goto(f.links.scene);
     await capture('three-candidates');
     for (const candidate of f.drafts.slice(1)) {
+      await openVersions();
       const picker = await firstVisible([page.getByRole('combobox', { name: /候选|稿件|讲法/ })]);
       if (picker) {
         const options = await picker.locator('option').evaluateAll(options => options.map(option => ({ text: option.text, value: option.value })));
@@ -380,6 +395,8 @@ async function populatedCases(run, session, fixture) {
   await makeCase('compare', async ({ page, goto, click, clickControl, select, scroll, capture, check }) => {
     await goto(f.links.oldPassage);
     await clickControl(['对照候选稿', '对照', '比稿']);
+    const versions = await firstVisible([page.locator('summary').filter({ hasText: /^选择对照版本$/ })]);
+    if (versions && !await page.getByRole('combobox', exact('左稿')).isVisible()) await click(versions, '选择对照版本');
     const left = await firstVisible([page.getByRole('combobox', exact('左稿'))]);
     const right = await firstVisible([page.getByRole('combobox', exact('右稿'))]);
     if (left && right) {
@@ -435,7 +452,7 @@ async function populatedCases(run, session, fixture) {
     await goto(f.links.oldPassage);
     const entry = page.url();
     await capture('before-basis');
-    const toggle = await firstVisible(controls(page, ['AI 本次依据', '本次依据', '查看依据', '依据', '展开依据']));
+    const toggle = await firstVisible(controls(page, ['来源与依据', 'AI 本次依据', '本次依据', '查看依据', '依据', '展开依据']));
     if (toggle) await click(toggle, '展开本次依据');
     else {
       const summary = page.locator('summary').filter({ hasText: `${f.character.name} · 第 1 版` });
@@ -448,7 +465,14 @@ async function populatedCases(run, session, fixture) {
       await scroll(quotation, '阅读本次依据中的固定原文');
       await capture('basis-source');
     }
-    await click([page.locator(`a[href="${f.links.source}"]`), page.getByRole('link', exact('查看资料原文 · 第 1 版'))], '打开固定版本引文');
+    const sourceLink = page.locator(`.evidence-content a[href^="${f.links.source}"]`).first();
+    const sourceUrl = new URL(await sourceLink.getAttribute('href'), page.url());
+    const expectedSource = new URL(f.links.source, page.url());
+    for (const [key, value] of expectedSource.searchParams) check(sourceUrl.searchParams.get(key) === value, `Source retains ${key}`);
+    check(sourceUrl.searchParams.getAll('returnTo').length === 1, 'Source has exactly one manuscript return parameter');
+    check(sourceUrl.searchParams.get('returnTo') === new URL(entry).pathname + new URL(entry).search + new URL(entry).hash,
+      'Actual source href preserves the original manuscript for a new tab');
+    await click(sourceLink, '打开固定版本引文');
     await page.locator('#passage-body mark').waitFor();
     check(await page.locator('#passage-body mark').innerText() === f.sourcePin.excerpt, 'Source opens the recorded excerpt');
     check(new URL(page.url()).searchParams.get('revision') === '1', 'Source revision remains pinned after source has been revised');
@@ -456,7 +480,7 @@ async function populatedCases(run, session, fixture) {
     await back();
     check(page.url() === entry, 'History returns to the exact draft passage URL');
     await capture('returned-to-passage');
-    const trigger = await firstVisible(controls(page, ['AI 本次依据', '本次依据', '依据']));
+    const trigger = await firstVisible(controls(page, ['来源与依据', 'AI 本次依据', '本次依据', '依据']));
     if (trigger && await trigger.getAttribute('aria-expanded') === 'false') await click(trigger, '重新展开依据以核对关闭返回');
     const close = await firstVisible(controls(page, ['收起依据', '关闭依据', '关闭本次依据', '返回正文']));
     if (close) await click(close, '收起本次依据');
@@ -467,31 +491,38 @@ async function populatedCases(run, session, fixture) {
   });
   await makeCase('candidate-evidence', async ({ page, goto, click, clickControl, select, scroll, capture, check }) => {
     await goto(f.links.oldDraft);
-    await clickControl(['AI 本次依据', '本次依据']);
+    await clickControl(['来源与依据', 'AI 本次依据', '本次依据']);
     await visibleText(page, f.sourcePin.excerpt);
     await scroll(page.locator('.evidence-content blockquote').filter({ hasText: f.sourcePin.excerpt }).first(), '阅读林澈稿关联的原句');
     await capture('first-candidate-basis');
     await clickControl(['关闭依据']);
     const picker = page.getByRole('combobox', exact('切换稿件'));
     await select(picker, f.drafts[1].draftId, '切换至船长的讲法');
-    await clickControl(['AI 本次依据', '本次依据']);
+    await clickControl(['来源与依据', 'AI 本次依据', '本次依据']);
     await visibleText(page, f.alternatePin.excerpt);
     check((await page.locator('.evidence-content').innerText()).includes(f.alternatePin.excerpt), 'Second candidate uses its own explicitly attached record');
     await scroll(page.locator('.evidence-content blockquote').filter({ hasText: f.alternatePin.excerpt }).first(), '阅读船长稿关联的另一原句');
     await capture('second-candidate-basis');
-    const character = page.locator(`.evidence-content a[href="${f.links.character}"]`).first();
+    const character = page.locator(`.evidence-content a[href^="${f.links.character}"]`).first();
+    const characterUrl = new URL(await character.getAttribute('href'), page.url());
+    const expectedCharacter = new URL(f.links.character, page.url());
+    for (const [key, value] of expectedCharacter.searchParams) check(characterUrl.searchParams.get(key) === value, `Character retains ${key}`);
+    check(characterUrl.searchParams.getAll('returnTo').length === 1, 'Character has exactly one manuscript return parameter');
+    check(characterUrl.searchParams.get('returnTo') === new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash,
+      'Actual evidence href preserves the original manuscript for a new tab');
     await click(character, '从实际组稿快照打开旧版角色');
     await visibleText(page, f.character.persona);
     check(new URL(page.url()).searchParams.get('revision') === '1', 'Character opens the pinned persona after the character has a newer revision');
     await capture('pinned-character');
   });
-  await makeCase('no-reference', async ({ page, goto, click, select, capture, check }) => {
+  await makeCase('no-reference', async ({ page, goto, click, openVersions, select, capture, check }) => {
     await goto(`/scenes/${f.bare.sceneId}`);
+    await openVersions();
     const picker = await firstVisible([page.getByRole('combobox', exact('切换稿件'))]);
     if (picker) await select(picker, `${f.bareDraft.draftId}@1`, '选择无引用稿');
     else await click([page.getByRole('link', exact(f.bareDraft.title)), page.getByRole('link', { name: new RegExp(`^${f.bareDraft.title} ·`) })], '打开无引用稿');
     await visibleText(page, f.bareDraft.body);
-    const basis = await firstVisible(controls(page, ['AI 本次依据', '本次依据', '依据', '查看依据']));
+    const basis = await firstVisible(controls(page, ['来源与依据', 'AI 本次依据', '本次依据', '依据', '查看依据']));
     if (basis) await click(basis, '查看无引用状态');
     const body = await page.locator('main').innerText();
     check(!body.includes(f.sourcePin.excerpt), 'Unreferenced prose does not inherit another draft source');

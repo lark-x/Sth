@@ -42,6 +42,40 @@ async function expectLinks(page, selector, expected) {
   }, { selector, expected }, { timeout: 15_000 });
 }
 
+async function expectLibraryRows(page, expected) {
+  await page.waitForFunction(expected => {
+    const rows = [...document.querySelectorAll('.library-sheet-list > li[data-sheet-key]')];
+    if (rows.length !== expected.length) return false;
+    const keys = rows.map(row => row.dataset.sheetKey);
+    if (new Set(keys).size !== expected.length) return false;
+    return expected.every(item => {
+      const row = rows.find(row => row.dataset.sheetKey === item.key);
+      const anchor = row?.querySelector('a.library-sheet');
+      if (!anchor || row.querySelector('.library-sheet-title')?.textContent.trim() !== item.title) return false;
+      const url = new URL(anchor.href);
+      const target = new URL(item.href, location.origin);
+      const preview = row.querySelector('.library-sheet-preview')?.textContent.trim() ?? '';
+      const status = row.querySelector('.library-sheet-meta')?.textContent ?? '';
+      const box = row.getBoundingClientRect();
+      const clip = row.closest('.library-sheet-scroll')?.getBoundingClientRect();
+      if (box.width <= 0 || box.height <= 0 || getComputedStyle(row).visibility === 'hidden') return false;
+      const visible = box.width > 0 && box.height > 0 && box.bottom > Math.max(0, clip?.top ?? 0)
+        && box.top < Math.min(innerHeight, clip?.bottom ?? innerHeight);
+      // Screen-off candidates may still be waiting for visibility. They must
+      // retain the same scene identity and may not invent a candidate excerpt.
+      const pending = !visible && item.candidate && url.pathname === item.scenePath && !url.searchParams.has('revision')
+        && !preview && status.includes('尚无采用稿');
+      const exact = url.pathname === target.pathname && url.searchParams.getAll('revision').length === 1
+        && url.searchParams.get('revision') === target.searchParams.get('revision')
+        && preview === item.preview && status.includes(item.status);
+      const returnTo = url.searchParams.get('returnTo');
+      if (!returnTo || url.searchParams.getAll('returnTo').length !== 1) return false;
+      const expectedReturn = `${item.projectPath}?${new URLSearchParams({ selected: item.sceneId })}`;
+      return url.origin === location.origin && (pending || exact) && returnTo === expectedReturn;
+    });
+  }, expected, { timeout: 15_000 });
+}
+
 const options = parseOptions(process.argv.slice(2), ['--out', '--samples']);
 const samples = Number(options.samples ?? 3);
 if (!Number.isInteger(samples) || samples < 1 || samples > 10) throw new Error('--samples must be an integer from 1 to 10');
@@ -83,7 +117,22 @@ try {
     seen.add(key); return true;
   }).slice(0, 6).map(item => new URL(item.href, workspace.origin).pathname);
   const diaryPaths = [fixture.diary, fixture.personalDiary].map(item => `/diaries/${item.noteId}`);
-  const scenePaths = [fixture.prelude, fixture.scene, fixture.unadopted, fixture.bare].map(item => `/scenes/${item.sceneId}`);
+  const libraryRows = await Promise.all([fixture.prelude, fixture.scene, fixture.unadopted, fixture.bare].map(async item => {
+    const scene = await workspace.invoke('scene.read', { sceneId: item.sceneId });
+    let draft = scene.adopted;
+    if (!draft) {
+      const { items: [first] } = await workspace.invoke('draft.list', { sceneId: item.sceneId, limit: 1 });
+      if (first) draft = await workspace.invoke('draft.read', { draftId: first.draftId, revision: first.revision });
+    }
+    assert.ok(draft, `Measurement fixture requires a manuscript for ${item.sceneId}`);
+    return {
+      key: `scene:${scene.sceneId}`, sceneId: scene.sceneId, title: scene.title, candidate: !scene.adopted,
+      scenePath: `/scenes/${scene.sceneId}`, projectPath: `/projects/${fixture.project.projectId}`,
+      href: scene.adopted ? `/scenes/${scene.sceneId}?revision=${scene.revision}` : `/drafts/${draft.draftId}?revision=${draft.revision}`,
+      preview: draft.body.replace(/\s+/g, ' ').trim().slice(0, 240),
+      status: `${scene.adopted ? '采用稿' : '候选稿'} · ${draft.title} · 第 ${draft.revision} 版`,
+    };
+  }));
   report.build = workspace.capturedBuild;
   report.bundle = await workspace.measureServedBundle();
   report.fixtureSha256 = fixture.contentSha256;
@@ -130,7 +179,7 @@ try {
             await expectLinks(page, '.sth-manuscript-list a', recentPaths);
             await expectLinks(page, '#diary-list .sth-entry-link', diaryPaths);
           }
-          if (route === 'project') await expectLinks(page, 'a.library-sheet', scenePaths);
+          if (route === 'project') await expectLibraryRows(page, libraryRows);
           if (target.text !== null) await page.waitForFunction(({ selector, text, contains }) => {
             const normalize = value => value.replace(/\s+/g, ' ').trim();
             const actual = normalize(document.querySelector(selector)?.textContent ?? '');
