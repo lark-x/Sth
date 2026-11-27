@@ -202,7 +202,7 @@ watch(() => props.url.href, (_value, _previous, onCleanup) => {
 <style scoped>
 .connections-route { min-inline-size: 0; max-inline-size: 53rem; margin-inline: auto; }
 .connections-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .65rem 1rem; }
-.connections-header h1 { inline-size: 100%; font: 650 clamp(1.8rem, 1.5rem + 1dvw, 2.4rem)/1.3 var(--sans); }
+.connections-header h1 { inline-size: 100%; }
 .connections-header p { color: var(--muted); }
 .connections-header a { display: inline-flex; align-items: center; min-block-size: 2.75rem; color: var(--accent-deep); }
 .service-origin { padding-block: .8rem 1.3rem; color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
