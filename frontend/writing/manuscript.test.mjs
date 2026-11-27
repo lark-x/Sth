@@ -335,7 +335,7 @@ test('manuscript reading and revision through the real shell and isolated API', 
     const page = await open(t, origin, `/scenes/${scene.sceneId}`);
     assert.equal(await page.locator('#passage-body').textContent(), longBody);
     await button(page, '本次依据').click();
-    await page.getByText(/此稿尚无明确关联的组稿记录/).waitFor();
+    await page.getByText('这版稿件还没有已确认的来源记录', { exact: true }).waitFor();
     assert.doesNotMatch(await page.locator('.manuscript-evidence').innerText(), /版本不匹配/);
     await button(page, '关闭依据').click();
     for (const [name, viewport] of [['phone', { width: 390, height: 844 }], ['desktop', { width: 1440, height: 900 }]]) {
@@ -396,13 +396,18 @@ test('manuscript reading and revision through the real shell and isolated API', 
       assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
       await trigger.locator('path').click();
       const panel = page.getByRole('dialog', { name: '本次依据', exact: true });
-      await panel.getByText(/此稿尚无明确关联的组稿记录/).waitFor();
+      await panel.getByText('这版稿件还没有已确认的来源记录', { exact: true }).waitFor();
       assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
       assert.equal(await trigger.getAttribute('aria-controls'), await panel.getAttribute('id'));
       assert.doesNotMatch(await panel.innerText(), /版本不匹配/);
-      await panel.locator('summary').filter({ hasText: '场景关联资料 · 第 1 版' }).click();
+      await panel.locator('summary').filter({ hasText: '查看场景资料' }).click();
+      await panel.getByText('场景修订 1 的可用资料', { exact: true }).waitFor();
       const original = panel.getByRole('link', { name: '场景引用原文 1 · 第 1 版', exact: true });
-      assert.equal(await original.getAttribute('href'), `/sources/${source.sourceId}?revision=1&start=${range.start}&end=${range.end}`);
+      const sourceHref = new URL(await original.getAttribute('href'), origin);
+      assert.equal(sourceHref.pathname, `/sources/${source.sourceId}`);
+      assert.deepEqual([...sourceHref.searchParams], [...new URLSearchParams({
+        revision: '1', start: String(range.start), end: String(range.end), returnTo: path,
+      })]);
       await snapshot(page, `compact-${name}-historical-source-panel`);
       await button(page, '关闭依据').click();
       await page.waitForFunction(top => Math.abs(scrollY - top) < 4, top);

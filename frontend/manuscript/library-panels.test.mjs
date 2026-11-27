@@ -366,6 +366,7 @@ test('collection navigation keeps its title and a usable pane across preview, hi
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
+      if (width < 640) await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
       await page.getByRole('link', { name: '创作', exact: true }).click();
       await settled(page);
       await assertTitle('资料库 · Sth');
@@ -795,6 +796,7 @@ test('library preserves project navigation and exposes management through the re
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(fromShelf(scenes[1].sceneId, projectPath));
     await settled(page);
+    await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
     const picker = page.getByRole('combobox', { name: '切换稿件', exact: true });
     await picker.waitFor();
     const value = await picker.locator('option').filter({ hasText: draft.title }).getAttribute('value');
