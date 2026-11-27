@@ -2,9 +2,23 @@
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
 
+## 2026-11-27 · 文稿资料库
+
+`feat/manuscript-library` 的 `5e7be70` 在干净工作树上完成浏览器截图验收。隔离样例有多章作品、同一幕的三份候选稿、两稿各自确认的组稿记录及一篇日记。Chromium 运行 1280、768、390、320px，WebKit 运行 390、320px。每个视口 20 个场景，120 项通过，共 349 张截图。截图前后浏览器构建的 SHA-256 均为 `ad546493478e7fff637d0570d3057197543b540f9a0e26672ed14d4179ae427a`。
+
+| 作者的操作 | 可以核对的画面 |
+| --- | --- |
+| 打开作品的第二章，找到当前采用的稿件 | [桌面三栏及选中行](manuscript-screens/chromium-desktop-directory-03-chapter-selected.png) |
+| 从助手返回的链接打开旧版选段 | [手机首屏中的目标句](manuscript-screens/chromium-phone-passage-01-assistant-link.png) |
+| 确认这份稿件参考过的原句和人物 | [手机展开本次依据](manuscript-screens/chromium-phone-evidence-02-basis-expanded.png) |
+
+本机 9322 已发布 `5e7be70`。容器与 HTTP 健康检查通过，沿用原服务配置和数据卷。升级前 56 张表的 1,177 行逐行核对一致，升级后 59 张表、1,187 行与演练结果相同。随后通过真实 HTTP 打开实际作品、日记和指定旧稿选段，四种宽度共 12 组页面、20 张截图。113 次读取留下 113 条业务回执，40 张作者内容相关表校验一致。关闭依据后四种宽度均回到原选段。真实稿件的对照图保存在本机忽略目录。
+
+用 `npm run test:manuscript` 检查分组往返、读写、证据和窄屏交互。执行 `node scripts/capture-manuscript.mjs --ui snapshot --stage final --out frontend/.artifacts/manuscript-review` 可复现样例及完整截图；再用 `node scripts/capture-manuscript.mjs --gallery frontend/.artifacts/manuscript-review` 生成可逐张查看的本地图册。真实 iOS、WKWebView 和真人私聊另行验收。
+
 ## 2026-11-27 · 三宿主创作工作区
 
-9322 当前运行 `sth-local:authoring-ae25ac0`，对应代码 `ae25ac0c578af0a2cd6c218f438f80b4eed2ec0f`。日记编辑可在同一标签页刷新后恢复未交稿的内容与待确认的保存请求。作品的「创作决定」提供「按此版准备写作」，可从作者选定的历史版本选择模板、写下要求并查看组稿出处。[打开北港的创作决定](http://127.0.0.1:9322/author-context?projectId=14d8d4f9-6cf7-449d-bec0-c2ff6e69029f&revision=0)
+该轮发布镜像为 `sth-local:authoring-ae25ac0`，对应代码 `ae25ac0c578af0a2cd6c218f438f80b4eed2ec0f`。日记编辑可在同一标签页刷新后恢复未交稿的内容与待确认的保存请求。作品的「创作决定」提供「按此版准备写作」，可从作者选定的历史版本选择模板、写下要求并查看组稿出处。[打开北港的创作决定](http://127.0.0.1:9322/author-context?projectId=14d8d4f9-6cf7-449d-bec0-c2ff6e69029f&revision=0)
 
 - 干净检出的候选版本通过 141 项浏览器测试，单独通过移动 WebKit 编辑、保存和历史导航。核心套件常规 126 项通过，另在隔离库启用第 127 项，使用实际 ComfyUI 生成 768×512 图片并从数据库备份恢复相同字节。
 - 升级前快照 `release-ae25ac0-20261127-152918/pre-upgrade.sqlite` 的 SHA-256 为 `e4ef3275115ece8572861dbbdd8a2fb5f3688d1e87096c62a1345a43b334ed1a`。SQLite 完整性和外键检查通过。新容器继续使用原卷和全部 16 项服务配置。
