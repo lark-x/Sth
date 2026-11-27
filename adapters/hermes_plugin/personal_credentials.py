@@ -113,10 +113,13 @@ def _store(directory, path, data, *, replace):
             staged.unlink(missing_ok=True)
 
 
-def save_binding(key, claim, delivery):
+def save_binding(key, claim, delivery, *, origin=None):
     directory = prepare_storage()
-    data = json.dumps({"key": key, "connectMessage": delivery,
-                       "token": claim["token"], "connectionId": claim["connectionId"]}).encode()
+    value = {"key": key, "connectMessage": delivery,
+             "token": claim["token"], "connectionId": claim["connectionId"]}
+    if origin is not None:
+        value["origin"] = origin
+    data = json.dumps(value).encode()
     if os.name == "nt":
         data = _dpapi(data, protect=True)
     _store(directory, directory / f"{key}.binding", data, replace=True)

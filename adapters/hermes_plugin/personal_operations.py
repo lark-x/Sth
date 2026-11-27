@@ -43,6 +43,7 @@ CONNECTED = "已连接 Sth。可以在此私聊使用个人操作。"
 REPLAY_NOTICE = "此步骤已有保存结果，已取回原结果。本次重新生成的内容未写入。"
 DISCOVER = "sth_personal_discover"
 INVOKE = "sth_personal_invoke"
+RECEIPT = "sth_personal_receipt"
 GUIDANCE = f"""本轮可使用 Sth 个人操作。保持 Hermes 的当前模型，按用户的语言交流。
 处理 Sth 请求时，用 {DISCOVER} 的空参数查看操作索引，再用 operationId 或 prefix 读取所需操作的完整 schema，最后用 {INVOKE} 调用。一般写作在当前对话完成；作者明确指定生成方案时才委托执行。普通聊天照常回答。
 按操作描述满足用户请求。仅在用户意图或必需字段确有歧义时询问。对 interaction.localDateField，“今天”使用本轮提供的本地日期或传为 today。
@@ -228,7 +229,7 @@ def _redeem(origin, identity, message_id, code):
     return CONNECTED
 
 
-def active_turn():
+def active_turn(**fields):
     from gateway.session_context import _SESSION_TURN_EVENT, bound_session_key, get_session_env
 
     event = _SESSION_TURN_EVENT.get()
@@ -236,7 +237,8 @@ def active_turn():
     if (event is None or event.internal or not _stable_id(event.message_id) or not _stable_id(session)
             or event.sender_id() != event.source.user_id or event.sender_id() != get_session_env("HERMES_SESSION_ACTOR_ID")
             or CONNECT.search((event.text or "").lstrip())):
-        return None
+        from .native import active_turn as native_turn
+        return native_turn(fields)
     try:
         from gateway.run import _gateway_runner_ref
 
@@ -250,7 +252,8 @@ def active_turn():
                 return Turn(origin, binding["token"], namespace, event)
     except (AttributeError, ImportError, OSError, ValueError):
         pass
-    return None
+    from .native import active_turn as native_turn
+    return native_turn(fields)
 
 
 def _local_date(turn):
@@ -337,7 +340,7 @@ def _tool_result(turn, result):
 
 
 def discover(args, **_fields):
-    turn = active_turn()
+    turn = active_turn(**_fields)
     if not turn:
         return _error("personal_turn_required", PRIVATE_ONLY)
     if not isinstance(args, dict) or set(args) - {"view", "prefix", "operationId"}:
@@ -354,8 +357,22 @@ def _matches_receipt(result, query):
             and type(result.get("replayed")) is bool and "result" in result)
 
 
+def receipt(args, **fields):
+    turn = active_turn(**fields)
+    if not turn:
+        return _error("personal_turn_required", PRIVATE_ONLY)
+    if (not isinstance(args, dict) or set(args) != {"operationId", "stepId"}
+            or not isinstance(args["operationId"], str) or len(args["operationId"]) > 100
+            or not OPERATION.fullmatch(args["operationId"]) or not _stable_id(args["stepId"])):
+        return _error("personal_invalid_invocation", "请提供原回执的操作 ID 和完整步骤 ID。")
+    status, result = _request(turn, "/receipt", args)
+    if 200 <= status < 300 and (not _matches_receipt(result, args) or not result["replayed"]):
+        return _error("personal_result_invalid", "Sth 返回的操作回执无效。")
+    return _tool_result(turn, result)
+
+
 def invoke(args, **_fields):
-    turn = active_turn()
+    turn = active_turn(**_fields)
     if not turn:
         return _error("personal_turn_required", PRIVATE_ONLY)
     required = {"operationId", "stepId", "input"}
@@ -427,3 +444,6 @@ def register_tools(ctx):
                              "description": "Stable 1-based ordinal for intentionally repeated items with the same identity."}}
     ctx.register_tool(INVOKE, toolset, schema(INVOKE, "按发现的 schema 调用 Sth 个人操作。同一步重试时使用相同输入及步骤 ID。读取生成提示词时查找 generations.prompt.page，按游标读完消息或出处。",
                                              fields, ["operationId", "stepId", "input"]), invoke)
+    ctx.register_tool(RECEIPT, toolset, schema(RECEIPT, "使用原回执的 operationId 和完整服务端 stepId 取回已保存结果，可跨会话核验。",
+        {"operationId": fields["operationId"], "stepId": {"type": "string", "minLength": 1, "maxLength": 512}},
+        ["operationId", "stepId"]), receipt)

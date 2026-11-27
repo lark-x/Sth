@@ -1,3 +1,19 @@
 name: sth-personal-operations
-version: 1.0.0
-description: Run Sth personal operations from a verified Hermes QQ or WeChat private chat.
+version: 1.2.0
+description: Connect a native Hermes terminal or a verified QQ or WeChat private chat to Sth.
+provides_tools:
+  - sth_personal_discover
+  - sth_personal_invoke
+  - sth_personal_receipt
+provides_hooks:
+  - pre_gateway_dispatch
+  - post_gateway_admission
+  - pre_llm_call
+  - transform_llm_output
+config_schema:
+  repository:
+    type: str
+    description: Optional external Sth runtime override. Defaults to the runtime shipped inside this plugin.
+  workspace_home:
+    type: str
+    description: Persistent workspace registry, defaulting to sth-workspaces within the active Hermes profile.
