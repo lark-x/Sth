@@ -16,6 +16,7 @@ const uid = useId();
 const root = ref<HTMLElement>();
 const trigger = ref<HTMLButtonElement>();
 const panel = ref<HTMLElement>();
+const closeButton = ref<HTMLButtonElement>();
 const open = ref(false);
 const loading = ref(false);
 const failure = ref('');
@@ -86,7 +87,14 @@ function updateBackground() {
     branch = branch.parentElement;
   }
 }
-function sizeChanged() { compact.value = compactQuery.matches; updateBackground(); }
+function sizeChanged() {
+  const wasCompact = compact.value;
+  compact.value = compactQuery.matches;
+  if (open.value && !wasCompact && compact.value && panel.value && !panel.value.contains(document.activeElement)) {
+    closeButton.value?.focus({ preventScroll: true });
+  }
+  updateBackground();
+}
 function toolbarOpen(event: Event) {
   const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button') : undefined;
   void openPanel(target ?? undefined);
@@ -98,7 +106,8 @@ function keyboard(event: KeyboardEvent) {
   }
   if (event.key !== 'Tab' || !compact.value || !panel.value) return;
   const controls = [...panel.value.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])')]
-    .filter(element => element.getClientRects().length && !element.closest('[inert]'));
+    .filter(element => element.getClientRects().length
+      && !element.closest('[inert], details:not([open]) > :not(summary:first-of-type)'));
   const first = controls[0];
   const last = controls.at(-1);
   const active = document.activeElement;
@@ -268,7 +277,7 @@ defineExpose({ open: openPanel, close: closePanel });
           <h2 :id="`${uid}-heading`">本次依据</h2>
           <p><span>{{ draft?.title ?? scene.title }}</span><span> · 修订 {{ draft?.revision ?? scene.revision }}</span></p>
         </div>
-        <button class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel">
+        <button ref="closeButton" class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false">
             <path d="m18 6-12 12M6 6l12 12" />
           </svg>

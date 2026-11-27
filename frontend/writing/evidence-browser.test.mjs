@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { chromium, webkit } from 'playwright';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { assertFitsViewport, openBrowser, startService } from '../../tests/browser/harness.mjs';
@@ -385,6 +386,78 @@ test('scene preparation history keeps multiple records available after expanding
   await selector.selectOption(second.generationId);
   await fixed.getByText(fx.source.body, { exact: true }).waitFor();
 });
+
+for (const engine of [chromium, webkit]) {
+  test(`mobile evidence focus in ${engine.name()}`, async t => {
+    const fx = await fixture(t);
+    const browser = await engine.launch();
+    t.after(() => browser.close());
+    const focused = locator => locator.evaluate(node => node === document.activeElement);
+
+    async function openAtWidth(t, width) {
+      const page = await browser.newPage({ baseURL: fx.origin, viewport: { width, height: 844 },
+        ...(engine === webkit ? { isMobile: true, hasTouch: true } : {}) });
+      t.after(() => page.close());
+      await page.goto(fx.path());
+      await button(page, '工具栏依据').press('Enter');
+      await responsivePanel(page, width).getByText(emptyDraft, { exact: true }).waitFor();
+      return page;
+    }
+
+    await t.test('Tab wraps at the last visible control with the attachment closed or open', async t => {
+      const page = await openAtWidth(t, 390);
+      const dialog = responsivePanel(page, 390);
+      const attachment = dialog.locator('.evidence-attachment');
+      const summary = attachment.locator('summary');
+      const close = button(dialog, '关闭依据');
+      assert.equal(await attachment.getAttribute('open'), null);
+      await summary.focus();
+      assert.equal(await focused(summary), true);
+      await page.keyboard.press('Tab');
+      assert.equal(await focused(close), true, 'Tab from the closed attachment summary wraps to Close');
+      await page.keyboard.press('Shift+Tab');
+      assert.equal(await focused(summary), true, 'Shift+Tab returns to the closed attachment summary');
+
+      await page.keyboard.press('Enter');
+      const inspect = button(attachment, '读取待核对组稿');
+      await inspect.focus();
+      assert.equal(await focused(inspect), true);
+      await page.keyboard.press('Tab');
+      assert.equal(await focused(close), true, 'Tab from the expanded attachment button wraps to Close');
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+      assert.equal(await focused(button(page, '工具栏依据')), true);
+    });
+
+    await t.test('resizing into a modal brings outside focus to Close and preserves inside focus', async t => {
+      const page = await openAtWidth(t, 768);
+      const passage = page.locator('#passage-body');
+      await passage.focus();
+      assert.equal(await focused(passage), true);
+
+      const dialog = responsivePanel(page, 390);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await dialog.waitFor();
+      assert.equal(await dialog.getAttribute('aria-modal'), 'true');
+      assert.equal(await passage.evaluate(node => node.inert), true);
+      assert.equal(await focused(button(dialog, '关闭依据')), true, 'the modal moves reading focus to Close');
+
+      const summary = page.locator('.evidence-attachment summary');
+      await summary.focus();
+      await page.setViewportSize({ width: 768, height: 844 });
+      await responsivePanel(page, 768).waitFor();
+      assert.equal(await passage.evaluate(node => node.inert), false);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await dialog.waitFor();
+      assert.equal(await focused(summary), true, 'focus already inside the panel stays on the same control');
+
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+      assert.equal(await focused(button(page, '工具栏依据')), true);
+      assert.equal(await passage.evaluate(node => node.inert), false);
+    });
+  });
+}
 
 test('opening uses the current viewport before a delayed media change reaches the component', async t => {
   const fx = await fixture(t);
