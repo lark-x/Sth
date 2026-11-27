@@ -44,6 +44,11 @@ test('fresh browsers and home share assistant-written manuscripts without record
   await homeReady(page);
   const hrefs = await home(page).locator('.sth-manuscript-link').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
   assert.deepEqual(hrefs, [draft.href, diary.href], 'home collapses the scene and its candidate consistently');
+  assert.equal(await home(page).getByRole('link', { name: `打开候选稿 ${draft.title}`, exact: true })
+    .locator('.sth-manuscript-continue').innerText(), '打开', '阅读入口准确说明打开后的状态');
+  await home(page).getByRole('link', { name: `打开日记 ${diary.title}`, exact: true }).click();
+  await page.locator('.diary-route[aria-busy="false"] .diary-prose').waitFor();
+  assert.equal(await page.locator('#diary-body').count(), 0);
   assert.equal(await page.evaluate(key => localStorage.getItem(key), storageKey), null);
   await page.goto('/workspace?tab=recent');
   await ready(page);
@@ -78,7 +83,7 @@ test('fresh browsers and home share assistant-written manuscripts without record
   await api.invoke('draft.revise', { draftId: draft.draftId, expectedRevision: 1, title: '助手重新命名的候选稿', body: '第二声钟响，渡船又靠了岸。' });
   await page.goto('/');
   await homeReady(page);
-  await home(page).getByRole('link', { name: '继续编辑候选稿 助手重新命名的候选稿', exact: true }).waitFor();
+  await home(page).getByRole('link', { name: '打开候选稿 助手重新命名的候选稿', exact: true }).waitFor();
   await page.goto('/workspace?tab=recent');
   await ready(page);
   assert.match(await rows(page).first().innerText(), /助手重新命名的候选稿/);
@@ -99,6 +104,8 @@ test('local exact versions survive newer assistant revisions and shared recent e
   await page.goto('/');
   await homeReady(page);
   assert.equal(await home(page).locator('.sth-manuscript-link').first().getAttribute('href'), exact);
+  assert.equal(await home(page).getByRole('link', { name: `打开候选稿 ${draft.title}`, exact: true })
+    .locator('.sth-manuscript-continue').innerText(), '打开', '固定版本入口保留精确链接并使用打开文案');
   await page.goto('/workspace?tab=recent');
   await ready(page);
   assert.equal(await rows(page).first().getAttribute('href'), exact);
@@ -120,7 +127,7 @@ test('local exact versions survive newer assistant revisions and shared recent e
   await homeReady(page);
   fail = false;
   await home(page).getByRole('button', { name: '重新读取最近编辑', exact: true }).click();
-  await home(page).getByRole('link', { name: `继续编辑日记 ${diary.title}`, exact: true }).waitFor();
+  await home(page).getByRole('link', { name: `打开日记 ${diary.title}`, exact: true }).waitFor();
   await page.evaluate(key => localStorage.removeItem(key), storageKey);
   fail = true;
   await page.reload();
@@ -129,5 +136,5 @@ test('local exact versions survive newer assistant revisions and shared recent e
   assert.equal(await home(page).locator('.sth-manuscript-link').count(), 0);
   fail = false;
   await home(page).getByRole('button', { name: '重新读取最近编辑', exact: true }).click();
-  await home(page).getByRole('link', { name: '继续编辑候选稿 第二声', exact: true }).waitFor();
+  await home(page).getByRole('link', { name: '打开候选稿 第二声', exact: true }).waitFor();
 });

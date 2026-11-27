@@ -55,8 +55,39 @@ function searchControl(catalog, domain, list, params, choices) {
 const providerStates = { ready: '可用', unconfigured: '未配置', invalid_config: '配置无效', unreachable: '无法连接' };
 const providerView = provider => provider ? `<p class="masthead-meta">图片供应商 · ${esc(providerStates[provider.status] ?? '状态未知')}${provider.provider ? ` · ${esc(provider.provider)}` : ''}</p>` : '';
 
+function placementReturn(ctx, projectId) {
+  const fallback = path('projects', projectId);
+  const requested = internalHref(ctx.url.searchParams.get('returnTo'));
+  return requested && new URL(requested, ctx.url).pathname === fallback ? requested : fallback;
+}
+
+async function chooseSceneChapter(ctx) {
+  const projectId = ctx.url.searchParams.get('projectId');
+  const sceneId = ctx.url.searchParams.get('addSceneId');
+  const [projects, scene, chapters] = await Promise.all([
+    listAll('project.list', {}, ctx.signal), read('scene.read', { sceneId }, ctx.signal),
+    listAll('chapter.list', { projectId }, ctx.signal),
+  ]);
+  const project = projects.find(item => item.projectId === projectId);
+  if (!project) throw new ApiError(404, 'project_not_found', '找不到这个作品。');
+  const returnTo = placementReturn(ctx, projectId);
+  const context = { projectId, addSceneId: sceneId, returnTo };
+  const description = scene.placement ? '此场景已有章节归属，请核对现有位置。'
+    : chapters.length ? '场景已创建，尚未归入作品。请选择章节，核对并保存编排后完成归入。'
+      : '场景已创建，尚未归入作品。本书还没有章节，请先新建章节，再核对并保存编排。';
+  ctx.show('选择章节', `${heading('选择章节', { trail: back(returnTo, '返回作品'), meta: `<p class="masthead-meta">${esc(project.title)} · ${esc(scene.title)}</p>` })}
+    <p role="status">${esc(description)}</p>
+    <div class="actions">${link(query('/chapters/new', context), '新建章节', 'plus', 'primary')}
+      ${link(query(path('scenes', sceneId), { returnTo: ctx.url.pathname + ctx.url.search }), '查看已保存场景', null, 'secondary')}
+      ${link(returnTo, '返回作品', 'back', 'quiet')}</div>
+    ${chapters.length ? section('选择目标章节', `<ul class="workspace-notes">${chapters.map(chapter => `<li>${link(
+      query(path('chapters', chapter.chapterId), { action: 'arrange', ...context }), `放入「${chapter.title}」`, null, 'secondary',
+    )}</li>`).join('')}</ul>`) : ''}`);
+}
+
 async function listPage(ctx, catalog, domain) {
   const params = ctx.url.searchParams;
+  if (domain === domains.chapters && params.get('projectId') && params.get('addSceneId')) return chooseSceneChapter(ctx);
   const list = operation(catalog, domain, 'list');
   const rules = schemaOf(catalog, list)?.properties ?? {};
   const scopeEntries = await Promise.all(Object.entries(scopes).filter(([key]) => rules[key])
@@ -148,6 +179,24 @@ async function createPage(ctx, catalog, domain) {
   const values = Object.fromEntries(['projectId', 'sceneId', 'branchId'].map(key => [key, params.get(key)]).filter(([, value]) => value));
   const fixed = {};
   let backTo = query(`/${domain.route}`, values);
+  const scenePlacement = domain === domains.scenes && values.projectId && !values.branchId;
+  const chapterPlacement = domain === domains.chapters && values.projectId && params.get('addSceneId');
+  let placementProject;
+  let placementChapter;
+  if (scenePlacement || chapterPlacement) {
+    const projects = await listAll('project.list', {}, ctx.signal);
+    placementProject = projects.find(project => project.projectId === values.projectId);
+    if (!placementProject) throw new ApiError(404, 'project_not_found', '找不到这个作品。');
+    backTo = placementReturn(ctx, values.projectId);
+    if (chapterPlacement) {
+      await read('scene.read', { sceneId: params.get('addSceneId') }, ctx.signal);
+      fixed.projectId = values.projectId;
+      backTo = query('/chapters', { projectId: values.projectId, addSceneId: params.get('addSceneId'), returnTo: backTo });
+    } else if (params.get('chapterId')) {
+      placementChapter = await read('chapter.read', { chapterId: params.get('chapterId') }, ctx.signal);
+      if (placementChapter.projectId !== values.projectId) throw new ApiError(400, 'chapter_project_mismatch', '章节不属于当前作品。');
+    }
+  }
   if (domain === domains.scenes && values.branchId) {
     fixed.branchId = values.branchId;
     backTo = path('branches', values.branchId);
@@ -207,10 +256,18 @@ async function createPage(ctx, catalog, domain) {
     } } },
   } };
   return operationPage(ctx, catalog, { id, title: domain.create, backTo: fixed.sceneId ? path('scenes', fixed.sceneId) : backTo, schema,
-    subtitle: fixed.story ? `${values.title} · 讲述${version(fixed.story.revision)}${fixed.story.checkpointRevision ? ` · 接续${version(fixed.story.checkpointRevision)}` : ''}` : undefined,
+    subtitle: placementProject ? `${placementProject.title}${placementChapter ? ` · ${placementChapter.title}` : ''} · ${scenePlacement ? '创建后请选择或新建章节，保存编排后才会归入作品。' : '新建章节后继续编排已保存的场景。'}`
+      : fixed.story ? `${values.title} · 讲述${version(fixed.story.revision)}${fixed.story.checkpointRevision ? ` · 接续${version(fixed.story.checkpointRevision)}` : ''}` : undefined,
     referenceExtras: character && (controls => characterSelections(ctx, controls)),
     values, fixed, orderable: domain === domains.templates ? ['fields'] : undefined,
-    complete: result => ctx.saved(recordHref(domain, result) || backTo, '已保存') });
+    complete(result) {
+      if (scenePlacement || chapterPlacement) {
+        const context = { projectId: placementProject.projectId, addSceneId: scenePlacement ? result.sceneId : params.get('addSceneId'), returnTo: placementReturn(ctx, placementProject.projectId) };
+        const chapterId = placementChapter?.chapterId ?? (chapterPlacement ? result.chapterId : undefined);
+        ctx.saved(chapterId ? query(path('chapters', chapterId), { action: 'arrange', ...context }) : query('/chapters', context),
+          scenePlacement ? '场景已创建，请继续保存章节编排' : '章节已创建，请继续保存编排');
+      } else ctx.saved(recordHref(domain, result) || backTo, '已保存');
+    } });
 }
 
 function cleanScenePins(record) {
@@ -233,6 +290,7 @@ async function editAction(ctx, catalog, domain, record, action, pinned) {
   let schema;
   let choices;
   let orderable;
+  let placementScene;
   let outputDomain = domain;
   if (action === 'revise') {
     fixed.expectedRevision = current.revision;
@@ -262,6 +320,14 @@ async function editAction(ctx, catalog, domain, record, action, pinned) {
     const scenes = await listAll('scene.list', {}, ctx.signal);
     choices = { sceneIds: scenes.filter(scene => !scene.placement || scene.placement.chapterId === record.chapterId)
       .map(scene => [scene.sceneId, scene.title, scene]) };
+    const addSceneId = ctx.url.searchParams.get('addSceneId');
+    if (addSceneId) {
+      placementScene = await read('scene.read', { sceneId: addSceneId }, ctx.signal);
+      if (placementScene.branchId || placementScene.branchFrom || (placementScene.placement && placementScene.placement.chapterId !== record.chapterId)) {
+        throw new ApiError(409, 'scene_already_placed', '此场景已有其他章节或 IF 归属，请先核对当前位置。');
+      }
+      if (!values.sceneIds.includes(addSceneId)) values.sceneIds.push(addSceneId);
+    }
     orderable = ['sceneIds'];
   }
   if (action === 'save' && domain === domains.generations) {
@@ -269,11 +335,27 @@ async function editAction(ctx, catalog, domain, record, action, pinned) {
     schema = { ...base, properties: { ...base.properties, output: templateOutputSchema(record.composition.template.fields) } };
   }
   if (!id || !title) return false;
-  await operationPage(ctx, catalog, { id, title, subtitle: `${nameOf(record, domain.title)}${record.revision ? ` · ${version(record.revision)}` : ''}`,
-    backTo: detail, values, fixed, choices, schema, orderable, clearable: ['origin', 'time', 'place', 'scope', 'projectId'], latest,
+  const placementBack = placementScene && query('/chapters', { projectId: record.projectId, addSceneId: placementScene.sceneId, returnTo: placementReturn(ctx, record.projectId) });
+  await operationPage(ctx, catalog, { id, title, subtitle: `${nameOf(record, domain.title)}${record.revision ? ` · ${version(record.revision)}` : ''}${placementScene ? ` · 已选中「${placementScene.title}」，保存编排后才会归入章节。` : ''}`,
+    backTo: placementBack || detail, values, fixed, choices, schema, orderable, clearable: ['origin', 'time', 'place', 'scope', 'projectId'], latest,
     submit: action === 'revise' ? effects.revise : title, complete(result) {
-      ctx.saved(recordHref(outputDomain, result) || detail, '已保存');
+      if (placementScene) {
+        const destination = new URL(placementReturn(ctx, record.projectId), ctx.url);
+        if (destination.searchParams.get('shelf') === 'unplaced' || destination.searchParams.has('chapterId')) {
+          destination.searchParams.delete('shelf');
+          destination.searchParams.set('chapterId', record.chapterId);
+        }
+        destination.searchParams.set('selected', placementScene.sceneId);
+        ctx.saved(destination.pathname + destination.search + destination.hash, '场景编排已保存');
+      } else ctx.saved(recordHref(outputDomain, result) || detail, '已保存');
     } });
+  if (placementScene && ctx.active()) {
+    ctx.main.querySelector('#workspace-editor').insertAdjacentHTML('afterend', `<div class="actions">
+      ${button('placement-reload', '重新读取最新章节并保留新场景', 'refresh', 'secondary')}
+      ${link(query(path('scenes', placementScene.sceneId), { returnTo: ctx.url.pathname + ctx.url.search }), '查看已保存场景', null, 'quiet')}
+      ${link(placementReturn(ctx, record.projectId), '返回作品', 'back', 'quiet')}</div>`);
+    ctx.main.querySelector('#placement-reload').onclick = () => ctx.refresh();
+  }
   return true;
 }
 

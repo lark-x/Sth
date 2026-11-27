@@ -94,7 +94,7 @@ onScopeDispose(() => controller?.abort());
       <p>可以从已存角色或资料构思，也可以先写场景，再安排进章节。</p>
       <div class="ce-actions">
         <a class="ce-button ce-primary" href="/workspace?tab=continue">从已有内容继续</a>
-        <a class="ce-button" href="/scenes/new">新建场景</a>
+        <a class="ce-button" :href="href('/scenes/new', { projectId: project.projectId, returnTo: href(recordHref('projects', project.projectId), { view: 'overview' }) })">新建场景</a>
         <a :href="href('/chapters/new', { projectId: project.projectId })">新建章节</a>
       </div>
     </section>
@@ -123,7 +123,7 @@ onScopeDispose(() => controller?.abort());
     <button v-if="more" type="button" class="ce-button" :disabled="busy" @click="loadScenes()">{{ busy ? '正在读取…' : '加载更多场景' }}</button>
     <section v-if="scenes.length" class="ce-book-footer">
       <div class="ce-actions">
-        <a href="/scenes/new">新建场景</a>
+        <a :href="href('/scenes/new', { projectId: project.projectId, returnTo: href(recordHref('projects', project.projectId), { view: 'overview' }) })">新建场景</a>
         <a :href="href('/chapters/new', { projectId: project.projectId })">新建章节</a>
         <a :href="href('/chapters', { projectId: project.projectId })">安排章节与场景</a>
       </div>

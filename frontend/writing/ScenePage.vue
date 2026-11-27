@@ -32,6 +32,7 @@ import EvidenceLinks from './EvidenceLinks.vue';
 
 const props = defineProps<{ route: WritingRoute; url: URL }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
+const readerHref = props.url.pathname + props.url.search + props.url.hash;
 const passage = ref<InstanceType<typeof ManuscriptBody>>();
 const editor = ref<InstanceType<typeof DraftEditor>>();
 const modeKey = `sth:writing:mode:${props.url.pathname}@${props.url.searchParams.get('revision') ?? 'current'}`;
@@ -88,7 +89,7 @@ const { data, busy, error, reload } = useRead(async (signal) => {
     rememberManuscript({
       kind: 'scene',
       id: sceneId,
-      href: props.url.pathname + props.url.search,
+      href: readerHref,
       title: scene.title,
       sceneId,
     }, true);
@@ -142,7 +143,7 @@ function edit() {
   if (location.pathname !== props.url.pathname) {
     emit('navigate', href(recordHref('drafts', manuscript.value.draftId), {
       revision: manuscript.value.revision,
-      returnTo: props.url.pathname + props.url.search + props.url.hash,
+      returnTo: readerHref,
       ...selection.value,
       edit: editing.value ? undefined : '1',
     }));
@@ -170,7 +171,7 @@ function saved(draft: Draft) {
     kind: 'draft',
     id: draft.draftId,
     href: href(recordHref('drafts', draft.draftId), {
-      returnTo: props.url.pathname + props.url.search + props.url.hash,
+      returnTo: readerHref,
     }),
     title: draft.title,
     sceneId: draft.sceneId,
@@ -178,35 +179,30 @@ function saved(draft: Draft) {
 }
 function switchDraft(event: Event) {
   const key = (event.target as HTMLSelectElement).value;
-  const draft = data.value?.drafts.find((item) => draftKey(item) === key);
+  const adopted = data.value?.scene.adopted;
+  const draft = data.value?.drafts.find((item) => draftKey(item) === key) ??
+    (adopted && draftKey(adopted) === key ? adopted : undefined);
   if (draft)
     emit(
       'navigate',
       href(recordHref('drafts', draft.draftId), {
         revision: draft.revision,
-        returnTo: props.url.pathname + props.url.search,
+        returnTo: readerHref,
       }),
-    );
-  else if (data.value?.scene.adopted)
-    emit(
-      'navigate',
-      recordHref(
-        'drafts',
-        data.value.scene.adopted.draftId,
-        data.value.scene.adopted.revision,
-      ),
     );
 }
 function switchVersion(event: Event) {
   if (data.value)
     emit(
       'navigate',
-      recordHref(
-        'scenes',
-        data.value.scene.sceneId,
-        Number((event.target as HTMLSelectElement).value),
-      ),
+      versionHref(Number((event.target as HTMLSelectElement).value)),
     );
+}
+function versionHref(revision?: number) {
+  return href(props.url.pathname, {
+    revision,
+    returnTo: props.url.searchParams.get('returnTo'),
+  });
 }
 </script>
 <template>
@@ -247,7 +243,7 @@ function switchVersion(event: Event) {
           href(recordHref('scenes', data.scene.sceneId), {
             action: 'compare',
             revision: revisionParam(url.searchParams),
-            returnTo: url.pathname + url.search,
+            returnTo: readerHref,
           })
         "
         >对照候选稿</a
@@ -278,7 +274,7 @@ function switchVersion(event: Event) {
       >
       <a
         v-if="url.searchParams.has('revision')"
-        :href="recordHref('scenes', data.scene.sceneId)"
+        :href="versionHref()"
         >查看当前版本</a
       >
       <a
@@ -406,7 +402,7 @@ function switchVersion(event: Event) {
           <li v-for="draft in data.drafts" :key="draft.draftId">
             <div>
               <h3>
-                <a :href="recordHref('drafts', draft.draftId)">{{
+                <a :href="href(recordHref('drafts', draft.draftId), { returnTo: readerHref })">{{
                   draft.title
                 }}</a>
               </h3>
@@ -561,7 +557,7 @@ function switchVersion(event: Event) {
       <ul class="wr-history">
         <li v-for="item in data.revisions" :key="item.revision">
           <a
-            :href="recordHref('scenes', item.sceneId, item.revision)"
+            :href="versionHref(item.revision)"
             :aria-current="
               item.revision === data.scene.revision ? 'page' : undefined
             "

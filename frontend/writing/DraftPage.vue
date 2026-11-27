@@ -116,6 +116,9 @@ async function saved(draft: Draft) {
   data.value = {
     ...data.value,
     draft,
+    drafts: data.value.drafts.map((item) =>
+      item.draftId === draft.draftId ? draft : item,
+    ),
     revisions: [
       draft,
       ...data.value.revisions.filter(
@@ -232,7 +235,7 @@ function cite(kind: 'character' | 'event') {
           href(recordHref('scenes', data.scene.sceneId), {
             action: 'compare',
             left: draftKey(data.draft),
-            returnTo: url.pathname + url.search,
+            returnTo: url.pathname + url.search + url.hash,
           })
         "
         >对照候选稿</a

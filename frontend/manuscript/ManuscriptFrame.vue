@@ -43,7 +43,10 @@ function setPane(pane: Pane) {
   wideLibrary.value = pane === 'library';
   focus.value = false;
   const entry = { ...history.state, manuscriptPane: pane };
-  if (pane !== history.state?.manuscriptPane) history.pushState(entry, '', location.href);
+  if (pane !== history.state?.manuscriptPane) {
+    if (compact.value) history.pushState(entry, '', location.href);
+    else history.replaceState(entry, '', location.href);
+  }
   void nextTick(() => {
     const target = root.value?.querySelector<HTMLElement>(pane === 'editor' ? '#main' : `.manuscript-${pane}`);
     target?.setAttribute('tabindex', '-1');
@@ -51,11 +54,17 @@ function setPane(pane: Pane) {
   });
 }
 
-watch(() => props.url, (url, previous) => {
+watch([() => props.url, compact], ([url], [previous]) => {
   if (url.href !== previous?.href) first.value = undefined;
   const saved = history.state?.manuscriptPane;
   activePane.value = ['library', 'sheets', 'editor'].includes(saved) ? saved : defaultPane(url);
-  wideLibrary.value = activePane.value === 'library' && saved === 'library';
+  // Compact collections do not mount the preview reader. Normalize an editor
+  // pane saved on a wider screen so resizing, Back and reload remain usable.
+  if (compact.value && collectionRoute(url) && activePane.value === 'editor') {
+    activePane.value = defaultPane(url);
+    history.replaceState({ ...history.state, manuscriptPane: activePane.value }, '', location.href);
+  }
+  wideLibrary.value = activePane.value === 'library';
   if (collectionRoute(url)) focus.value = false;
 }, { immediate: true });
 

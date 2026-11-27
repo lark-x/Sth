@@ -3,6 +3,7 @@ import type { Diary, Project } from '../workspace/api.ts';
 import { all, href, read, recordHref } from '../workspace/api.ts';
 import { revisionParam } from '../writing/api.ts';
 import { loadRecentManuscripts } from './recent.ts';
+import { collectionRoute } from './routes.ts';
 
 export type { Project };
 export interface LibraryChapter {
@@ -135,6 +136,24 @@ export function isLibraryCollection(url: URL): boolean {
   return /^\/(projects|create|diaries)\/?$/.test(url.pathname)
     || /^\/projects\/(?!new\/?$)[^/]+\/?$/.test(url.pathname)
     || (/^\/workspace\/?$/.test(url.pathname) && url.searchParams.get('tab') === 'recent');
+}
+
+export function libraryCollectionTitle(url: URL, projects: Project[], chapters: LibraryChapter[]): string | undefined {
+  if (!collectionRoute(url)) return;
+  if (/^\/(projects|create)\/?$/.test(url.pathname)) return '资料库 · Sth';
+  if (/^\/diaries\/?$/.test(url.pathname)) return '日记 · Sth';
+  if (/^\/workspace\/?$/.test(url.pathname)) return '最近写过 · Sth';
+  let projectId: string | undefined;
+  try { projectId = routeId(url.pathname, 'projects'); } catch { return '作品 · Sth'; }
+  const project = projects.find(item => item.projectId === projectId);
+  const projectTitle = project?.title ?? '作品';
+  if (url.searchParams.get('shelf') === 'unplaced') return `未编入章节 · ${projectTitle} · Sth`;
+  const chapterId = url.searchParams.get('chapterId');
+  if (chapterId) {
+    const chapter = chapters.find(item => item.chapterId === chapterId && item.projectId === projectId);
+    return `${chapter?.title ?? '章节'} · ${projectTitle} · Sth`;
+  }
+  return `${projectTitle} · Sth`;
 }
 
 export const projectShelfHref = (projectId: string, chapterId?: string) =>

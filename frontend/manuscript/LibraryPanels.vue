@@ -6,7 +6,7 @@ import { all, href, message, recordHref } from '../workspace/api.ts';
 import { retain, savedText } from '../workspace/useSubmission.ts';
 import { ApiError } from '../api.ts';
 import {
-  chapterOrder, isLibraryCollection, libraryCollectionHref, librarySheetHref, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
+  chapterOrder, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
   resolveLibraryContext, shelfKey, unplacedShelfHref,
 } from './library-data.ts';
 import type { LibraryChapter, LibraryContext, LibrarySheet, Project, RecentManuscript } from './library-data.ts';
@@ -40,6 +40,20 @@ let treeLoad: Promise<void> = Promise.resolve();
 const activeProjectId = computed(() => context.value.projectId);
 const activeProject = computed(() => projects.value.find(project => project.projectId === activeProjectId.value));
 const activeChapter = computed(() => chapters.value.find(chapter => chapter.chapterId === context.value.chapterId));
+const collectionTitle = computed(() => libraryCollectionTitle(props.url, projects.value, chapters.value));
+function updateCollectionTitle() {
+  if (collectionTitle.value && document.title !== collectionTitle.value) document.title = collectionTitle.value;
+}
+// Preview readers also set document.title after their asynchronous loads. The
+// collection owns the tab until an author actually opens a manuscript URL.
+const titleObserver = new MutationObserver(updateCollectionTitle);
+watch(collectionTitle, value => {
+  titleObserver.disconnect();
+  if (!value) return;
+  updateCollectionTitle();
+  const titleElement = document.querySelector('title');
+  if (titleElement) titleObserver.observe(titleElement, { childList: true, characterData: true, subtree: true });
+}, { immediate: true });
 const visibleSheets = computed(() => orderedSheets(sheets.value, context.value, chapters.value)
   .filter(sheet => matchesSheet(sheet, query.value, chapters.value)));
 const selectedSheet = computed(() => visibleSheets.value.find(sheet => sheet.id === selectedId.value)
@@ -64,7 +78,11 @@ const emptyText = computed(() => context.value.shelf === 'recent' ? '打开一�
     : context.value.shelf === 'unplaced' ? '尚未编入章节的场景会显示在这里。'
       : context.value.chapterId ? '这个章节还没有场景。' : '作品还没有编入章节的场景。');
 const createLink = computed(() => context.value.shelf === 'diaries' ? '/diaries/new'
-  : context.value.shelf === 'recent' ? '/workspace?tab=continue' : '/scenes/new');
+  : context.value.shelf === 'recent' ? '/workspace?tab=continue'
+    : activeProjectId.value ? href('/scenes/new', {
+      projectId: activeProjectId.value, chapterId: context.value.chapterId,
+      returnTo: libraryCollectionHref(context.value, selectedSheet.value?.id) ?? managementReturn.value,
+    }) : '/scenes/new');
 const createLabel = computed(() => context.value.shelf === 'diaries' ? '写日记'
   : context.value.shelf === 'recent' ? '开始写作' : '新建场景');
 
@@ -252,6 +270,7 @@ onMounted(() => {
   window.addEventListener('sth:manuscripts-changed', recentChanged);
 });
 onScopeDispose(() => {
+  titleObserver.disconnect();
   treeController?.abort();
   controller?.abort();
   clearTimeout(countTimer);
@@ -357,7 +376,7 @@ onScopeDispose(() => {
         <li v-for="sheet in visibleSheets" :key="sheet.key">
           <a class="library-sheet" :href="sheetHref(sheet)" :aria-current="selected(sheet) ? 'page' : undefined" @click="rememberSelection(sheet)">
             <span class="library-sheet-title">{{ sheet.title }}</span>
-            <span class="library-sheet-preview" :class="{ 'library-preview-empty': !sheet.preview }">{{ sheet.preview || (sheet.unavailable ? '打开文稿查看内容' : '还没有正文，进入场景开始写作。') }}</span>
+            <span class="library-sheet-preview" :class="{ 'library-preview-empty': !sheet.preview }">{{ sheet.preview || (sheet.unavailable ? '打开文稿查看内容' : '打开场景查看候选稿或开始写作。') }}</span>
             <span class="library-sheet-meta">
               <time v-if="sheet.diaryDate" :datetime="sheet.diaryDate">{{ sheet.diaryDate }}</time>
               <span v-else>{{ sheetMeta(sheet) }}</span>

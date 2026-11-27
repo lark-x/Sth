@@ -343,6 +343,152 @@ test('library panels use real operations with stable manuscript rows and preview
   });
 });
 
+test('collection navigation keeps its title and a usable pane across preview, history and resizing', { timeout: 120_000 }, async t => {
+  const { origin, invoke } = await fixture(t, { actualShell: true });
+  const project = await invoke('project.create', { title: '窗外的返航声' });
+  const chapter = await invoke('chapter.create', { projectId: project.projectId, title: '灯还亮着' });
+  const scene = await invoke('scene.create', { title: '留下一盏灯' });
+  const draft = await invoke('draft.create', { sceneId: scene.sceneId, sceneRevision: 1, title: '候选正文', body: '窗外传来两记短音。' });
+  await invoke('chapter.arrange', { chapterId: chapter.chapterId, expectedRevision: 1, sceneIds: [scene.sceneId] });
+  await invoke('diary.create', { title: '渡口日记', body: '今夜灯还亮着。', diaryDate: '2026-11-27' });
+  let page;
+  const projectPath = `/projects/${project.projectId}`;
+  const chapterPath = `${projectPath}?chapterId=${chapter.chapterId}`;
+  async function assertTitle(expected) {
+    await page.waitForFunction(expected => document.title === expected, expected);
+  }
+
+  await t.test('collection titles survive asynchronous previews, search, history and mobile entry from home', async t => {
+    page = await openBrowser(t, origin, { width: 390, height: 844 });
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await page.getByRole('link', { name: '创作', exact: true }).click();
+      await settled(page);
+      await assertTitle('资料库 · Sth');
+      const collections = [
+        [projectPath, `${project.title} · Sth`],
+        [chapterPath, `${chapter.title} · ${project.title} · Sth`],
+        [`${projectPath}?shelf=unplaced`, `未编入章节 · ${project.title} · Sth`],
+        ['/diaries', '日记 · Sth'],
+        ['/workspace?tab=recent', '最近写过 · Sth'],
+        ['/projects', '资料库 · Sth'],
+      ];
+      for (const [path, expected] of collections) {
+        await page.goto(path);
+        await settled(page);
+        if (width >= 640 && await rows(page).count()) await page.locator('.wr-reader-toolbar,.diary-toolbar').first().waitFor();
+        await assertTitle(expected);
+        // An asynchronously completing reader must not name the collection tab.
+        await page.evaluate(() => { document.title = '迟到的预览标题 · Sth'; });
+        await assertTitle(expected);
+      }
+      await page.goto(chapterPath);
+      await settled(page);
+      await page.getByRole('searchbox', { name: '搜索文稿', exact: true }).fill('一盏灯');
+      await rows(page).first().click();
+      await page.locator('.wr-reader-toolbar').waitFor();
+      await assertTitle(`${scene.title} · Sth`);
+      await page.goBack();
+      await settled(page);
+      await assertTitle(`${chapter.title} · ${project.title} · Sth`);
+      assert.equal(await page.getByRole('searchbox', { name: '搜索文稿', exact: true }).inputValue(), '一盏灯');
+      await page.goForward();
+      await page.locator('.wr-reader-toolbar').waitFor();
+      await assertTitle(`${scene.title} · Sth`);
+    }
+  });
+
+  await t.test('tablet library matches the selected pane and shrinking a collection preview never becomes blank', async t => {
+    page = await openBrowser(t, origin, { width: 820, height: 900 });
+    for (const [path, phonePane] of [['/create', 'library'], [projectPath, 'sheets']]) {
+      await page.setViewportSize({ width: 820, height: 900 });
+      await page.goto(path);
+      await settled(page);
+      const toggle = page.locator('.wr-reader-toolbar').getByRole('button', { name: '资料库', exact: true });
+      await toggle.waitFor();
+      if (path === '/create') assert.ok(await page.locator('.manuscript-library').isVisible());
+      if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+      await toggle.click();
+      assert.equal(await page.locator('.manuscript-frame').getAttribute('data-pane'), 'editor');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.locator(`.manuscript-frame[data-pane="${phonePane}"]`).waitFor();
+      assert.ok(await page.locator(`.manuscript-${phonePane}`).isVisible());
+      assert.equal(await page.locator('.ms-editor').isVisible(), false);
+      assert.equal(await page.evaluate(() => history.state.manuscriptPane), phonePane);
+      await page.reload();
+      await settled(page);
+      assert.ok(await page.locator(`.manuscript-${phonePane}`).isVisible());
+      await assertFitsViewport(page);
+    }
+  });
+
+  await t.test('a scene with an unadopted candidate uses neutral list copy without candidate fan-out', async t => {
+    page = await openBrowser(t, origin, { width: 390, height: 844 });
+    let candidateReads = 0;
+    const onRequest = request => {
+      if (request.url().endsWith('/api/web/invoke') && request.postDataJSON()?.operationId === 'draft.list') candidateReads++;
+    };
+    page.on('request', onRequest);
+    try {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(projectPath);
+      await settled(page);
+      assert.doesNotMatch(await rows(page).first().innerText(), /还没有正文/);
+      assert.match(await rows(page).first().innerText(), /打开场景查看候选稿或开始写作/);
+      assert.equal(candidateReads, 0, 'mobile collection summaries need no per-scene draft.list reads');
+      await rows(page).first().click();
+      await page.locator('.wr-reader-toolbar').waitFor();
+      await page.getByText(draft.body, { exact: true }).waitFor();
+    } finally { page.off('request', onRequest); }
+  });
+
+  await t.test('tablet library toggles reuse history while mobile drill-down remains reversible', async t => {
+    page = await openBrowser(t, origin, { width: 768, height: 900 });
+    for (const width of [768, 820]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/create');
+      await settled(page);
+      await page.locator('.library-project-link').filter({ hasText: project.title }).click();
+      await settled(page);
+      const toggle = page.locator('.wr-reader-toolbar').getByRole('button', { name: '资料库', exact: true });
+      await toggle.waitFor();
+      const length = await page.evaluate(() => history.length);
+      await toggle.click();
+      assert.ok(await page.locator('.manuscript-library').isVisible());
+      await toggle.click();
+      assert.equal(await page.locator('.manuscript-library').isVisible(), false);
+      assert.equal(await page.evaluate(() => history.length), length, 'tablet view toggles must not add history entries');
+      assert.equal(new URL(page.url()).pathname, projectPath);
+      await page.goBack();
+      await page.waitForURL(url => url.pathname === '/create');
+      await settled(page);
+      assert.ok(await page.locator('.manuscript-library').isVisible());
+      await page.goForward();
+      await settled(page);
+      assert.ok(await page.locator('.manuscript-sheets').isVisible());
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(chapterPath);
+    await settled(page);
+    await rows(page).first().click();
+    await page.locator('.wr-reader-toolbar').getByRole('button', { name: '返回文稿列表', exact: true }).click();
+    await page.locator('.manuscript-frame[data-pane="sheets"]').waitFor();
+    const manuscript = page.url();
+    await page.locator('.ms-sheets-bar').getByRole('button', { name: '资料库', exact: true }).click();
+    await page.goBack();
+    await page.locator('.manuscript-frame[data-pane="sheets"]').waitFor();
+    assert.equal(page.url(), manuscript);
+    await page.goBack();
+    await page.locator('.manuscript-frame[data-pane="editor"]').waitFor();
+    assert.equal(page.url(), manuscript);
+    await page.goBack();
+    await page.waitForURL(url => url.pathname + url.search === chapterPath);
+    await settled(page);
+    assert.ok(await page.locator('.manuscript-sheets').isVisible());
+  });
+});
+
 test('library refreshes stale creation caches once and isolates rapid project changes', { timeout: 120_000 }, async t => {
   const { origin, invoke } = await fixture(t);
   const page = await openBrowser(t, origin, { width: 1280, height: 900 });
@@ -364,7 +510,10 @@ test('library refreshes stale creation caches once and isolates rapid project ch
     assert.equal(await page.locator('.library-sheets-heading h2').textContent(), project.title);
     assert.equal(treeReads(), reads + 1, 'one fresh tree read confirms the newly created work');
     const empty = page.locator('.library-empty');
-    assert.equal(await empty.getByRole('link', { name: '新建场景', exact: true }).getAttribute('href'), '/scenes/new');
+    const create = new URL(await empty.getByRole('link', { name: '新建场景', exact: true }).getAttribute('href'), origin);
+    assert.equal(create.pathname, '/scenes/new');
+    assert.equal(create.searchParams.get('projectId'), project.projectId);
+    assert.equal(create.searchParams.get('returnTo'), `/projects/${project.projectId}`);
     assert.equal(await empty.getByRole('link', { name: '继续写', exact: true }).getAttribute('href'), '/workspace?tab=continue');
     assert.equal(await empty.getByRole('link', { name: '新建章节', exact: true }).getAttribute('href'), `/chapters/new?projectId=${project.projectId}`);
     assert.deepEqual(await page.evaluate(() => window.libraryEvents), [{ kind: 'preview', href: '' }]);

@@ -129,6 +129,60 @@ test('collapsed diary evidence retains exact source revisions, backlinks and saf
   assert.equal((await api.invoke('diary.read', { noteId: diary.noteId })).revision, 2);
 });
 
+test('typing at the end of a long diary keeps the caret in view and saves once', { timeout: 40_000 }, async t => {
+  const origin = await startService(t);
+  const api = await pairPersonalClient(origin);
+  const page = await openBrowser(t, origin, { width: 1440, height: 1000 });
+  const body = Array.from({ length: 30 }, (_, index) =>
+    `第${index + 1}段。今天从河岸回来的时候，我想起去年秋天的那一次散步。窗前的书还翻在昨天那页，远处最后一班渡船正离开码头。`).join('\n\n');
+  let writes = 0;
+  await page.route('**/api/web/invoke', async route => {
+    if (route.request().postDataJSON().operationId === 'diary.revise') {
+      writes++;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    await route.continue();
+  });
+  for (const [width, height] of [[1440, 1000], [390, 844]]) {
+    const diary = await api.invoke('diary.create', { title: `文末续写 ${width}`, body, diaryDate: '2026-11-27' });
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    await page.getByRole('link', { name: `继续写 ${diary.title}`, exact: true }).click();
+    await ready(page);
+    const editor = field(page, '正文');
+    await editor.focus();
+    await editor.press('Control+End');
+    const before = await page.evaluate(() => scrollY);
+    assert.ok(before > height, '从实际滚动到的长文末尾续写');
+    await capture(page, `typing-${width}-before`);
+    await page.keyboard.type('继续把今天写完。', { delay: 15 });
+    await page.keyboard.press('Enter');
+    await page.keyboard.insertText('另起一行。');
+    const after = await page.evaluate(() => scrollY);
+    assert.ok(Math.abs(after - before) < 100, `输入和换行不把页面从 ${before} 跳到 ${after}`);
+    await capture(page, `typing-${width}-after`);
+    assert.equal(await editor.inputValue(), `${body}继续把今天写完。\n另起一行。`);
+    const beforeWrites = writes;
+    await page.getByRole('button', { name: '依据与修订', exact: true }).click();
+    await page.getByRole('button', { name: '回到正文', exact: true }).click();
+    assert.equal(writes, beforeWrites, '展开依据和返回正文没有提交表单');
+    const position = await editor.evaluate(element => ({
+      focused: document.activeElement === element, caret: element.selectionStart, top: scrollY,
+    }));
+    assert.equal(position.focused, true);
+    assert.equal(position.caret, (await editor.inputValue()).length);
+    assert.ok(Math.abs(position.top - after) <= 2, '依据往返保持刚刚续写的位置');
+    await page.getByRole('button', { name: '保存修改', exact: true }).dblclick();
+    await page.waitForURL(`${origin}${diary.href}`);
+    await ready(page);
+    assert.equal(writes, beforeWrites + 1, '双击保存只发起一次写入');
+    const saved = await api.invoke('diary.read', { noteId: diary.noteId });
+    assert.equal(saved.revision, 2);
+    assert.equal(saved.body, `${body}继续把今天写完。\n另起一行。`);
+    await assertFitsViewport(page);
+  }
+});
+
 test('home resumes a specific edited candidate and an edited diary with an older diary date', { timeout: 30_000 }, async t => {
   const origin = await startService(t);
   const api = await pairPersonalClient(origin);
@@ -170,7 +224,7 @@ test('home resumes a specific edited candidate and an edited diary with an older
     await assertFitsViewport(page);
     await capture(page, `manuscript-home-${width}`);
   }
-  await recent.getByRole('link', { name: `继续编辑候选稿 ${draft.title}`, exact: true }).click();
+  await recent.getByRole('link', { name: `打开候选稿 ${draft.title}`, exact: true }).click();
   await page.waitForURL(`${origin}${draft.href}`);
   await page.getByRole('heading', { level: 1, name: draft.title, exact: true }).waitFor();
 });

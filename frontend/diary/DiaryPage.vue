@@ -26,8 +26,12 @@ let bodyObserver: ResizeObserver | undefined;
 function fitBody() {
   const textarea = bodyEditor.value;
   if (!textarea) return;
+  const top = window.scrollY;
+  const left = window.scrollX;
   textarea.style.height = 'auto';
   textarea.style.height = `${textarea.scrollHeight + 2}px`;
+  // Measuring a long entry briefly shrinks the document and clamps its scroll.
+  window.scrollTo({ top, left, behavior: 'instant' });
 }
 
 function syncEvidenceState() {

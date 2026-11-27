@@ -24,6 +24,21 @@ const active = computed(() => currentNavigation(url.value));
 const isHome = computed(() => url.value.pathname === '/' && !url.value.searchParams.has('projectId'));
 const workbench = computed(() => manuscriptRoute(url.value));
 
+function visibleContent() {
+  const main = document.getElementById('main');
+  if (main?.getClientRects().length) return main;
+  return Array.from(document.querySelectorAll<HTMLElement>('.manuscript-library, .manuscript-sheets'))
+    .find(pane => pane.getClientRects().length > 0);
+}
+
+function skipToContent(event: MouseEvent) {
+  const target = visibleContent();
+  if (!target || target.id === 'main') return;
+  event.preventDefault();
+  target.setAttribute('tabindex', '-1');
+  target.focus();
+}
+
 async function updateRoute(focus = true) {
   focusNextMount = focus;
   routeError.value = false;
@@ -32,8 +47,8 @@ async function updateRoute(focus = true) {
   await nextTick();
   if (focus) {
     window.scrollTo({ top: 0, behavior: 'instant' });
-    const main = document.getElementById('main');
-    const target = main?.querySelector<HTMLElement>('h1') ?? main;
+    const main = visibleContent();
+    const target = main?.querySelector<HTMLElement>('h1, h2') ?? main;
     target?.setAttribute('tabindex', '-1');
     target?.focus({ preventScroll: true });
   }
@@ -41,7 +56,7 @@ async function updateRoute(focus = true) {
 
 function focusPage() {
   if (!focusNextMount) return;
-  const heading = document.querySelector<HTMLElement>('#main h1');
+  const heading = visibleContent()?.querySelector<HTMLElement>('h1, h2');
   if (!heading) return;
   heading.setAttribute('tabindex', '-1');
   heading.focus({ preventScroll: true });
@@ -96,7 +111,7 @@ onErrorCaptured(() => {
 
 <template>
   <div class="sth-app" @click="onClick" @sth:replace="onReplace" @sth:announce="onAnnounce">
-    <a class="skip-link" href="#main">跳到正文</a>
+    <a class="skip-link" href="#main" @click="skipToContent">跳到正文</a>
     <ManuscriptFrame v-if="workbench && !routeError" :url="url" @navigate="navigate" v-slot="{ editorUrl }">
       <RouteDocument :key="editorUrl.href + ':' + refreshVersion" :url="editorUrl" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
     </ManuscriptFrame>

@@ -6,6 +6,7 @@ import type { DiarySummary } from './api.ts';
 import type { RouteEvents } from './routes.ts';
 import { quickBody, quickCall } from './quick-note.ts';
 import { loadRecentManuscripts, recentManuscripts, rememberManuscript } from './manuscript/recent.ts';
+import type { RecentManuscript } from './manuscript/recent.ts';
 
 const emit = defineEmits<RouteEvents>();
 const diaries = ref<DiarySummary[]>([]);
@@ -86,6 +87,11 @@ function editedAt(timestamp: number) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(timestamp);
 }
 
+function opensEditor(manuscript: RecentManuscript) {
+  const params = new URL(manuscript.href, location.origin).searchParams;
+  return manuscript.kind !== 'scene' && params.get('edit') === '1' && !params.has('revision');
+}
+
 onMounted(() => {
   document.title = '首页 · Sth';
   refreshManuscripts();
@@ -129,13 +135,13 @@ onBeforeUnmount(() => {
       <div v-else-if="manuscriptsError" class="sth-list-state"><p class="sth-error" role="alert">{{ manuscriptsError }}</p><button type="button" class="button secondary" @click="refreshManuscripts">重新读取最近编辑</button></div>
       <ul v-else-if="manuscripts.length" class="sth-manuscript-list" role="list">
         <li v-for="manuscript in manuscripts.slice(0, 6)" :key="`${manuscript.kind}:${manuscript.id}`">
-          <a :href="manuscript.href" class="sth-manuscript-link" :aria-label="`继续编辑${manuscriptKinds[manuscript.kind]} ${manuscript.title}`">
+          <a :href="manuscript.href" class="sth-manuscript-link" :aria-label="`${opensEditor(manuscript) ? '继续编辑' : '打开'}${manuscriptKinds[manuscript.kind]} ${manuscript.title}`">
             <AppIcon :name="manuscript.kind === 'diary' ? 'diary' : 'pen'" />
             <div class="sth-manuscript-copy">
               <h3>{{ manuscript.title }}</h3>
               <p>{{ manuscriptKinds[manuscript.kind] }}<span> · </span><time v-if="manuscript.updatedAt" :datetime="new Date(manuscript.updatedAt).toISOString()">{{ editedAt(manuscript.updatedAt) }}</time><span v-else>历史文稿</span></p>
             </div>
-            <span class="sth-manuscript-continue">接着写<AppIcon name="arrow" /></span>
+            <span class="sth-manuscript-continue">{{ opensEditor(manuscript) ? '接着写' : '打开' }}<AppIcon name="arrow" /></span>
           </a>
         </li>
       </ul>

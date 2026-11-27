@@ -137,6 +137,124 @@ async function candidate(page, title, body) {
   return idAt(page);
 }
 
+test('contextual scene creation preserves work and chapter placement', { timeout: 90_000 }, async t => {
+  const { origin, invoke } = await fixture(t);
+  const viewport = { width: 768, height: 1024 };
+
+  await t.test('chapter creation preselects the saved scene and retries a concurrent arrangement safely', async t => {
+    const project = await invoke('project.create', { title: '章节内新建验收' });
+    const chapter = await invoke('chapter.create', { projectId: project.projectId, title: '已有章节' });
+    const existing = await invoke('scene.create', { title: '原有的一幕' });
+    await invoke('chapter.arrange', { chapterId: chapter.chapterId, expectedRevision: 1, sceneIds: [existing.sceneId] });
+    const source = `/projects/${project.projectId}?chapterId=${chapter.chapterId}`;
+    const page = await open(t, origin, source, viewport);
+    const create = page.locator('.library-sheets-footer').getByRole('link', { name: '新建场景', exact: true });
+    await create.waitFor();
+    const address = new URL(await create.getAttribute('href'), origin);
+    assert.equal(address.searchParams.get('chapterId'), chapter.chapterId);
+    let creations = 0;
+    page.on('request', request => {
+      if (request.url().endsWith('/api/web/invoke') && request.postDataJSON()?.operationId === 'scene.create') creations++;
+    });
+    await create.click();
+    await expectHeading(page, '新建场景');
+    await field(page, '标题').fill('本章新增的一幕');
+    await click(page, '新建场景');
+    await expectHeading(page, '编排章节');
+    const created = (await invoke('scene.list', { title: '本章新增的一幕' })).items[0];
+    assert.ok(created);
+    assert.equal(created.placement, undefined);
+    assert.deepEqual(await field(page, '场景').evaluateAll(elements => elements.map(element => element.value)), [existing.sceneId, created.sceneId]);
+    await capture(page, 'placement-tablet-preselected');
+
+    const concurrent = await invoke('scene.create', { title: '另一位作者刚编入的一幕' });
+    await invoke('chapter.arrange', { chapterId: chapter.chapterId, expectedRevision: 2, sceneIds: [concurrent.sceneId, existing.sceneId] });
+    await click(page, '编排章节');
+    await page.locator('#workspace-editor [role="alert"]:visible').waitFor();
+    assert.deepEqual((await invoke('chapter.read', { chapterId: chapter.chapterId })).scenes.map(scene => scene.sceneId), [concurrent.sceneId, existing.sceneId]);
+    assert.equal((await invoke('scene.read', { sceneId: created.sceneId })).placement, undefined);
+    await link(page, '查看已保存场景').waitFor();
+    await capture(page, 'placement-tablet-conflict');
+    await click(page, '重新读取最新章节并保留新场景');
+    await field(page, '场景').nth(2).waitFor();
+    assert.deepEqual(await field(page, '场景').evaluateAll(elements => elements.map(element => element.value)), [concurrent.sceneId, existing.sceneId, created.sceneId]);
+    await click(page, '编排章节');
+    await page.waitForURL(url => url.pathname === `/projects/${project.projectId}` && url.searchParams.get('selected') === created.sceneId);
+    await expectHeading(page, created.title);
+    assert.equal(new URL(page.url()).searchParams.get('chapterId'), chapter.chapterId);
+    assert.deepEqual((await invoke('chapter.read', { chapterId: chapter.chapterId })).scenes.map(scene => scene.sceneId), [concurrent.sceneId, existing.sceneId, created.sceneId]);
+    assert.equal((await invoke('scene.read', { sceneId: created.sceneId })).placement.projectId, project.projectId);
+    assert.equal(creations, 1, 'arrangement retries never create another scene');
+    await assertFitsViewport(page);
+    await capture(page, 'placement-tablet-returned');
+  });
+
+  await t.test('an empty work explains chapter creation and finishes in the same work', async t => {
+    const project = await invoke('project.create', { title: '空书新建验收' });
+    const page = await open(t, origin, `/projects/${project.projectId}`, viewport);
+    await page.locator('.library-empty').getByRole('link', { name: '新建场景', exact: true }).click();
+    await expectHeading(page, '新建场景');
+    await field(page, '标题').fill('空书的第一幕');
+    await click(page, '新建场景');
+    await expectHeading(page, '选择章节');
+    await page.getByRole('status').filter({ hasText: '本书还没有章节，请先新建章节' }).waitFor();
+    const created = (await invoke('scene.list', { title: '空书的第一幕' })).items[0];
+    assert.deepEqual((await invoke('scene.list', { projectId: project.projectId })).items, []);
+    await capture(page, 'placement-empty-work-next-step');
+    await link(page, '新建章节').click();
+    await expectHeading(page, '新建章节');
+    await field(page, '标题').fill('从第一章开始');
+    await click(page, '新建章节');
+    await expectHeading(page, '编排章节');
+    assert.equal(await field(page, '场景').inputValue(), created.sceneId);
+    await click(page, '编排章节');
+    await page.waitForURL(url => url.pathname === `/projects/${project.projectId}` && url.searchParams.get('selected') === created.sceneId);
+    await expectHeading(page, created.title);
+    assert.equal((await invoke('scene.read', { sceneId: created.sceneId })).placement.projectId, project.projectId);
+    await capture(page, 'placement-empty-work-returned');
+
+    await goto(page, `/projects/${project.projectId}?view=overview`);
+    const overviewCreate = page.locator('.ce-book-footer').getByRole('link', { name: '新建场景', exact: true });
+    await overviewCreate.waitFor();
+    const address = new URL(await overviewCreate.getAttribute('href'), origin);
+    assert.equal(address.searchParams.get('projectId'), project.projectId);
+    assert.equal(address.searchParams.get('returnTo'), `/projects/${project.projectId}?view=overview`);
+  });
+
+  await t.test('the work overview selects a chapter and returns to the same overview on a phone', async t => {
+    const project = await invoke('project.create', { title: '作品总览新建验收' });
+    const chapter = await invoke('chapter.create', { projectId: project.projectId, title: '总览中的一章' });
+    const source = `/projects/${project.projectId}?view=overview`;
+    const page = await open(t, origin, source, phone);
+    await page.getByRole('region', { name: '开始写作品', exact: true }).getByRole('link', { name: '新建场景', exact: true }).click();
+    await expectHeading(page, '新建场景');
+    await field(page, '标题').fill('总览里新建的一幕');
+    await click(page, '新建场景');
+    await expectHeading(page, '选择章节');
+    const created = (await invoke('scene.list', { title: '总览里新建的一幕' })).items[0];
+    assert.equal(created.placement, undefined);
+    await link(page, '放入「总览中的一章」').click();
+    await expectHeading(page, '编排章节');
+    assert.equal(await field(page, '场景').inputValue(), created.sceneId);
+    await click(page, '编排章节');
+    await page.waitForURL(url => url.pathname === `/projects/${project.projectId}` && url.searchParams.get('view') === 'overview');
+    await page.locator('.ce-book').getByRole('link', { name: created.title, exact: true }).waitFor();
+    assert.equal((await invoke('scene.read', { sceneId: created.sceneId })).placement.chapterId, chapter.chapterId);
+    await assertFitsViewport(page);
+    await capture(page, 'placement-phone-overview-returned');
+  });
+
+  await t.test('creation without work context keeps its existing independent-scene flow', async t => {
+    const page = await open(t, origin, '/scenes/new', phone);
+    await expectHeading(page, '新建场景');
+    await field(page, '标题').fill('保持独立创建');
+    await click(page, '新建场景');
+    await expectHeading(page, '保持独立创建');
+    assert.equal(new URL(page.url()).search, '');
+    assert.equal((await invoke('scene.read', { sceneId: idAt(page) })).placement, undefined);
+  });
+});
+
 test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t => {
   const { origin, invoke } = await fixture(t);
   for (const [name, viewport] of [['desktop', desktop], ['phone', phone]]) {

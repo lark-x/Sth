@@ -159,6 +159,21 @@ test('home shows empty and recoverable error states and preserves an unsaved cap
   await assertFitsViewport(page);
 });
 
+test('phone keyboard navigation reaches the visible library and sheet list', async t => {
+  const origin = await startService(t);
+  const page = await openBrowser(t, origin, { width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('link', { name: '创作', exact: true }).click();
+  for (const pane of ['.manuscript-library', '.manuscript-sheets']) {
+    await page.locator(pane).waitFor({ state: 'visible' });
+    await page.locator('.skip-link').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator(pane).evaluate(element => element === document.activeElement), true);
+    assert.equal(new URL(page.url()).hash, '');
+    if (pane === '.manuscript-library') await page.getByRole('link', { name: '日记', exact: true }).click();
+  }
+});
+
 test('shell dispatches exact migration routes and keeps unknown subroutes on the legacy fallback', { timeout: 30_000 }, async t => {
   const origin = await startService(t);
   const page = await openBrowser(t, origin, { width: 1280, height: 900 });
