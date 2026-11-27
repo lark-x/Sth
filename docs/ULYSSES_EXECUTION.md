@@ -13,7 +13,7 @@
 
 | 任务 | 模型 | 允许写入范围 | 依赖与接口影响 | 状态与验收 |
 | --- | --- | --- | --- | --- |
-| A0 架构基线 | ChatflowsAI GPT-6.2 Sol xhigh | `scripts/architecture-baseline.mjs`、`docs/ARCHITECTURE.md`、`docs/architecture-baseline.json` | 全量首次扫描；不改业务契约 | `b06e3bd` 后按独立审查修复测试覆盖、登记库与依赖列号，提交 `e0cb151` 复审中 |
+| A0 架构基线 | ChatflowsAI GPT-6.2 Sol xhigh | `scripts/architecture-baseline.mjs`、`docs/ARCHITECTURE.md`、`docs/architecture-baseline.json` | 全量首次扫描；不改业务契约 | `e0cb151` 三项独立复审关闭，已集成并重新生成主树快照，静态一致性检查通过 |
 | P1 可点击样稿 | Xingchi GPT-6.1 Sol xhigh | `docs/prototypes/ulysses-workspace*` | 已确认的灰白视觉；仅模拟数据，无正式业务写入 | `8f2f82a`；四宽度双引擎 8/8，主代理已查看重点截图，独立审查中 |
 | N1 返回原稿原段 | ChatflowsAI GPT-6.2 Sol xhigh | `frontend/App.vue`、新增 `frontend/navigation-state.ts` 与 `frontend/tests/navigation-state.test.mjs` | 先复现，基线记录完成再改正式代码；保持 URL 与 history 中既有状态 | 进行中；先记录旧版与选段返回失败，再验证浏览器 Back 和显式返回路径 |
 | M0 布局与性能基线 | 当前主模型 | `scripts/measure-authoring.mjs`、`scripts/manuscript-fixture.mjs` 的快照度量方法、本执行记录与忽略目录下证据 | 复用现有隔离 fixture；不新增产品依赖 | 采集和负例完成，独立复审通过；修正错误页、列表完整性、采样窗口和产物来源 |
@@ -63,10 +63,14 @@
 
 ## 已交回的实现批次
 
+- 主树已集成 N1、T1 和 A0。N1 单独集成 17/17；加入 T1 后导航与固定依据联合 18/18（其中依据父用例实际包含七组视口），构建与类型检查通过。此结果只覆盖当前批次，不代表后续页面与交付完成。
+- A0 修正后的改造前快照已归档为 `frontend/.artifacts/ulysses-baseline/architecture-before.json`，其提交来源为 `e0cb151`。本次主树增量 281→284 文件、908→915 依赖边、运行循环仍为 1；116 项 operation、业务库及登记库指纹保持一致。新增阅读回位提升行为稳定性，同时增加局部状态代码，不能以代码量减少评估其收益。
 - N1 `a01a0d1`：原六条返回路径偏移 96px，修正后为 0px；独立复跑 16/16。复审发现辅助页刷新后返回入口未初始化，已用真实刷新红测复现并补一行初始化，17/17 通过，独立 Reviewer 已关闭该项，待主线集成验收。
 - C1 `38eba5a`：章内创建直接归章再进入写稿，保存响应丢失沿原回执恢复，章序冲突先读最新再明确提交。作者聚焦与完整回归通过，独立审查待完成。原作者尝试启动 Reviewer 返回 `Model provider chatflowsai not found`；主代理已按指定路由重新安排独立审查，没有更换模型。
 - T1 `5e8e654`：root 是共享主题权威，Vue 壳和 frame 复用；首页 390px 顶栏从 133px 到约 108px，首条近期文稿底部从约 703px 到 573px。独立审查中。依据宽度从旧 clamp 改为已约定 min 后，主代理用 `0ffbfe3` 更新唯一精确宽度断言，实际 frame 七组路径通过，未删除或放宽其他断言。
 - P1 `8f2f82a`：普通 320/390px 样稿正文盒约 223px，默认中文实测为 Noto Sans SC；样稿的模拟保存不能计为正式产品完成。
+- P1 独立审查发现保持依据打开切版未更新、样例编辑污染旧修订、角色页返回缺少目标阅读状态，已退回作者修正；视觉方向认可不等于样稿交互全部通过。
+- C1 独立审查发现回执 404 后离页仍补发归章，以及移章后的回链与并发选章恢复两项问题，暂缓集成，交原所有者修复与补测。
 
 ## 治理变更记录要求
 
