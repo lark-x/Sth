@@ -2,6 +2,8 @@
 
 Sth 是个人创作工作区。网页、Hermes 私聊和 MCP 客户端共用一套操作，可以管理作品、角色和日记，引用资料、选用场景稿件、套用写作模板，以及委托模型和批量出图。
 
+当前开发按[六阶段迭代计划](docs/WORKSPACE_ITERATION.md)推进，包括 Hermes 安装、Codex 与 Antigravity 接续、Vue 桌面与手机网页、作者决定和升级验收。
+
 基础工作区的交付范围见 [AI 原生创作工作区四阶段计划](docs/AI_NATIVE_ROADMAP.md)。从原文研究、归纳判断到按视角写故事的模块边界和场景验收见 [资料研究与故事创作计划](docs/RESEARCH_STORY_PLAN.md)。
 
 重做网页或接入另一位 AI 时，先读 [前端与后端契约](docs/FRONTEND_BACKEND.md)。运行 `node scripts/contract.ts` 可以离线查看当前构建的操作索引，附加操作 ID 可读取准确的输入和输出结构。
