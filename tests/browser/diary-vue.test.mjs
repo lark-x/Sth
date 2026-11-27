@@ -589,7 +589,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     assert.deepEqual(calls[0], calls[1]);
   });
 
-  await t.test('phone reload during an in-flight write recovers its pre-dispatch receipt without a second create', async t => {
+  await t.test('phone reload during an in-flight write recovers its pre-dispatch receipt without a second create', { timeout: 15_000 }, async t => {
     const project = await invoke('project.create', { title: '刷新中保存' });
     const href = `/diaries/new?projectId=${project.projectId}`;
     const page = await open(t, origin, href);
@@ -610,7 +610,9 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
       await gate;
       await route.fulfill({ response }).catch(() => {});
     });
+    const request = page.waitForRequest(request => request.url().endsWith('/api/web/invoke') && request.postDataJSON()?.operationId === 'diary.create');
     await click(page, '保存日记');
+    await request;
     await pending;
     assert.deepEqual(JSON.parse(await storedDraft(page, href)).call, calls[0]);
     await reload(page);
@@ -665,7 +667,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
   });
 
   for (const outcome of ['success', 'uncertain']) {
-    await t.test(`an older module copy's ${outcome} response cannot overwrite or clear a newer phone draft`, async t => {
+    await t.test(`an older module copy's ${outcome} response cannot overwrite or clear a newer phone draft`, { timeout: 15_000 }, async t => {
       const page = await open(t, origin);
       await fill(page, { ...first, title: `旧副本 ${outcome}` });
       await page.evaluate(async key => {
@@ -686,7 +688,9 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
         if (outcome === 'uncertain') return route.fulfill({ status: 503, json: { code: 'temporarily_unavailable' } }).catch(() => {});
         return route.fulfill({ response }).catch(() => {});
       });
+      const request = page.waitForRequest(request => request.url().endsWith('/api/web/invoke') && request.postDataJSON()?.operationId === 'diary.create');
       await click(page, '保存日记');
+      await request;
       await pending;
       await navigate(page, '/__diary_outside');
       const newer = { ...revised, title: `新副本 ${outcome}` };

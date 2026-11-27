@@ -4,12 +4,14 @@
 
 ## 普通用户三步
 
-收到 `sth-hermes-1.2.0-win32-x64.zip` 后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
+本轮验收的 Windows x64 分发包为 `sth-hermes-1.2.0-ae25ac0-win32-x64.zip`，SHA-256 为 `3f5f04ac4a9c348c9f762903ca96486a06b990c57ecb3bf74981fc8b051abe8e`。收到后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
+
+当前安装包保存在私有仓库的发布草稿中。仓库维护者可以下载附件；GitHub 已核对的文件大小为 87,680,673 字节。[Windows x64 发布草稿](https://github.com/lark-x/Sth/releases/tag/untagged-2694e3744cb41a4950b1)
 
 1. 安装。在解压后含 `plugin.yaml` 的目录中运行。
 
    ```powershell
-   Set-Location C:/Downloads/sth-hermes-1.2.0-win32-x64
+   Set-Location C:/Downloads/sth-hermes-1.2.0-ae25ac0-win32-x64
    hermes plugins install ([System.Uri](Get-Location).Path).AbsoluteUri --enable --force
    ```
 
