@@ -1,6 +1,31 @@
-import { ApiError, entity, invoke, retryWrite, revision, step } from './api.js';
+import { ApiError, entity, invoke, read, revision, step } from './api.js';
 import { workspaceError } from './workspace-actions.js';
 import { button, esc, link, path } from './ui.js';
+
+async function placementReceipt({ operationId, stepId }, signal) {
+  const timeout = AbortSignal.timeout(15000);
+  let response;
+  try {
+    response = await fetch('/api/web/receipt', {
+      method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operationId, stepId }), cache: 'no-store', mode: 'same-origin',
+      credentials: 'same-origin', redirect: 'error', signal: AbortSignal.any([signal, timeout]),
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new ApiError(0, '', timeout.aborted ? '请求超时。' : '无法连接本地服务。');
+  }
+  const data = await response.json().catch(() => null);
+  signal.throwIfAborted();
+  if (!response.ok) {
+    const details = typeof data?.error === 'object' ? data.error : data;
+    const code = details?.code ?? data?.error;
+    if (response.status === 404 && code === 'operation_receipt_not_found') return;
+    throw new ApiError(response.status, code, details?.message);
+  }
+  if (!data?.result || typeof data.result !== 'object') throw new ApiError(502, '', '服务未返回操作回执。');
+  return data.result;
+}
 
 export function bindScenePlacement(ctx, { key, form, view = form, start, scene, chapterId, readChapter, complete, backTo }) {
   const storageKey = `sth:scene-placement:${key}`;
@@ -12,6 +37,7 @@ export function bindScenePlacement(ctx, { key, form, view = form, start, scene, 
   const active = () => ctx.active() && location.href === ctx.url.href;
   const currentScene = () => saved.scene ?? scene;
   const targetChapter = () => saved.chapterId ?? chapterId;
+  const placedChoice = !start && Boolean(scene?.placement);
 
   function persist(changes) {
     const next = { ...saved, ...changes };
@@ -30,7 +56,7 @@ export function bindScenePlacement(ctx, { key, form, view = form, start, scene, 
 
   function render(focus = false) {
     const current = currentScene();
-    const continuing = Boolean(saved.call || saved.scene || saved.chapterId);
+    const continuing = !placedChoice && Boolean(saved.call || saved.scene || saved.chapterId);
     const review = saved.review && !reviewedChapter;
     const message = error || (saved.call && !busy ? '上次提交的结果待确认。' : '');
     view.hidden = continuing;
@@ -54,8 +80,13 @@ export function bindScenePlacement(ctx, { key, form, view = form, start, scene, 
   }
 
   async function write(call, recover = false) {
-    if (!recover) persist({ call });
-    return recover ? retryWrite(call) : invoke(call);
+    if (!recover) {
+      persist({ call });
+      return invoke(call);
+    }
+    const result = await placementReceipt(call, ctx.signal);
+    if (!result && active()) return invoke(call, ctx.signal);
+    return result;
   }
 
   async function append() {
@@ -69,13 +100,25 @@ export function bindScenePlacement(ctx, { key, form, view = form, start, scene, 
     }));
   }
 
+  function finish(placement) {
+    if (!active()) return;
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {
+      error = '无法清除提交进度。请恢复浏览器的本地存储后重试。';
+      return;
+    }
+    complete(currentScene(), placement);
+  }
+
   async function run(event) {
     if (busy || !active()) return;
     busy = true;
     error = '';
+    let checkingPlacement = false;
     try {
-      const pending = saved.call;
-      const call = pending ?? (event ? start(event) : undefined);
+      const pending = placedChoice ? undefined : saved.call;
+      const call = pending ?? (event ? start?.(event) : undefined);
       if (call) {
         const { operationId } = call;
         const resultPromise = write(call, Boolean(pending));
@@ -89,20 +132,25 @@ export function bindScenePlacement(ctx, { key, form, view = form, start, scene, 
           persist({ chapterId: entity(result, 'chapterId').chapterId, call: undefined });
         }
       } else if (event?.submitter?.value) {
-        persist({ chapterId: event.submitter.value });
+        if (!placedChoice) persist({ chapterId: event.submitter.value });
       } else if (event) return;
-      if (targetChapter() && call?.operationId !== 'chapter.arrange') {
+      if (targetChapter() && !placedChoice && call?.operationId !== 'chapter.arrange') {
         render();
         await append();
       }
       if (!active()) return;
-      sessionStorage.removeItem(storageKey);
-      complete(currentScene(), targetChapter());
+      checkingPlacement = Boolean(targetChapter() || placedChoice);
+      const latest = checkingPlacement ? await read('scene.read', { sceneId: currentScene().sceneId }, ctx.signal) : undefined;
+      finish(latest?.placement);
     } catch (reason) {
       if (!active()) return;
+      if (reason.code === 'chapter_scene_already_placed') {
+        finish();
+        return;
+      }
       const conflict = reason.code === 'chapter_revision_conflict';
       error = conflict ? '章节顺序已有更新。请读取当前章序后再归入。' : workspaceError(reason);
-      if (reason instanceof ApiError && !reason.uncertain && reason.code !== 'placement_storage_unavailable' &&
+      if (!checkingPlacement && reason instanceof ApiError && !reason.uncertain && reason.code !== 'placement_storage_unavailable' &&
         ![401, 403, 429].includes(reason.status)) {
         try { persist({ call: undefined, review: conflict || saved.review }); } catch { }
       }

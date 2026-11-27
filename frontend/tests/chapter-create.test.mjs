@@ -254,3 +254,155 @@ test('automatic arrangement appends after every page of a long chapter', { timeo
   assert.equal(first.sceneCount, 56);
   assert.deepEqual([...first.scenes, ...second.scenes].map(scene => scene.sceneId), [...existing, sceneId]);
 });
+
+test('C1 review P1: leaving while a missing arrange receipt is pending pauses the replay', { timeout: 30_000 }, async t => {
+  const { origin, invoke } = await fixture(t);
+  const project = await invoke('project.create', { title: '回执期间离页' });
+  const chapter = await invoke('chapter.create', { projectId: project.projectId, title: '待归入的一章' });
+  const source = `/projects/${project.projectId}?chapterId=${chapter.chapterId}`;
+  const page = await openCreation(t, origin, source);
+  const formUrl = page.url();
+  const arrangements = [];
+  await page.route('**/api/web/invoke', async route => {
+    const call = route.request().postDataJSON();
+    if (call.operationId !== 'chapter.arrange') return route.continue();
+    arrangements.push(call);
+    if (arrangements.length === 1) return route.abort('failed');
+    return route.continue();
+  });
+
+  const title = '停在回执检查的场景';
+  await submitScene(page, title);
+  await page.getByRole('alert').waitFor();
+  const [scene] = (await invoke('scene.list', { title })).items;
+  assert.ok(scene);
+  assert.equal((await invoke('chapter.read', { chapterId: chapter.chapterId })).sceneCount, 0);
+  await page.reload();
+
+  const fetched = Promise.withResolvers();
+  const release = Promise.withResolvers();
+  await page.route('**/api/web/receipt', async route => {
+    const response = await route.fetch();
+    fetched.resolve({ status: response.status(), call: route.request().postDataJSON(), body: await response.json() });
+    await release.promise;
+    await route.fulfill({ response });
+  }, { times: 1 });
+  const retry = button(page, '重试同一次提交');
+  await retry.click();
+  try {
+    const receipt = await fetched.promise;
+    assert.equal(receipt.status, 404);
+    assert.equal(receipt.body.code, 'operation_receipt_not_found');
+    assert.deepEqual(receipt.call, { operationId: 'chapter.arrange', stepId: arrangements[0].stepId });
+    await link(page.getByRole('region', { name: '场景创建进度' }), '返回').click();
+    await page.waitForURL(url => url.pathname === `/projects/${project.projectId}`);
+  } finally {
+    release.resolve();
+  }
+
+  const replay = await page.waitForResponse(response => response.url().endsWith('/api/web/invoke') &&
+    response.request().postDataJSON()?.operationId === 'chapter.arrange', { timeout: 1000 }).catch(error => {
+    if (error.name !== 'TimeoutError') throw error;
+    return null;
+  });
+  if (replay) await replay.finished();
+  const paused = await invoke('chapter.read', { chapterId: chapter.chapterId });
+  assert.equal(paused.sceneCount, 0, 'receipt recovery sent an arrange write after the author left');
+  assert.equal(arrangements.length, 1);
+  assert.equal(new URL(page.url()).pathname, `/projects/${project.projectId}`);
+
+  await page.goto(formUrl);
+  await retry.click();
+  assert.equal((await editor(page)).get('sceneId'), scene.sceneId);
+  assert.deepEqual(arrangements, [arrangements[0], arrangements[0]]);
+  assert.deepEqual((await invoke('scene.list', { title })).items.map(item => item.sceneId), [scene.sceneId]);
+});
+
+test('C1 review P2: a recovered arrange receipt follows the scene to its new chapter', { timeout: 30_000 }, async t => {
+  const { origin, invoke } = await fixture(t);
+  const project = await invoke('project.create', { title: '归章后移动' });
+  const first = await invoke('chapter.create', { projectId: project.projectId, title: '原归属' });
+  const second = await invoke('chapter.create', { projectId: project.projectId, title: '实际归属' });
+  const page = await openCreation(t, origin, `/projects/${project.projectId}?chapterId=${first.chapterId}`);
+  const arrangements = [];
+  await page.route('**/api/web/invoke', async route => {
+    const call = route.request().postDataJSON();
+    if (call.operationId !== 'chapter.arrange') return route.continue();
+    arrangements.push(call);
+    if (arrangements.length !== 1) return route.continue();
+    assert.equal((await route.fetch()).status(), 200);
+    await route.abort('failed');
+  });
+
+  const title = '在写作开始前移章';
+  await submitScene(page, title);
+  await page.getByRole('alert').waitFor();
+  const [scene] = (await invoke('scene.list', { title })).items;
+  assert.equal(scene.placement.chapterId, first.chapterId);
+  await invoke('chapter.arrange', { chapterId: first.chapterId, expectedRevision: 2, sceneIds: [] });
+  await invoke('chapter.arrange', { chapterId: second.chapterId, expectedRevision: 1, sceneIds: [scene.sceneId] });
+
+  await page.reload();
+  await button(page, '重试同一次提交').click();
+  const params = await editor(page);
+  assert.equal(params.get('sceneId'), scene.sceneId);
+  assert.equal(params.get('revision'), String(scene.revision));
+  const destination = new URL(params.get('returnTo'), origin);
+  assert.equal(destination.pathname, `/projects/${project.projectId}`);
+  assert.equal(destination.searchParams.get('chapterId'), second.chapterId);
+  assert.equal(destination.searchParams.get('selected'), scene.sceneId);
+  assert.equal(arrangements.length, 1);
+  assert.equal((await invoke('chapter.read', { chapterId: first.chapterId })).sceneCount, 0);
+  assert.deepEqual((await invoke('chapter.read', { chapterId: second.chapterId })).scenes.map(item => item.sceneId), [scene.sceneId]);
+});
+
+test('C1 review P2: the losing chapter choice reveals the winning placement after reload', { timeout: 30_000 }, async t => {
+  const { origin, invoke } = await fixture(t);
+  const project = await invoke('project.create', { title: '两端选章' });
+  const first = await invoke('chapter.create', { projectId: project.projectId, title: '本端所选' });
+  const second = await invoke('chapter.create', { projectId: project.projectId, title: '另一端已归入' });
+  const page = await openCreation(t, origin, `/scenes/new?projectId=${project.projectId}`);
+  const title = '只归入一章的场景';
+  await submitScene(page, title);
+  await heading(page, '选择章节').waitFor();
+  const sceneId = new URL(page.url()).searchParams.get('addSceneId');
+  const arrangements = [];
+  await page.route('**/api/web/invoke', async route => {
+    const call = route.request().postDataJSON();
+    if (call.operationId !== 'chapter.arrange') return route.continue();
+    arrangements.push(call);
+    if (arrangements.length === 1) {
+      await invoke('chapter.arrange', { chapterId: second.chapterId, expectedRevision: 1, sceneIds: [sceneId] });
+    }
+    return route.continue();
+  });
+
+  const conflict = page.waitForResponse(response => response.url().endsWith('/api/web/invoke') &&
+    response.request().postDataJSON()?.operationId === 'chapter.arrange');
+  await button(page, `放入「${first.title}」`).click();
+  const response = await conflict;
+  assert.equal(response.status(), 409);
+  assert.equal((await response.json()).code, 'chapter_scene_already_placed');
+  const resume = button(page, '继续写作');
+  await page.getByRole('alert').or(resume).first().waitFor();
+  assert.equal(await resume.isVisible(), true, `冲突后应显示继续写作，当前页面为 ${await page.locator('main').innerText()}`);
+  await page.reload();
+  await heading(page, '选择章节').waitFor();
+
+  assert.equal(await resume.isVisible(), true, `恢复时应显示继续写作，当前页面为 ${await page.locator('main').innerText()}`);
+  assert.equal(await button(page, `放入「${first.title}」`).isVisible(), false);
+  await page.getByRole('status').filter({ hasText: second.title }).waitFor();
+  await capture(page, 'review-winning-chapter');
+  await resume.click();
+  const params = await editor(page);
+  assert.equal(params.get('sceneId'), sceneId);
+  assert.equal(new URL(params.get('returnTo'), origin).searchParams.get('chapterId'), second.chapterId);
+  const body = '作者从保留的同一场景开始写作。';
+  await field(page, '正文').fill(body);
+  await page.reload();
+  assert.equal(await field(page, '正文').inputValue(), body);
+  assert.equal(arrangements.length, 1);
+  assert.deepEqual((await invoke('scene.list', { title })).items.map(scene => scene.sceneId), [sceneId]);
+  assert.equal((await invoke('chapter.read', { chapterId: first.chapterId })).sceneCount, 0);
+  assert.deepEqual((await invoke('chapter.read', { chapterId: second.chapterId })).scenes.map(item => item.sceneId), [sceneId]);
+});

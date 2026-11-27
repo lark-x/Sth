@@ -68,15 +68,17 @@ function placementOptions(ctx, catalog, projectId, backTo = placementReturn(ctx,
     const chapter = await read('chapter.read', { chapterId }, ctx.signal);
     if (chapter.projectId !== projectId) throw new ApiError(400, 'chapter_project_mismatch', '章节不属于当前作品。');
     return { ...chapter, scenes: await chapterScenes(catalog, chapter, ctx.signal) };
-  }, complete(scene, chapterId) {
-    if (!chapterId) {
-      ctx.saved(query('/chapters', { projectId, addSceneId: scene.sceneId, returnTo }), '场景已保存，请选择章节');
+  }, complete(scene, placement) {
+    if (!placement) {
+      const chooser = query('/chapters', { projectId, addSceneId: scene.sceneId, returnTo });
+      if (new URL(chooser, ctx.url).href === ctx.url.href) ctx.refresh();
+      else ctx.saved(chooser, '场景已保存');
       return;
     }
-    const destination = new URL(returnTo, ctx.url);
+    const destination = new URL(placement.projectId === projectId ? returnTo : path('projects', placement.projectId), ctx.url);
     if (destination.searchParams.get('view') !== 'overview') {
       destination.searchParams.delete('shelf');
-      destination.searchParams.set('chapterId', chapterId);
+      destination.searchParams.set('chapterId', placement.chapterId);
       destination.searchParams.set('selected', scene.sceneId);
     }
     ctx.saved(query('/drafts/new', { sceneId: scene.sceneId, revision: scene.revision,
@@ -95,20 +97,22 @@ async function chooseSceneChapter(ctx, catalog) {
   if (!project) throw new ApiError(404, 'project_not_found', '找不到这个作品。');
   const returnTo = placementReturn(ctx, projectId);
   const context = { projectId, addSceneId: sceneId, returnTo };
-  const description = scene.placement ? '此场景已有章节归属。'
+  const placedChapter = scene.placement && (chapters.find(chapter => chapter.chapterId === scene.placement.chapterId) ??
+    await read('chapter.read', { chapterId: scene.placement.chapterId, limit: 1 }, ctx.signal));
+  const description = placedChapter ? `场景已归入「${placedChapter.title}」。`
     : chapters.length ? '请选择场景要归入的章节。' : '本书还没有章节，请先新建章节。';
   if (!ctx.show('选择章节', `${heading('选择章节', { trail: back(returnTo, '返回作品'), meta: `<p class="masthead-meta">${esc(project.title)} · ${esc(scene.title)}</p>` })}
     <div id="placement-choices"><p role="status">${esc(description)}</p>
     <form aria-label="选择目标章节" method="post" action="/api/web/invoke">${errorBox}
-      <ul class="workspace-notes">${chapters.filter(chapter => !scene.placement || scene.placement.chapterId === chapter.chapterId)
-        .map(chapter => `<li><button class="button secondary" type="submit" value="${esc(chapter.chapterId)}">${esc(scene.placement ? '继续写作' : `放入「${chapter.title}」`)}</button></li>`).join('')}</ul>
+      <ul class="workspace-notes">${(placedChapter ? [placedChapter] : chapters)
+        .map(chapter => `<li><button class="button secondary" type="submit" value="${esc(chapter.chapterId)}">${esc(placedChapter ? '继续写作' : `放入「${chapter.title}」`)}</button></li>`).join('')}</ul>
     </form>
     <div class="actions">${scene.placement ? '' : link(query('/chapters/new', context), '新建章节', 'plus', 'primary')}
       ${link(query(path('scenes', sceneId), { returnTo: ctx.url.pathname + ctx.url.search }), '查看已保存场景', null, 'secondary')}
       ${link(returnTo, '返回作品', 'back', 'quiet')}</div></div>`)) return;
   const view = ctx.main.querySelector('#placement-choices');
   bindScenePlacement(ctx, { ...placementOptions(ctx, catalog, projectId), key: `choose:${projectId}:${sceneId}`,
-    view, form: view.querySelector('form'), scene, start: () => undefined });
+    view, form: view.querySelector('form'), scene });
 }
 
 async function listPage(ctx, catalog, domain) {
