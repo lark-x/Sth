@@ -27,11 +27,23 @@ function heading(page, name) {
   return page.getByRole('heading', { level: 1, name, exact: true });
 }
 
-function nav(page, name) {
-  return page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name, exact: true });
+async function openNavigation(page) {
+  if (page.viewportSize().width >= 640) return page;
+  await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '资料库', exact: true });
+  await dialog.waitFor();
+  return dialog;
 }
 
-const settings = page => page.getByRole('navigation', { name: /^(?:应用设置|工作区工具)$/ }).getByRole('link', { name: '设置', exact: true });
+async function nav(page, name) {
+  const navigation = await openNavigation(page);
+  await navigation.getByRole('navigation', { name: '主导航' }).getByRole('link', { name, exact: true }).click();
+}
+
+async function settings(page) {
+  const navigation = await openNavigation(page);
+  await navigation.getByRole('navigation', { name: /^(?:应用设置|工作区工具)$/ }).getByRole('link', { name: '设置', exact: true }).click();
+}
 
 async function showLibrary(page) {
   if (page.viewportSize().width >= 640) return;
@@ -45,13 +57,18 @@ async function showLibrary(page) {
 }
 
 async function home(page) {
-  if (await page.locator('.manuscript-frame').count()) await showLibrary(page);
+  if (await page.locator('.manuscript-frame').count()) {
+    await showLibrary(page);
+  } else if (page.viewportSize().width < 640) {
+    await nav(page, '首页');
+    return;
+  }
   await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
 }
 
 async function openProjects(page) {
   await home(page);
-  await nav(page, '创作').click();
+  await nav(page, '创作');
   await showLibrary(page);
 }
 
@@ -74,7 +91,7 @@ async function launch(t, viewport) {
 
 async function pairThroughUi(page, origin) {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin });
-  await settings(page).click();
+  await settings(page);
   const pairing = page.getByRole('region', { name: '配对码' });
   const [response] = await Promise.all([
     page.waitForResponse((response) => new URL(response.url()).pathname === '/api/web/connections/code' &&
@@ -91,7 +108,7 @@ async function pairThroughUi(page, origin) {
   const command = await page.evaluate(() => navigator.clipboard.readText());
   assert.equal(command, `sth personal connect ${code}`);
   const api = await pairPersonalClient(origin, command.split(' ').at(-1));
-  await nav(page, '日记').click();
+  await nav(page, '日记');
   return api;
 }
 
@@ -149,7 +166,7 @@ async function createScopedDiary(page, api, viewport) {
   assert.deepEqual(projects, [{ projectId, title }]);
 
   await home(page);
-  await nav(page, '角色').click();
+  await nav(page, '角色');
   await page.getByRole('link', { name: '新建角色', exact: true }).click();
   await page.getByRole('textbox', { name: '角色名称', exact: true }).fill(name);
   await projectField(page).selectOption({ label: title });
@@ -161,6 +178,7 @@ async function createScopedDiary(page, api, viewport) {
   assert.deepEqual(character, { characterId, name, authorName: name, persona, description: persona, entries: [], projectId,
     revision: 1, href: `/characters/${characterId}` });
 
+  await page.getByRole('region', { name: '角色详情', exact: true }).locator('summary').filter({ hasText: /^更多$/ }).click();
   await page.getByRole('link', { name: '写角色日记', exact: true }).click();
   await heading(page, '写日记').waitFor();
   await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
@@ -191,7 +209,14 @@ async function createScopedDiary(page, api, viewport) {
 for (const [name, viewport] of [['desktop', desktop], ['narrow', narrow]]) {
   test(`${name}: zero-project onboarding, personal diary edit, and project character diary`, { timeout }, async (t) => {
     const { page, origin } = await launch(t, viewport);
-    assert.deepEqual(await page.getByRole('navigation', { name: '主导航' }).getByRole('link').allTextContents(), ['日记', '创作', '角色', '资料', '任务']);
+    const navigation = await openNavigation(page);
+    assert.deepEqual(await navigation.getByRole('navigation', { name: '主导航' }).getByRole('link').allTextContents(),
+      viewport.width < 640 ? ['首页', '日记', '创作', '角色', '资料', '任务'] : ['日记', '创作', '角色', '资料', '任务']);
+    if (viewport.width < 640) {
+      assert.deepEqual(await navigation.getByRole('navigation', { name: '应用设置' }).getByRole('link').allTextContents(), ['设置']);
+      await navigation.getByRole('button', { name: '关闭', exact: true }).click();
+      await navigation.waitFor({ state: 'hidden' });
+    }
     await page.getByText('日记本还是空的', { exact: true }).waitFor();
     const api = await pairPersonalClient(origin);
     assert.deepEqual(await api.invoke('project.list', {}), { items: [] });
@@ -274,7 +299,7 @@ test('desktop: pairing command, stale diary edit recovery, and connection revoca
   assert.deepEqual(await expectDiaryPage(page, merged), identity);
   assert.deepEqual(await api.invoke('diary.read', { noteId }), { ...merged, ...identity, revision: 3 });
 
-  await settings(page).click();
+  await settings(page);
   await page.getByRole('button', { name: `撤销连接 ${clientName}`, exact: true }).click();
   await page.getByRole('dialog', { name: '撤销连接' }).getByRole('button', { name: '撤销连接', exact: true }).click();
   await page.getByText('已撤销', { exact: true }).waitFor();

@@ -292,6 +292,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       await toolLink(page, `返回${scene.title}`);
       await toolLink(page, '对照候选稿');
       await expectHeading(page, '对照候选稿');
+      await page.locator('summary').filter({ hasText: /^选择对照版本$/ }).click();
       assert.equal(await page.getByRole('combobox', { name: '左稿', exact: true }).inputValue(), `${left}@1`);
       assert.equal(await page.getByRole('combobox', { name: '右稿', exact: true }).inputValue(), `${right}@1`);
       assert.equal(await page.getByRole('article', { name: '左稿', exact: true }).locator('del').innerText(), '她在岸上停步。');
@@ -573,6 +574,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     await expectHeading(page, scene.title);
     await toolLink(page, '对照候选稿');
     await expectHeading(page, '对照候选稿');
+    await page.locator('summary').filter({ hasText: /^选择对照版本$/ }).click();
     assert.equal(await page.getByRole('combobox', { name: '左稿', exact: true }).locator('option').count(), 52);
     await page.getByRole('combobox', { name: '左稿', exact: true }).selectOption(`${draft.draftId}@1`);
     await page.getByRole('combobox', { name: '右稿', exact: true }).selectOption(`${draft.draftId}@52`);
