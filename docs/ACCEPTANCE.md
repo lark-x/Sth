@@ -2,9 +2,29 @@
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
 
-## 2026-11-28 · 前端视觉重新评审
+## 2026-11-28 · Ulysses 方向整合验收
 
-当前部署为 `23b2aca`。本日主要页面与依据开关抽查 24/24 通过，另有 7 项定向回归通过，手机白页、返回、长日记输入和章内新建的复测通过。证据保存在本机忽略目录 `frontend/.artifacts/smoke-20261128/`。
+本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。应用代码在 `91be384` 后保持一致，后续提交为测试和交付记录。部署与安装包的版本另行核对，不用本地源码代替运行版本。
+
+| 体验 | 正式页面截图 |
+| --- | --- |
+| 资料库、章节文稿列表、当前正文 | [1280px 三栏](ulysses-screens/desktop-chapter.png) |
+| 手机首屏读稿与依据 | [390px 读稿](ulysses-screens/phone-reading.png) · [原文与人物依据](ulysses-screens/phone-evidence.png) |
+| 窄屏书库、旧版选段、日记 | [WebKit 320px 章节](ulysses-screens/webkit-320-chapter.png) · [旧版选段](ulysses-screens/webkit-320-passage.png) · [日记](ulysses-screens/webkit-320-diary.png) |
+| 首页与辅助资料 | [390px 首页](ulysses-screens/phone-home.png) · [角色正文](ulysses-screens/phone-character.png) |
+| 同一样本前后对照 | [旧首页](ulysses-screens/before-phone-home.png) / [新首页](ulysses-screens/phone-home.png)；[旧读稿](ulysses-screens/before-phone-reading.png) / [新读稿](ulysses-screens/after-phone-reading.png) |
+
+以上为隔离样例；每张图片的原路径、阶段、源码与构建摘要在 [截图清单](ulysses-screens/manifest.json)。完整六组为 Chromium 1280/768/390/320 与 WebKit 390/320，每组 20 个场景，合计 120/120、349 张图。采集构建摘要 `8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505`，应用源码摘要 `588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14`；所有通过组的 `sourceStable`、`servedBuildStable` 均为 true。
+
+最终完整浏览器回归 222/222，文稿专项 154/154；核心 130 通过、1 条真实 ComfyUI 条件用例跳过；适配器 18 通过、3 条真实宿主启动/登录条件用例跳过。已安装 Hermes 的 CLI、合成 QQ/微信上下文及公共结果链接通过，不作为新一轮真人设备或真实模型验收。构建和类型检查通过。
+
+完整浏览器回归过程中发现旧菜单入口和旧预览标题断言不再对应正式界面；更新为实际展开菜单、精确选择行/正文/版本后，经独立审查通过。书库异步摘要测试改为等待准确 preview href。原业务、API、安全与版本断言保留，未增加超时、删除或跳过失败用例。最终全套日志为本机 `frontend/.artifacts/ulysses-baseline/final-{browser,manuscript}-accepted.log`，严格标题补验为 `chapter-create-reviewed-final.log`（10/10）。失败轮次也保留。
+
+请求量、首屏位置、包体及本机布局位移的前后变化见 [治理对照](ULYSSES_EXECUTION.md#最终整合的收益与代价)。真实 iOS、WKWebView、真人私聊及大库慢设备性能仍属于后续范围。
+
+## 2026-11-28 · 改造前的视觉重新评审
+
+当时部署为 `23b2aca`。本日主要页面与依据开关抽查 24/24 通过，另有 7 项定向回归通过，手机白页、返回、长日记输入和章内新建的复测通过。证据保存在本机忽略目录 `frontend/.artifacts/smoke-20261128/`。
 
 用户否定当前绿色主题及 Ulysses 参考的落实程度。对照官方界面与本日截图，当前三栏结构已有实现，配色、中文排版、文稿摘要、首屏层级和跨页风格仍未达标。前端视觉阶段重新开启。下方历史测试和截图记录继续作为对应版本的功能证据，新的完成度及交付要求见[重整计划](WORKSPACE_ITERATION.md#2026-11-28-完成度重新评定)与[设计约定](../DESIGN.md)。
 

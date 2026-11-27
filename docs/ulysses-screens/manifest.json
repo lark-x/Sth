@@ -1,0 +1,93 @@
+{
+  "format": 1,
+  "files": [
+    {
+      "file": "desktop-chapter.png",
+      "source": "screens-desktop-final/chromium-desktop-directory-03-chapter-selected.png",
+      "sha256": "304a33f9b76318f7033c5c1ffe2c4ccac2f2bdd4aa4e455681e9a80a6efa90c7",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "phone-reading.png",
+      "source": "screens-phone-final-retry/chromium-phone-focus-01-single-screen-reading.png",
+      "sha256": "82d1a745bce608ec65ee9628cd9d016071a699ff2ec772e1924678c77deaebdb",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "phone-evidence.png",
+      "source": "screens-phone-final-retry/chromium-phone-evidence-02-basis-expanded.png",
+      "sha256": "f78fdcc49e055f64f8740d344320e0e8dfae063ee1e919c93a13fd002d1ce62e",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "webkit-320-chapter.png",
+      "source": "screens-webkit-compact-final/webkit-compact-directory-03-chapter-selected.png",
+      "sha256": "7cd17f0d4c334fe3ce72cbab3b73ed6e23640401e7e8a5a913c06d7faebb51b7",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "webkit-320-passage.png",
+      "source": "screens-webkit-compact-final/webkit-compact-passage-01-assistant-link.png",
+      "sha256": "4235c0f885f51775bbe22f260cb328303cfc8669244eb16c0e078707400a8917",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "webkit-320-diary.png",
+      "source": "screens-webkit-compact-final/webkit-compact-diary-01-diary-read.png",
+      "sha256": "26c616ae5e947dbf7e09fbf1dbd47d4f82726a878fb37c4e2e22dbb76bb54632",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "phone-home.png",
+      "source": "metrics-after/390-home.png",
+      "sha256": "9a0ca05954512ad83ad83a9d9bf3175370a6828f686d3480933a05528ae88f7a",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "phone-character.png",
+      "source": "metrics-after/390-character.png",
+      "sha256": "bb2f59915753ab3298eee3efc04675ecbf77cb028aabb024d5a77825918b74d3",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "before-phone-home.png",
+      "source": "metrics-final/390-home.png",
+      "sha256": "cdc6330c2ee4ee995a22c6876dec5608c94d59faf6a13a4971458d553f1fe48d",
+      "stage": "before",
+      "sourceSha256": "68ee3075abeb12471e5b246ff7a5ddf3aff98c22065276df887bdb4934b818d0",
+      "bundleSha256": "d982905218c638e21159c268b1108b5ea51e944e0ce0c1d647343e3465fb0c22"
+    },
+    {
+      "file": "before-phone-reading.png",
+      "source": "metrics-final/390-oldDraft.png",
+      "sha256": "af8f76fa2d11d437e1779b434c5d291134212cd6ac2772346904d066cbdf9a48",
+      "stage": "before",
+      "sourceSha256": "68ee3075abeb12471e5b246ff7a5ddf3aff98c22065276df887bdb4934b818d0",
+      "bundleSha256": "d982905218c638e21159c268b1108b5ea51e944e0ce0c1d647343e3465fb0c22"
+    },
+    {
+      "file": "after-phone-reading.png",
+      "source": "metrics-after/390-oldDraft.png",
+      "sha256": "5c54979e0fac6d000088884a7336664a534088e62a32b6d5ec6d33ea306ae20a",
+      "stage": "after",
+      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
+      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    }
+  ]
+}
