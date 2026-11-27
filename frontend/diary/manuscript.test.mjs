@@ -116,6 +116,7 @@ test('collapsed diary evidence retains exact source revisions, backlinks and saf
   await page.goto(`${diary.href}?edit=1`);
   await ready(page);
   assert.equal(await field(page, '资料版本').inputValue(), '1');
+  await page.getByRole('button', { name: '依据与修订', exact: true }).click();
   await page.getByRole('button', { name: '移除资料引用 1', exact: true }).click();
   await page.getByRole('button', { name: '保存修改', exact: true }).click();
   await page.waitForURL(`${origin}${diary.href}`);

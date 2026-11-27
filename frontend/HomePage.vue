@@ -92,6 +92,23 @@ function opensEditor(manuscript: RecentManuscript) {
   return manuscript.kind !== 'scene' && params.get('edit') === '1' && !params.has('revision');
 }
 
+function manuscriptRevision(manuscript: RecentManuscript & { revision?: unknown }) {
+  const params = new URL(manuscript.href, location.origin).searchParams;
+  if (params.has('revision')) {
+    const revision = params.get('revision')!;
+    return /^[1-9]\d*$/.test(revision) && Number.isSafeInteger(Number(revision)) ? Number(revision) : undefined;
+  }
+  return typeof manuscript.revision === 'number' && Number.isSafeInteger(manuscript.revision) && manuscript.revision > 0
+    ? manuscript.revision : undefined;
+}
+
+function diaryExcerpt(manuscript: RecentManuscript) {
+  if (manuscript.kind !== 'diary') return undefined;
+  const revision = manuscriptRevision(manuscript);
+  const diary = diaries.value.find(diary => diary.noteId === manuscript.id && diary.revision === revision);
+  return diary ? excerpt(diary.body) : undefined;
+}
+
 onMounted(() => {
   document.title = '首页 · Sth';
   refreshManuscripts();
@@ -139,7 +156,8 @@ onBeforeUnmount(() => {
             <AppIcon :name="manuscript.kind === 'diary' ? 'diary' : 'pen'" />
             <div class="sth-manuscript-copy">
               <h3>{{ manuscript.title }}</h3>
-              <p>{{ manuscriptKinds[manuscript.kind] }}<span> · </span><time v-if="manuscript.updatedAt" :datetime="new Date(manuscript.updatedAt).toISOString()">{{ editedAt(manuscript.updatedAt) }}</time><span v-else>历史文稿</span></p>
+              <p v-if="diaryExcerpt(manuscript)" class="sth-manuscript-excerpt">{{ diaryExcerpt(manuscript) }}</p>
+              <p>{{ manuscriptKinds[manuscript.kind] }}<span v-if="manuscriptRevision(manuscript)"> · 第 {{ manuscriptRevision(manuscript) }} 版</span><span> · </span><time v-if="manuscript.updatedAt" :datetime="new Date(manuscript.updatedAt).toISOString()">{{ editedAt(manuscript.updatedAt) }}</time><span v-else>历史文稿</span></p>
             </div>
             <span class="sth-manuscript-continue">{{ opensEditor(manuscript) ? '接着写' : '打开' }}<AppIcon name="arrow" /></span>
           </a>
@@ -181,6 +199,7 @@ onBeforeUnmount(() => {
 .sth-manuscript-copy { flex: 1; min-inline-size: 0; }
 .sth-manuscript-copy h3 { overflow-wrap: anywhere; margin: 0; }
 .sth-manuscript-copy p { margin-block: .2rem 0; color: var(--muted); font-size: .8rem; }
+.sth-manuscript-copy .sth-manuscript-excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
 .sth-manuscript-copy time { font-variant-numeric: tabular-nums; }
 .sth-manuscript-continue { display: inline-flex; align-items: center; gap: .5rem; color: var(--accent); font-size: .85rem; white-space: nowrap; }
 .sth-manuscript-continue .icon { inline-size: 1rem; block-size: 1rem; }

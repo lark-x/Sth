@@ -91,6 +91,7 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
         <ManuscriptViewControls />
         <a v-if="!view" class="diary-back" :href="isEditing ? cancelHref : indexHref(record?.projectId)"
           @click="navigate($event, isEditing ? cancelHref : indexHref(record?.projectId))"><AppIcon name="back" />{{ isEditing && !isNew ? '返回日记' : isNew && url.searchParams.has('characterId') ? '返回角色' : '日记' }}</a>
+        <span v-if="record" class="diary-toolbar-revision">第 {{ draft?.record?.revision ?? record.revision }} 版</span>
         <span class="diary-toolbar-count">{{ characters.toLocaleString('zh-CN') }} 字</span>
         <div class="diary-toolbar-actions">
           <button ref="evidenceButton" type="button" class="diary-button diary-quiet" aria-controls="diary-supplement" :aria-expanded="evidenceOpen" @click="toggleEvidence">依据与修订</button>
@@ -179,7 +180,7 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
             <p v-if="contextError" class="diary-notice" role="alert">{{ contextError }}</p>
           </details>
 
-          <details v-if="canCite" class="diary-context" :open="draft.values.sourcePins.length > 0">
+          <details v-if="canCite" class="diary-context" :open="isNew && draft.values.sourcePins.length > 0">
             <summary>资料引用<span v-if="draft.values.sourcePins.length"> · {{ draft.values.sourcePins.length }} 处</span></summary>
             <p v-if="sourceError" class="diary-notice" role="alert">{{ sourceError }}</p>
             <SourcePins :pins="draft.values.sourcePins" :sources="sources" :disabled="locked" :max-items="properties?.sourcePins?.maxItems ?? 20"

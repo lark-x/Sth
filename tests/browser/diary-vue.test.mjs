@@ -315,6 +315,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     const page = await open(t, origin, href);
     const body = '手机上还没提交的补写。';
     await field(page, '正文').fill(body);
+    await click(page, '依据与修订');
     await field(page, '引用原文').fill(localPin.excerpt);
     await field(page, '原文起点').fill('3');
     await field(page, '原文终点').fill('6');
@@ -492,6 +493,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     assert.equal((await invoke('diary.read', { noteId })).sourcePins[0].revision, 1);
     await link(page, '编辑').click();
     await h1(page, '编辑日记').waitFor();
+    await click(page, '依据与修订');
     await page.getByRole('button', { name: '移除资料引用 1' }).click();
     await click(page, '保存修改');
     await expectDiary(page, { ...first, title: '有出处的夜航' });

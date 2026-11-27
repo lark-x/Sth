@@ -53,7 +53,9 @@ for (const [name, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     await page.getByRole('heading', { name: '记一句', exact: true }).waitFor();
     await page.getByRole('link', { name: '整理角色', exact: true }).click();
     await page.getByRole('heading', { name: '角色', exact: true }).waitFor();
+    if (viewport.width < 640) await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
     assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), 'page');
+    if (viewport.width < 640) await page.getByRole('button', { name: '关闭', exact: true }).click();
     await page.goBack();
     await page.getByRole('heading', { name: '记一句', exact: true }).waitFor();
     await page.getByLabel('此刻想记下什么', { exact: true }).fill('保存下来的一句话。');
@@ -163,6 +165,7 @@ test('phone keyboard navigation reaches the visible library and sheet list', asy
   const origin = await startService(t);
   const page = await openBrowser(t, origin, { width: 390, height: 844 });
   await page.goto('/');
+  await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
   await page.getByRole('link', { name: '创作', exact: true }).click();
   for (const pane of ['.manuscript-library', '.manuscript-sheets']) {
     await page.locator(pane).waitFor({ state: 'visible' });
