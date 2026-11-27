@@ -30,6 +30,153 @@ test('return links accept only an unambiguous same-origin writing reader URL', (
   assert.equal(manuscriptReturn(duplicate), undefined);
 });
 
+test('native reference hrefs retain manuscript return context when copied or opened in a new tab', { timeout: 90_000 }, async t => {
+  const output = resolve(artifacts, '..', 'native-hrefs');
+  await mkdir(output, { recursive: true });
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  const report = { status: 'running', build: workspace.capturedBuild, cases: [], pageErrors: [] };
+  let browser;
+  try {
+    const body = '🚢 第一处：末班十点。\n第二处：末班十点。';
+    const excerpt = '末班十点';
+    const start = body.lastIndexOf(excerpt);
+    const range = { start, end: start + excerpt.length };
+    const source = await workspace.invoke('source.create', { title: '新标签页原文', kind: 'excerpt', body });
+    await workspace.invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '新版改为末班九点。' });
+    const other = await workspace.invoke('character.create', { name: '另一位巡灯人', persona: '第一版设定。' });
+    await workspace.invoke('character.revise', { characterId: other.characterId, expectedRevision: 1, persona: '第二版设定。' });
+    const character = await workspace.invoke('character.create', { name: '原稿中的巡灯人', persona: '旧版巡灯设定。', entries: [
+      { label: '同行角色', blocks: [{ type: 'reference', kind: 'character', id: other.characterId, revision: 2 }] },
+      { label: '第二次通知', blocks: [{ type: 'reference', kind: 'source', id: source.sourceId, revision: 1, excerpt, range }] },
+    ] });
+    await workspace.invoke('character.revise', { characterId: character.characterId, expectedRevision: 1, persona: '新版巡灯设定。' });
+    const pin = { sourceId: source.sourceId, revision: 1, excerpt, range };
+    const diary = await workspace.invoke('diary.create', { title: '有位置的引用', diaryDate: '2026-11-28', body: '按第二处通知等船。', sourcePins: [pin] });
+    await workspace.invoke('diary.create', { title: '整条原文引用', diaryDate: '2026-11-28', body: '保留整条通知。', sourcePins: [{ sourceId: source.sourceId, revision: 1, excerpt }] });
+    const scene = await workspace.invoke('scene.create', { title: '原稿场景' });
+    const originalBody = '她在北岸听见第三声钟响，仍旧等在栈桥。';
+    const draft = await workspace.invoke('draft.create', { sceneId: scene.sceneId, sceneRevision: 1, title: '需返回的旧稿', body: originalBody });
+    await workspace.invoke('draft.revise', { draftId: draft.draftId, expectedRevision: 1, body: '新版已经登上渡船。' });
+    const original = `/drafts/${draft.draftId}?revision=1&start=3&end=12#passage-body`;
+    const contextual = path => {
+      const url = new URL(path, workspace.origin);
+      url.searchParams.set('returnTo', original);
+      return url.pathname + url.search + url.hash;
+    };
+    const characterPath = `/characters/${character.characterId}?revision=1`;
+    const sourcePath = `/sources/${source.sourceId}?revision=1&start=${range.start}&end=${range.end}`;
+    report.fixture = { characterPath, sourcePath, original, range, excerpt };
+    browser = await chromium.launch();
+    const context = await browser.newContext({ baseURL: workspace.origin, viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
+    context.on('page', page => {
+      page.setDefaultTimeout(10_000);
+      page.on('pageerror', error => report.pageErrors.push(error.message));
+    });
+    const page = await context.newPage();
+    for (const [name, fromDomain, from, label, targetDomain, target, mode] of [
+      ['character-reference', 'character', characterPath, '角色 · 第 2 版', 'character', `/characters/${other.characterId}?revision=2`, 'control'],
+      ['character-source-range', 'character', characterPath, '资料 · 第 1 版', 'source', sourcePath, 'copied'],
+      ['source-original-range', 'source', sourcePath, `原文位置 ${range.start}–${range.end}`, 'source', sourcePath, 'middle'],
+      ['source-original-record', 'source', sourcePath, '原文 · 第 1 版', 'source', `/sources/${source.sourceId}?revision=1`, 'copied'],
+      ['source-character-evidence', 'source', sourcePath, '原稿中的巡灯人 · 第 1 版 · 第二次通知', 'character', characterPath, 'control'],
+    ]) {
+      await t.test(name, async () => {
+        await page.goto(contextual(from));
+        await settled(page, fromDomain);
+        if (fromDomain === 'source') await expand(page, '引用这条资料的内容');
+        const anchor = link(page, label);
+        const copiedHref = await anchor.getAttribute('href');
+        const destination = new URL(copiedHref, workspace.origin);
+        assert.deepEqual(destination.searchParams.getAll('returnTo'), [original], 'the href itself contains exactly one validated return target');
+        assert.equal(destination.href, new URL(contextual(target), workspace.origin).href, 'revision and source range remain exact');
+        const record = { name, mode, from: page.url(), href: copiedHref };
+        report.cases.push(record);
+        let opened;
+        try {
+          if (mode === 'copied') {
+            opened = await context.newPage();
+            await opened.goto(destination.href);
+          } else {
+            [opened] = await Promise.all([context.waitForEvent('page'), anchor.click(mode === 'middle' ? { button: 'middle' } : { modifiers: ['Control'] })]);
+            await opened.waitForURL(destination.href);
+          }
+          await settled(opened, targetDomain);
+          assert.equal(await link(opened, '返回原稿').getAttribute('href'), original);
+          assert.deepEqual(new URL(opened.url()).searchParams.getAll('returnTo'), [original]);
+          if (targetDomain === 'source') {
+            assert.equal(await opened.locator('#passage-body').textContent(), body);
+            if (target === sourcePath) assert.equal(await opened.locator('#passage-body mark').textContent(), excerpt);
+            else assert.equal(await opened.locator('#passage-body mark').count(), 0);
+          } else assert.equal(await opened.locator('.characters-persona .characters-prose').textContent(), name === 'character-reference' ? '第二版设定。' : '旧版巡灯设定。');
+          await opened.reload();
+          await settled(opened, targetDomain);
+          assert.equal(await link(opened, '返回原稿').getAttribute('href'), original);
+          record.screenshot = `${name}.png`;
+          await opened.screenshot({ path: resolve(output, record.screenshot), animations: 'disabled' });
+          const returnHref = await link(opened, '返回原稿').getAttribute('href');
+          await opened.goto(new URL(returnHref, workspace.origin).href);
+          await opened.locator('#passage-body').waitFor();
+          const returned = new URL(opened.url());
+          assert.equal(returned.pathname + returned.search + returned.hash, original);
+          assert.equal(await opened.locator('#passage-body').textContent(), originalBody, 'the copied return href reads the old draft, not its latest revision');
+          record.returned = returned.href;
+          record.passed = true;
+        } finally { await opened?.close(); }
+      });
+    }
+    await t.test('invalid context and unrelated or external destinations remain unchanged', async () => {
+      for (const [domain, path, label, expected] of [
+        ['character', characterPath, '角色 · 第 2 版', `/characters/${other.characterId}?revision=2`],
+        ['source', sourcePath, `原文位置 ${range.start}–${range.end}`, sourcePath],
+      ]) {
+        for (const query of [
+          `returnTo=${encodeURIComponent('https://outside.test/drafts/id')}`,
+          `returnTo=${encodeURIComponent(original)}&returnTo=${encodeURIComponent(original)}`,
+        ]) {
+          await page.goto(`${path}&${query}`);
+          await settled(page, domain);
+          if (domain === 'source') await expand(page, '引用这条资料的内容');
+          assert.equal(await link(page, '返回原稿').count(), 0);
+          assert.equal(await link(page, label).getAttribute('href'), expected);
+        }
+        await page.goto(contextual(path));
+        await settled(page, domain);
+        // Exercise the existing delegated-click boundary without leaving the isolated service.
+        const external = 'https://outside.test/sources/notice?revision=2#location';
+        const observed = await page.evaluate(({ domain, external }) => {
+          const root = document.querySelector(domain === 'character' ? '.characters-route > section' : '.sources-route');
+          const anchor = document.createElement('a');
+          anchor.href = external;
+          root.append(anchor);
+          let result;
+          document.addEventListener('click', event => {
+            result = { href: anchor.getAttribute('href'), defaultPrevented: event.defaultPrevented };
+            event.preventDefault();
+          }, { once: true });
+          anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          anchor.remove();
+          return result;
+        }, { domain, external });
+        assert.deepEqual(observed, { href: external, defaultPrevented: false });
+      }
+      await expand(page, '引用这条资料的内容');
+      assert.equal(await link(page, '日记 · 有位置的引用 · 第 1 版').getAttribute('href'), `/diaries/${diary.noteId}?revision=1`);
+      report.boundaries = 'passed';
+    });
+    assert.deepEqual(await workspace.inspectServedBundle(), report.build.bundle);
+    assert.deepEqual(report.pageErrors, []);
+    report.status = report.cases.length === 5 && report.cases.every(record => record.passed) && report.boundaries === 'passed' ? 'passed' : 'failed';
+  } catch (error) {
+    report.status = 'failed';
+    report.error = error.stack;
+    throw error;
+  } finally {
+    await browser?.close();
+    await workspace.close();
+    await writeFile(resolve(output, 'manifest.json'), `${JSON.stringify(report, null, 2)}\n`);
+  }
+});
+
 async function expand(page, name) {
   const summary = page.locator('summary').filter({ hasText: new RegExp(`^${name}$`) });
   if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { assetHref, referenceHref, resources } from './api';
 import type { CharacterEntry } from './api';
-defineProps<{ entries: CharacterEntry[] }>();
+defineProps<{ entries: CharacterEntry[]; contextualHref: (href: string) => string }>();
 </script>
 
 <template>
@@ -13,7 +13,7 @@ defineProps<{ entries: CharacterEntry[] }>();
         <ul class="characters-blocks"><li v-for="(block, index) in entry.blocks" :key="index">
           <div v-if="block.type === 'text'" class="characters-prose">{{ block.text }}</div>
           <template v-else-if="block.type === 'reference'">
-            <a :href="referenceHref(block)">{{ resources[block.kind][1] }} · 第 {{ block.revision }} 版</a>
+            <a :href="contextualHref(referenceHref(block))">{{ resources[block.kind][1] }} · 第 {{ block.revision }} 版</a>
             <blockquote v-if="block.excerpt" class="characters-prose">{{ block.excerpt }}</blockquote>
           </template>
           <img v-else-if="block.type === 'image'" :src="assetHref(block.assetId)" :alt="entry.label || '图片'" loading="lazy">

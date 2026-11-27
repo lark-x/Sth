@@ -26,9 +26,9 @@ const props = defineProps<{ url: URL; route: SourceRoute }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
 const returnTo = computed(() => manuscriptReturn(props.url));
 function contextual(path: string) {
-  if (!returnTo.value) return path;
+  if (!returnTo.value || path.startsWith('#')) return path;
   const destination = new URL(path, props.url);
-  if (destination.origin !== props.url.origin || !/^\/sources(?:\/|$)/.test(destination.pathname)) return path;
+  if (destination.origin !== props.url.origin || !/^\/(?:characters|sources)(?:\/|$)/.test(destination.pathname)) return path;
   destination.searchParams.set('returnTo', returnTo.value);
   return destination.pathname + destination.search + destination.hash;
 }
@@ -235,7 +235,7 @@ onBeforeUnmount(() => controller.abort());
       <p role="alert">{{ error }}</p>
       <div class="sources-actions">
         <button class="sources-button" type="button" @click="load">重试</button
-        ><a href="/sources">返回资料</a>
+        ><a :href="contextual('/sources')">返回资料</a>
       </div></template
     >
     <template v-else>
@@ -359,7 +359,7 @@ onBeforeUnmount(() => controller.abort());
           <h2>引用这条资料的内容</h2>
           <ul v-if="backlinks.length" class="sources-list">
             <li v-for="(item, index) in backlinks" :key="index">
-              <a :href="localHref(item.owner.href)"
+              <a :href="contextual(localHref(item.owner.href))"
                 >{{ resourceNames[item.owner.kind] ?? item.owner.kind }} · {{ item.owner.title }} · 第
                 {{ item.owner.revision }} 版</a
               >
@@ -367,9 +367,9 @@ onBeforeUnmount(() => controller.abort());
                 {{ item.stance === 'support' ? '依据' : '反证' }}
               </p>
               <blockquote class="sources-prose">{{ item.pin.excerpt }}</blockquote>
-              <a v-if="item.pin.range" :href="href(item.pin.sourceId, item.pin.revision, item.pin.range)"
+              <a v-if="item.pin.range" :href="contextual(href(item.pin.sourceId, item.pin.revision, item.pin.range))"
                 >原文位置 {{ item.pin.range.start }}–{{ item.pin.range.end }}</a
-              ><a v-else :href="href(item.pin.sourceId, item.pin.revision)"
+              ><a v-else :href="contextual(href(item.pin.sourceId, item.pin.revision))"
                 >原文 · 第 {{ item.pin.revision }} 版</a
               >
             </li>
@@ -380,7 +380,7 @@ onBeforeUnmount(() => controller.abort());
           <h2>引用此记录的角色证据</h2>
           <ul class="sources-list">
             <li v-for="(item, index) in evidence" :key="index">
-              <a :href="resourceHref('character', item.characterId, item.revision)"
+              <a :href="contextual(resourceHref('character', item.characterId, item.revision))"
                 >{{ item.name }} · 第 {{ item.revision }} 版 · {{ item.label || '未命名条目' }}</a
               >
               <blockquote v-if="item.reference.excerpt" class="sources-prose">

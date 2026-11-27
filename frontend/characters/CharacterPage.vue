@@ -19,9 +19,9 @@ const projectError = ref('');
 const requested = computed(() => props.url.searchParams.get('revision'));
 const returnTo = computed(() => manuscriptReturn(props.url));
 function contextual(path: string) {
-  if (!returnTo.value) return path;
+  if (!returnTo.value || path.startsWith('#')) return path;
   const destination = new URL(path, props.url);
-  if (destination.origin !== props.url.origin || !/^\/characters(?:\/|$)/.test(destination.pathname)) return path;
+  if (destination.origin !== props.url.origin || !/^\/(?:characters|sources)(?:\/|$)/.test(destination.pathname)) return path;
   destination.searchParams.set('returnTo', returnTo.value);
   return destination.pathname + destination.search + destination.hash;
 }
@@ -94,7 +94,7 @@ onScopeDispose(() => controller?.abort());
   <section :aria-busy="busy" aria-label="角色详情" @click="retainReturn">
     <p v-if="busy" role="status" class="characters-state">正在读取角色…</p>
     <div v-else-if="error" class="characters-state"><h1 tabindex="-1">页面暂时无法打开</h1>
-      <p role="alert">{{ error }}</p><div class="characters-actions"><button type="button" class="characters-button" @click="load">重试</button><a href="/characters">返回角色</a></div>
+      <p role="alert">{{ error }}</p><div class="characters-actions"><button type="button" class="characters-button" @click="load">重试</button><a :href="contextual('/characters')">返回角色</a></div>
     </div>
     <template v-else>
       <header class="characters-heading characters-toolbar">
@@ -118,7 +118,7 @@ onScopeDispose(() => controller?.abort());
         :operations="operations" :cancel="cancel" @navigate="navigate" @refresh="emit('refresh')" />
       <template v-else-if="record">
         <article v-if="record.persona" class="characters-section characters-persona" aria-label="角色设定"><h2>角色设定</h2><div class="characters-prose">{{ record.persona }}</div></article>
-        <CharacterEntries :entries="record.entries" />
+        <CharacterEntries :entries="record.entries" :contextual-href="contextual" />
         <details v-if="operations.get('character.read')?.inputSchema.properties?.revision" class="characters-section characters-disclosure" aria-label="版本历史">
           <summary>版本历史</summary>
           <p v-if="historyError" role="alert">{{ historyError }} <button type="button" class="characters-button" @click="load">重新读取</button></p>
