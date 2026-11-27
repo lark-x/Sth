@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onScopeDispose, ref, shallowRef, useId, watch } from 'vue';
+import type { Directive } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import bookMark from '../../web/assets/book.svg';
 import { all, href, message, recordHref } from '../workspace/api.ts';
 import { retain, savedText } from '../workspace/useSubmission.ts';
 import { ApiError } from '../api.ts';
 import {
-  chapterOrder, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
+  chapterOrder, draftSheetContent, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadCandidateSummary, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
   resolveLibraryContext, shelfKey, unplacedShelfHref,
 } from './library-data.ts';
 import type { LibraryChapter, LibraryContext, LibrarySheet, Project, RecentManuscript } from './library-data.ts';
@@ -27,7 +28,7 @@ const treeBusy = ref(false);
 const busy = ref(false);
 const treeError = ref('');
 const error = ref('');
-const incomplete = ref(false);
+const listIncomplete = ref(false);
 const query = ref('');
 const selectedId = ref<string>();
 const announcement = ref('');
@@ -37,6 +38,33 @@ let countTimer: ReturnType<typeof setTimeout> | undefined;
 let loadedShelf: string | undefined;
 let lastPreview: string | undefined;
 let treeLoad: Promise<void> = Promise.resolve();
+const intersecting = new Set<string>();
+const activeCandidates = new Set<string>();
+const observed = new Set<Element>();
+const previewViewport = window.matchMedia('(min-width: 640px)');
+const sheetObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    const key = (entry.target as HTMLElement).dataset.sheetKey;
+    if (!key || !observed.has(entry.target)) continue;
+    if (entry.isIntersecting) intersecting.add(key);
+    else intersecting.delete(key);
+  }
+  readCandidates();
+});
+const vTrackSheet: Directive<HTMLElement> = {
+  mounted(element) {
+    observed.add(element);
+    sheetObserver.observe(element);
+  },
+  beforeUnmount(element) {
+    observed.delete(element);
+    sheetObserver.unobserve(element);
+    intersecting.delete(element.dataset.sheetKey!);
+  },
+};
+const allScope = computed(() => context.value.shelf === 'project' && !context.value.projectId);
+const allScopeHref = computed(() => /^\/(create|projects)\/?$/.test(props.url.pathname) && !props.url.search
+  ? props.url.pathname : context.value.allPath ?? '/projects');
 const activeProjectId = computed(() => context.value.projectId);
 const activeProject = computed(() => projects.value.find(project => project.projectId === activeProjectId.value));
 const activeChapter = computed(() => chapters.value.find(chapter => chapter.chapterId === context.value.chapterId));
@@ -54,8 +82,17 @@ watch(collectionTitle, value => {
   const titleElement = document.querySelector('title');
   if (titleElement) titleObserver.observe(titleElement, { childList: true, characterData: true, subtree: true });
 }, { immediate: true });
-const visibleSheets = computed(() => orderedSheets(sheets.value, context.value, chapters.value)
-  .filter(sheet => matchesSheet(sheet, query.value, chapters.value)));
+const searching = computed(() => Boolean(query.value.trim()));
+const incomplete = computed(() => listIncomplete.value || sheets.value.some(sheet => sheet.unavailable));
+const sortedSheets = computed(() => orderedSheets(sheets.value, context.value, chapters.value));
+const visibleSheets = computed(() => searching.value
+  ? sortedSheets.value.filter(sheet => matchesSheet(sheet, query.value, chapters.value)) : sortedSheets.value);
+const unsearched = computed(() => {
+  if (!searching.value) return new Set<string>();
+  const matches = new Set(visibleSheets.value.map(sheet => sheet.key));
+  return new Set(sortedSheets.value.filter(sheet => sheet.needsCandidate && !matches.has(sheet.key)).map(sheet => sheet.key));
+});
+const searchPending = computed(() => unsearched.value.size > 0);
 const selectedSheet = computed(() => visibleSheets.value.find(sheet => sheet.id === selectedId.value)
   ?? (isLibraryCollection(props.url) ? visibleSheets.value[0] : undefined));
 const managementReturn = computed(() => isLibraryCollection(props.url)
@@ -71,8 +108,14 @@ const subtitle = computed(() => context.value.shelf === 'recent' ? '按最近编
         : activeProject.value ? '按章节顺序' : '按作品与章节顺序');
 const count = computed(() => {
   const unit = context.value.shelf === 'diaries' ? '篇日记' : context.value.shelf === 'recent' ? '篇文稿' : '幕';
-  return query.value.trim() ? `${visibleSheets.value.length} / ${sheets.value.length} ${unit}` : `${sheets.value.length} ${unit}`;
+  if (!searching.value) return `${sheets.value.length} ${unit}`;
+  if (searchPending.value || incomplete.value) {
+    if (visibleSheets.value.length) return `已找到 ${visibleSheets.value.length} ${unit}`;
+    return searchPending.value ? '正在搜索正文…' : '搜索未完成';
+  }
+  return `${visibleSheets.value.length} / ${sheets.value.length} ${unit}`;
 });
+const footerCount = computed(() => busy.value ? '正在读取…' : error.value ? '读取未完成' : count.value);
 const emptyText = computed(() => context.value.shelf === 'recent' ? '打开一篇日记或文稿后，可以从这里接着写。'
   : context.value.shelf === 'diaries' ? '写下今天的一句话，开始第一篇日记。'
     : context.value.shelf === 'unplaced' ? '尚未编入章节的场景会显示在这里。'
@@ -134,12 +177,13 @@ function rememberSelection(sheet: LibrarySheet) {
 
 async function loadSheets() {
   controller?.abort();
+  activeCandidates.clear();
   const request = new AbortController();
   controller = request;
   const url = new URL(props.url.href);
   busy.value = true;
   error.value = '';
-  incomplete.value = false;
+  listIncomplete.value = false;
   try {
     const [next] = await Promise.all([resolveLibraryContext(url, request.signal), treeLoad]);
     if (request.signal.aborted) return;
@@ -171,7 +215,7 @@ async function loadSheets() {
       ?? (libraryCollectionHref(next) ? savedText(selectionStorageKey(next)) : undefined);
     selectedId.value = remembered;
     sheets.value = result.items;
-    incomplete.value = result.incomplete;
+    listIncomplete.value = result.incomplete;
     loadedShelf = key;
     const selection = selectedSheet.value;
     if (selection) rememberSelection(selection);
@@ -193,8 +237,28 @@ async function loadSheets() {
   }
 }
 
+function readCandidates() {
+  const request = controller;
+  if (!request || request.signal.aborted || busy.value || error.value || activeCandidates.size >= 4) return;
+  const previewKey = previewViewport.matches && isLibraryCollection(props.url) ? selectedSheet.value?.key : undefined;
+  const pending = sortedSheets.value.filter(sheet => sheet.needsCandidate && !activeCandidates.has(sheet.key));
+  const priority = (sheet: LibrarySheet) => sheet.key === previewKey || intersecting.has(sheet.key);
+  const queue = [...pending.filter(priority), ...pending.filter(sheet => unsearched.value.has(sheet.key) && !priority(sheet))];
+  for (const sheet of queue.slice(0, 4 - activeCandidates.size)) {
+    activeCandidates.add(sheet.key);
+    void loadCandidateSummary(sheet, request.signal).then(result => {
+      if (!request.signal.aborted) sheets.value = sheets.value.map(item => item.key === result.key ? result : item);
+    }, () => {}).finally(() => {
+      if (request.signal.aborted) return;
+      activeCandidates.delete(sheet.key);
+      readCandidates();
+    });
+  }
+}
+
 function publishPreview() {
-  if (busy.value || !isLibraryCollection(props.url)) return;
+  if (busy.value || searchPending.value || (searching.value && incomplete.value && !visibleSheets.value.length)
+    || selectedSheet.value?.needsCandidate || !isLibraryCollection(props.url)) return;
   const first = error.value || !selectedSheet.value ? '' : sheetHref(selectedSheet.value);
   const key = `${props.url.href}\n${first}`;
   if (lastPreview === key) return;
@@ -221,10 +285,16 @@ function sheetHref(sheet: LibrarySheet) {
   return !isLibraryCollection(props.url) && sheet.id === current ? `${props.url.pathname}${props.url.search}${props.url.hash}`
     : librarySheetHref(sheet, context.value, props.url);
 }
-function sheetMeta(sheet: LibrarySheet) {
-  if (sheet.diaryDate) return sheet.diaryDate;
-  return chapters.value.find(chapter => chapter.chapterId === sheet.chapterId)?.title ?? sheet.status;
+const currentDraftContent = computed(() => {
+  const adopted = context.value.scene?.adopted;
+  const draft = context.value.draft;
+  if (draft) return draftSheetContent(draft, draft.draftId === adopted?.draftId && draft.revision === adopted.revision);
+  if (adopted) return draftSheetContent(adopted, true);
+});
+function currentContent(sheet: LibrarySheet) {
+  return sheet.kind === 'scene' && sheet.id === context.value.sceneId ? currentDraftContent.value ?? sheet : sheet;
 }
+const sheetChapters = computed(() => new Map(chapters.value.map(chapter => [chapter.chapterId, chapter.title])));
 function sheetLinks() {
   return Array.from(sheetsPanel.value?.querySelectorAll<HTMLAnchorElement>('a.library-sheet') ?? []);
 }
@@ -260,20 +330,25 @@ function refresh() { void loadTree(); void loadSheets(); }
 function recentChanged() { if (context.value.shelf === 'recent') void loadSheets(); }
 void loadTree();
 watch(() => props.url.href, () => { lastPreview = undefined; void loadSheets(); }, { immediate: true });
-watch([query, chapters], publishPreview, { flush: 'post' });
-watch(count, text => {
+watch([query, busy], readCandidates, { flush: 'post' });
+watch([query, chapters, searchPending, selectedSheet], publishPreview, { flush: 'post' });
+watch(footerCount, text => {
   clearTimeout(countTimer);
+  announcement.value = '';
   countTimer = setTimeout(() => { announcement.value = text; }, 250);
 });
 onMounted(() => {
+  previewViewport.addEventListener('change', readCandidates);
   window.addEventListener('focus', refresh);
   window.addEventListener('sth:manuscripts-changed', recentChanged);
 });
 onScopeDispose(() => {
   titleObserver.disconnect();
+  sheetObserver.disconnect();
   treeController?.abort();
   controller?.abort();
   clearTimeout(countTimer);
+  previewViewport.removeEventListener('change', readCandidates);
   window.removeEventListener('focus', refresh);
   window.removeEventListener('sth:manuscripts-changed', recentChanged);
 });
@@ -296,9 +371,12 @@ onScopeDispose(() => {
         <a class="library-link" href="/diaries" :aria-current="context.shelf === 'diaries' ? 'page' : undefined">
           <AppIcon name="diary" /><span>日记</span>
         </a>
+        <a class="library-link" :href="allScopeHref" :aria-current="allScope ? 'page' : undefined">
+          <AppIcon name="book" /><span>全部文稿</span>
+        </a>
       </nav>
       <div class="library-section-heading">
-        <h3><a href="/projects" :aria-current="context.shelf === 'project' && !context.projectId ? 'page' : undefined">作品</a></h3>
+        <h3>作品</h3>
         <a class="library-icon-button" href="/projects/new" aria-label="新建作品"><AppIcon name="plus" /></a>
       </div>
       <p v-if="treeBusy && !projects.length" class="library-state" role="status">正在读取作品…</p>
@@ -373,20 +451,22 @@ onScopeDispose(() => {
         <button type="button" class="library-text-button" :disabled="busy" @click="loadSheets">重试摘要</button>
       </div>
       <ul :id="`${id}-sheets`" class="library-sheet-list" aria-label="文稿" @keydown="listKeydown">
-        <li v-for="sheet in visibleSheets" :key="sheet.key">
+        <li v-for="sheet in visibleSheets" :key="sheet.key" v-track-sheet :data-sheet-key="sheet.key">
           <a class="library-sheet" :href="sheetHref(sheet)" :aria-current="selected(sheet) ? 'page' : undefined" @click="rememberSelection(sheet)">
             <span class="library-sheet-title">{{ sheet.title }}</span>
-            <span class="library-sheet-preview" :class="{ 'library-preview-empty': !sheet.preview }">{{ sheet.preview || (sheet.unavailable ? '打开文稿查看内容' : '打开场景查看候选稿或开始写作。') }}</span>
+            <span class="library-sheet-preview" :class="{ 'library-preview-empty': !currentContent(sheet).preview }">{{ currentContent(sheet).preview }}</span>
             <span class="library-sheet-meta">
               <time v-if="sheet.diaryDate" :datetime="sheet.diaryDate">{{ sheet.diaryDate }}</time>
-              <span v-else>{{ sheetMeta(sheet) }}</span>
-              <span v-if="sheet.chapterId" class="library-sheet-status">{{ sheet.status }}</span>
+              <span v-else-if="sheet.chapterId">{{ sheetChapters.get(sheet.chapterId) }}</span>
+              <span v-if="!sheet.diaryDate" :class="{ 'library-sheet-status': sheet.chapterId }">{{ currentContent(sheet).status }}</span>
             </span>
           </a>
         </li>
       </ul>
       <div v-if="!busy && !error && !visibleSheets.length" class="library-empty">
-        <template v-if="query.trim()">
+        <p v-if="searchPending" role="status">正在搜索正文…</p>
+        <p v-else-if="searching && incomplete">搜索未完成，部分正文无法读取。</p>
+        <template v-else-if="searching">
           <h3>没有匹配的文稿</h3><p>试试其他标题、正文片段或章节名。</p>
           <button type="button" class="library-text-button" @click="clearSearch">清除搜索</button>
         </template>
@@ -401,7 +481,7 @@ onScopeDispose(() => {
       </div>
     </div>
     <footer class="library-sheets-footer">
-      <span>{{ busy ? '正在读取…' : error ? '读取未完成' : count }}</span>
+      <span>{{ footerCount }}</span>
       <a :href="createLink">{{ createLabel }}<AppIcon name="plus" /></a>
       <span class="library-sr-only" role="status" aria-atomic="true">{{ announcement }}</span>
     </footer>

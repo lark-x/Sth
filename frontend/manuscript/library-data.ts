@@ -1,7 +1,7 @@
 import type { Draft, Scene, SceneSummary } from '../../src/story/contracts.ts';
 import type { Diary, Project } from '../workspace/api.ts';
 import { all, href, read, recordHref } from '../workspace/api.ts';
-import { revisionParam } from '../writing/api.ts';
+import { revisionParam, type DraftSummary } from '../writing/api.ts';
 import { loadRecentManuscripts } from './recent.ts';
 import { collectionRoute } from './routes.ts';
 
@@ -25,6 +25,7 @@ export interface LibraryContext {
   shelf: 'recent' | 'diaries' | 'project' | 'unplaced';
   projectId?: string;
   chapterId?: string;
+  allPath?: '/create' | '/projects';
   sceneId?: string;
   selectedSceneId?: string;
   noteId?: string;
@@ -47,6 +48,7 @@ export interface LibrarySheet {
   diaryDate?: string;
   updatedAt?: number;
   unavailable?: boolean;
+  needsCandidate?: boolean;
 }
 
 const identity = /^[A-Za-z0-9_-]{1,128}$/;
@@ -59,6 +61,12 @@ function routeId(path: string, resource: string): string | undefined {
   try { id = decodeURIComponent(match[1]!); } catch { throw new Error('invalid route'); }
   if (!identity.test(id)) throw new Error('invalid route');
   return id;
+}
+
+function allManuscriptsPath(url: URL) {
+  if (url.search) return;
+  if (/^\/create\/?$/.test(url.pathname)) return '/create' as const;
+  if (/^\/projects\/?$/.test(url.pathname)) return '/projects' as const;
 }
 
 function originatingShelf(url: URL, scene: Scene): LibraryContext | undefined {
@@ -76,6 +84,8 @@ function originatingShelf(url: URL, scene: Scene): LibraryContext | undefined {
         continue;
       }
       if (routeId(source.pathname, 'drafts')) continue;
+      const allPath = allManuscriptsPath(source);
+      if (allPath) return { shelf: 'project', allPath, projectId: undefined, chapterId: undefined };
       const projectId = routeId(source.pathname, 'projects');
       if (!projectId) return;
       const shelf = source.searchParams.get('shelf');
@@ -128,7 +138,7 @@ export async function resolveLibraryContext(url: URL, signal: AbortSignal): Prom
         : /^\/sources(?:\/|$)/.test(url.pathname) ? 'sources' : undefined,
     };
   }
-  if (/^\/(projects|create)\/?$/.test(url.pathname)) return { shelf: 'project' };
+  if (/^\/(projects|create)\/?$/.test(url.pathname)) return { shelf: 'project', allPath: allManuscriptsPath(url) };
   return { shelf: 'recent' };
 }
 
@@ -162,6 +172,7 @@ export const unplacedShelfHref = (projectId: string) =>
   href(recordHref('projects', projectId), { shelf: 'unplaced' });
 
 export function libraryCollectionHref(context: LibraryContext, selectedSceneId?: string): string | undefined {
+  if (context.allPath) return context.allPath;
   if (!context.projectId || !['project', 'unplaced'].includes(context.shelf)) return;
   return href(recordHref('projects', context.projectId), {
     ...(context.shelf === 'unplaced' ? { shelf: 'unplaced' } : { chapterId: context.chapterId }),
@@ -205,15 +216,38 @@ export function matchesSheet(sheet: LibrarySheet, query: string, chapters: Libra
   return terms.every(term => haystack.includes(term));
 }
 
+function excerpt(text: string) { return text.replace(/\s+/g, ' ').trim().slice(0, 240); }
+
+export function draftSheetContent(draft: Draft, adopted: boolean) {
+  return { preview: excerpt(draft.body), status: `${adopted ? '采用稿' : '候选稿'} · ${draft.title} · 第 ${draft.revision} 版` };
+}
+
 function sceneSheet(scene: SceneSummary | Scene): LibrarySheet {
-  const body = 'characters' in scene ? scene.adopted?.body ?? '' : '';
+  const adopted = 'characters' in scene ? scene.adopted : undefined;
   const context = [scene.time, scene.place].filter(Boolean).join(' · ');
   return {
     key: `scene:${scene.sceneId}`, kind: 'scene', id: scene.sceneId, title: scene.title,
-    href: recordHref('scenes', scene.sceneId), preview: (body || context).replace(/\s+/g, ' ').trim().slice(0, 240),
-    searchText: `${body}\n${context}`, status: scene.adopted ? '采用稿' : '尚无采用稿',
+    href: recordHref('scenes', scene.sceneId, adopted ? scene.revision : undefined),
+    ...(adopted ? draftSheetContent(adopted, true) : { preview: excerpt(context), status: scene.adopted ? '采用稿' : '尚无稿件' }),
+    searchText: `${adopted?.body ?? ''}\n${context}`,
     projectId: scene.placement?.projectId, chapterId: scene.placement?.chapterId, position: scene.placement?.position,
   };
+}
+
+export async function loadCandidateSummary(sheet: LibrarySheet, signal: AbortSignal): Promise<LibrarySheet> {
+  const base = { ...sheet, needsCandidate: false, status: '尚无稿件' };
+  try {
+    const { items: [first] } = await read<{ items: DraftSummary[] }>('draft.list', { sceneId: sheet.id, limit: 1 }, signal);
+    if (!first) return base;
+    const draft = await read<Draft>('draft.read', { draftId: first.draftId, revision: first.revision }, signal);
+    return {
+      ...base, ...draftSheetContent(draft, false), href: recordHref('drafts', draft.draftId, draft.revision),
+      searchText: `${draft.body}\n${sheet.searchText}`,
+    };
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return { ...base, unavailable: true, status: '摘要暂时无法读取' };
+  }
 }
 
 function diarySheet(diary: Diary): LibrarySheet {
@@ -263,8 +297,7 @@ async function loadRecentSheets(recent: RecentManuscript[], url: URL, signal: Ab
         const draft = await read<Draft>('draft.read', { draftId: item.id, ...version }, signal);
         sheet = {
           key: `scene:${draft.sceneId}`, kind: 'scene', id: draft.sceneId, title: item.title || draft.title,
-          href: link, preview: draft.body.replace(/\s+/g, ' ').trim().slice(0, 240), searchText: draft.body,
-          status: `草稿 · 第 ${draft.revision} 版`,
+          href: link, ...draftSheetContent(draft, false), searchText: draft.body,
         };
       } else {
         sheet = sceneSheet(await read<Scene>('scene.read', { sceneId: item.id, ...version }, signal));
@@ -299,6 +332,7 @@ export async function loadLibrarySheets(context: LibraryContext, recent: RecentM
   const summaries = await all<SceneSummary>('scene.list', filter, signal);
   let incomplete = false;
   const items = await mapDetails(summaries, signal, async summary => {
+    if (!summary.adopted) return { ...sceneSheet(summary), needsCandidate: true, status: '尚无采用稿' };
     try {
       const detail = context.scene?.sceneId === summary.sceneId && context.scene.revision === summary.revision
         ? context.scene : await read<Scene>('scene.read', { sceneId: summary.sceneId, revision: summary.revision }, signal);

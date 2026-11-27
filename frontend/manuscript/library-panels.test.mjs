@@ -13,10 +13,12 @@ const root = resolve(import.meta.dirname, '../..');
 const recentKey = 'sth:manuscripts:recent:v1';
 const rows = page => page.locator('.library-sheet');
 const titles = page => page.locator('.library-sheet-title').allTextContents();
-function fromShelf(sceneId, collection) {
+function fromShelf(sceneId, collection, { path = `/scenes/${sceneId}`, revision } = {}) {
   const source = new URL(collection, 'http://library.test');
   source.searchParams.set('selected', sceneId);
-  return `/scenes/${sceneId}?${new URLSearchParams({ returnTo: source.pathname + source.search })}`;
+  const query = new URLSearchParams(revision ? { revision } : {});
+  query.set('returnTo', source.pathname + source.search);
+  return `${path}?${query}`;
 }
 
 async function fixture(t, { actualShell = false } = {}) {
@@ -171,7 +173,7 @@ test('library panels use real operations with stable manuscript rows and preview
     const search = page.getByRole('searchbox', { name: '搜索文稿' });
     await search.fill('海盐');
     assert.deepEqual(await titles(page), [first.title]);
-    await page.waitForFunction(href => window.libraryEvents.at(-1)?.href === href, fromShelf(first.sceneId, `/projects/${project.projectId}`));
+    await page.waitForFunction(href => window.libraryEvents.at(-1)?.href === href, fromShelf(first.sceneId, `/projects/${project.projectId}`, { revision: 2 }));
     assert.ok((await page.evaluate(() => window.libraryEvents)).every(event => event.kind === 'preview'));
     await search.fill('不存在的文稿');
     await page.getByRole('heading', { name: '没有匹配的文稿' }).waitFor();
@@ -183,7 +185,7 @@ test('library panels use real operations with stable manuscript rows and preview
     await search.press('ArrowDown');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), fromShelf(second.sceneId, `/projects/${project.projectId}`));
     await page.keyboard.press('ArrowDown');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), fromShelf(first.sceneId, `/projects/${project.projectId}`));
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), fromShelf(first.sceneId, `/projects/${project.projectId}`, { revision: 2 }));
     await page.keyboard.press('End');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), fromShelf(extra.at(-1).sceneId, `/projects/${project.projectId}`));
     await page.keyboard.press('Home');
@@ -229,13 +231,14 @@ test('library panels use real operations with stable manuscript rows and preview
     await setUrl(page, `/scenes/${first.sceneId}`);
     assert.deepEqual(await page.evaluate(() => window.libraryEvents), []);
     await setUrl(page, collection);
-    assert.deepEqual(await page.evaluate(() => window.libraryEvents), [{ kind: 'preview', href: fromShelf(first.sceneId, collection) }]);
+    assert.deepEqual(await page.evaluate(() => window.libraryEvents), [{ kind: 'preview', href: fromShelf(first.sceneId, collection, { revision: 2 }) }]);
   });
 
   await t.test('diaries sort by date and every collection emits a preview without navigation', async () => {
     for (const path of ['/diaries', '/projects', '/create']) {
       await page.evaluate(() => { window.libraryEvents = []; });
       await setUrl(page, path);
+      await page.waitForFunction(() => window.libraryEvents.some(event => event.kind === 'preview' && event.href));
       const events = await page.evaluate(() => window.libraryEvents);
       assert.ok(events.some(event => event.kind === 'preview' && event.href));
       assert.ok(events.every(event => event.kind === 'preview'));
@@ -311,7 +314,7 @@ test('library panels use real operations with stable manuscript rows and preview
     let fail = true;
     await page.route('**/api/web/invoke', route => {
       const call = route.request().postDataJSON();
-      if (fail && call.operationId === 'scene.read' && call.input.sceneId === third.sceneId) {
+      if (fail && call.operationId === 'draft.list' && call.input.sceneId === third.sceneId) {
         return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'unavailable' }) });
       }
       return route.continue();
@@ -388,14 +391,14 @@ test('collection navigation keeps its title and a usable pane across preview, hi
       await page.getByRole('searchbox', { name: '搜索文稿', exact: true }).fill('一盏灯');
       await rows(page).first().click();
       await page.locator('.wr-reader-toolbar').waitFor();
-      await assertTitle(`${scene.title} · Sth`);
+      await assertTitle(`${draft.title} · Sth`);
       await page.goBack();
       await settled(page);
       await assertTitle(`${chapter.title} · ${project.title} · Sth`);
       assert.equal(await page.getByRole('searchbox', { name: '搜索文稿', exact: true }).inputValue(), '一盏灯');
       await page.goForward();
       await page.locator('.wr-reader-toolbar').waitFor();
-      await assertTitle(`${scene.title} · Sth`);
+      await assertTitle(`${draft.title} · Sth`);
     }
   });
 
@@ -423,7 +426,7 @@ test('collection navigation keeps its title and a usable pane across preview, hi
     }
   });
 
-  await t.test('a scene with an unadopted candidate uses neutral list copy without candidate fan-out', async t => {
+  await t.test('a visible unadopted scene opens the exact candidate used in its summary', async t => {
     page = await openBrowser(t, origin, { width: 390, height: 844 });
     let candidateReads = 0;
     const onRequest = request => {
@@ -434,12 +437,13 @@ test('collection navigation keeps its title and a usable pane across preview, hi
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(projectPath);
       await settled(page);
-      assert.doesNotMatch(await rows(page).first().innerText(), /还没有正文/);
-      assert.match(await rows(page).first().innerText(), /打开场景查看候选稿或开始写作/);
-      assert.equal(candidateReads, 0, 'mobile collection summaries need no per-scene draft.list reads');
+      await rows(page).first().getByText(`候选稿 · ${draft.title} · 第 ${draft.revision} 版`, { exact: true }).waitFor();
+      assert.match(await rows(page).first().innerText(), new RegExp(draft.body));
+      assert.equal(candidateReads, 1);
       await rows(page).first().click();
+      await page.waitForURL(url => url.pathname === `/drafts/${draft.draftId}` && url.searchParams.get('revision') === `${draft.revision}`);
       await page.locator('.wr-reader-toolbar').waitFor();
-      await page.getByText(draft.body, { exact: true }).waitFor();
+      await page.locator('#passage-body').getByText(draft.body, { exact: true }).waitFor();
     } finally { page.off('request', onRequest); }
   });
 
@@ -616,6 +620,7 @@ test('library refreshes stale creation caches once and isolates rapid project ch
       assert.deepEqual(await sheetErrors(), []);
       assert.deepEqual(await titles(page), [projects[1].scene.title]);
       assert.equal(await page.locator('.library-sheets-heading h2').textContent(), projects[1].title);
+      await page.waitForFunction(() => window.libraryEvents.length > 0);
       assert.deepEqual(await page.evaluate(() => window.libraryEvents), [{ kind: 'preview', href: fromShelf(projects[1].scene.sceneId, `/projects/${projects[1].projectId}`) }]);
       await page.waitForTimeout(250);
       assert.equal(treeReads(), reads + 1, 'completed tree refresh never loops');
@@ -648,6 +653,7 @@ test('library refreshes stale creation caches once and isolates rapid project ch
       await finished.promise;
       await settled(page);
       assert.deepEqual(await titles(page), [projects[1].scene.title]);
+      await page.waitForFunction(() => window.libraryEvents.length > 0);
       assert.deepEqual(await page.evaluate(() => window.libraryEvents), [{ kind: 'preview', href: fromShelf(projects[1].scene.sceneId, `/projects/${projects[1].projectId}`) }]);
       assert.equal(treeReads(), reads + 1, 'switching cached projects needs no extra tree requests');
     } finally {
@@ -675,9 +681,9 @@ test('library preserves project navigation and exposes management through the re
   const page = await openBrowser(t, origin, { width: 1280, height: 900 });
   const projectPath = `/projects/${project.projectId}`;
   const groups = [
-    { path: projectPath, title: project.title, count: 3, target: scenes[1], label: '作品整组' },
-    { path: `${projectPath}?chapterId=${chapter.chapterId}`, title: chapter.title, count: 2, target: scenes[1], label: '章节' },
-    { path: `${projectPath}?shelf=unplaced`, title: '未编入章节', count: 2, target: scenes[4], label: '未编入' },
+    { path: projectPath, title: project.title, count: 3, target: scenes[1], draft, label: '作品整组' },
+    { path: `${projectPath}?chapterId=${chapter.chapterId}`, title: chapter.title, count: 2, target: scenes[1], draft, label: '章节' },
+    { path: `${projectPath}?shelf=unplaced`, title: '未编入章节', count: 2, target: scenes[4], draft: standalone, label: '未编入' },
   ];
   async function showSheets() {
     if (page.viewportSize().width >= 640) return;
@@ -703,8 +709,12 @@ test('library preserves project navigation and exposes management through the re
         assert.ok(await management.isVisible());
         assert.deepEqual(await management.getByRole('link').allTextContents(), ['作品总览', '编排章节', '创作决定']);
         assert.ok((await titles(page)).indexOf(group.target.title) > 0, 'each return scenario selects a non-first row');
-        await rows(page).filter({ has: page.getByText(group.target.title, { exact: true }) }).click();
-        await page.waitForURL(url => url.pathname === `/scenes/${group.target.sceneId}`);
+        const targetRow = rows(page).filter({ has: page.getByText(group.target.title, { exact: true }) });
+        const draftPath = `/drafts/${group.draft.draftId}`;
+        const status = targetRow.getByText(`候选稿 · ${group.draft.title} · 第 ${group.draft.revision} 版`, { exact: true });
+        await status.waitFor();
+        await targetRow.click();
+        await page.waitForURL(url => url.pathname === draftPath && url.searchParams.get('revision') === `${group.draft.revision}`);
         assert.equal(new URL(page.url()).searchParams.get('returnTo'), new URL(fromShelf(group.target.sceneId, group.path), origin).searchParams.get('returnTo'));
         await assertGroup(group);
         await showSheets();
@@ -742,7 +752,7 @@ test('library preserves project navigation and exposes management through the re
           await page.locator('.library-sheet[aria-current="page"]').click();
         }
         await page.locator('.wr-reader-toolbar').getByRole('button', { name: '更多', exact: true }).click();
-        const backLabel = group.label === '未编入' ? '返回场景列表' : '返回章节';
+        const backLabel = `返回${group.target.title}`;
         const back = page.locator('.wr-more-menu').getByRole('link', { name: backLabel, exact: true });
         await back.click();
         await page.waitForURL(url => url.pathname === projectPath && url.searchParams.get('selected') === group.target.sceneId);
@@ -751,8 +761,9 @@ test('library preserves project navigation and exposes management through the re
         // Browser Back restores the original collection entry without selected=.
         await page.goto(group.path);
         await settled(page);
-        await rows(page).filter({ has: page.getByText(group.target.title, { exact: true }) }).click();
-        await page.waitForURL(url => url.pathname.startsWith('/scenes/'));
+        await status.waitFor();
+        await targetRow.click();
+        await page.waitForURL(url => url.pathname === draftPath);
         await page.goBack();
         await page.waitForURL(url => url.pathname + url.search === group.path);
         await assertGroup(group);
