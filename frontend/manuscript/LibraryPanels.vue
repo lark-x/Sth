@@ -11,12 +11,12 @@ import {
   chapterOrder, draftSheetContent, isAdoptedDraft, isLibraryCollection, libraryCollectionHref, libraryCollectionTitle, librarySheetHref, loadCandidateSummary, loadLibrarySheets, matchesSheet, orderedSheets, projectShelfHref,
   resolveLibraryContext, shelfKey, unplacedShelfHref,
 } from './library-data.ts';
-import type { LibraryChapter, LibraryContext, LibrarySheet, Project, RecentManuscript } from './library-data.ts';
+import type { LibraryChapter, LibraryContext, LibraryPreviewReason, LibrarySheet, Project, RecentManuscript } from './library-data.ts';
 import { recentManuscripts } from './recent.ts';
 import './library-panels.css';
 
 const props = defineProps<{ url: URL }>();
-const emit = defineEmits<{ navigate: [href: string]; preview: [href: string] }>();
+const emit = defineEmits<{ navigate: [href: string]; preview: [href: string, reason?: LibraryPreviewReason] }>();
 const id = useId();
 const sheetsPanel = ref<HTMLElement>();
 const searchInput = ref<HTMLInputElement>();
@@ -262,14 +262,21 @@ function readCandidates() {
 }
 
 function publishPreview() {
-  if (busy.value || !isLibraryCollection(props.url)) return;
+  if (!isLibraryCollection(props.url) || (busy.value && !searching.value)) return;
   const selection = selectedSheet.value;
   if (selection?.needsCandidate && !searching.value) return;
-  const first = error.value || !selection || selection.needsCandidate ? '' : sheetHref(selection);
-  const key = `${props.url.href}\n${first}`;
+  const first = busy.value || error.value || !selection || selection.needsCandidate ? '' : sheetHref(selection);
+  let reason: LibraryPreviewReason | undefined;
+  if (!first) {
+    const failed = error.value || searchIncomplete.value;
+    if (!searching.value) reason = failed ? 'unavailable' : 'empty';
+    else if (busy.value || searchPending.value || selection?.needsCandidate) reason = 'searching';
+    else reason = failed ? 'search-incomplete' : 'no-matches';
+  }
+  const key = `${props.url.href}\n${first}\n${reason ?? ''}`;
   if (lastPreview === key) return;
   lastPreview = key;
-  emit('preview', first);
+  emit('preview', first, reason);
 }
 
 function navigate(event: MouseEvent) {
@@ -341,7 +348,7 @@ function manuscriptsChanged() {
 void loadTree();
 watch(() => props.url.href, () => { lastPreview = undefined; void loadSheets(); }, { immediate: true });
 watch([query, busy, chapters], readCandidates, { flush: 'post' });
-watch([query, chapters, selectedSheet], publishPreview, { flush: 'post' });
+watch([query, busy, searchPending, searchIncomplete, selectedSheet], publishPreview, { flush: 'post' });
 watch(footerCount, text => {
   clearTimeout(countTimer);
   announcement.value = '';

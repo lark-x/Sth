@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import LibraryPanels from './LibraryPanels.vue';
+import type { LibraryPreviewReason } from './library-data.ts';
 import { collectionRoute } from './routes.ts';
 import { manuscriptView } from './view.ts';
 import ManuscriptViewControls from './ManuscriptViewControls.vue';
@@ -12,6 +13,14 @@ const emit = defineEmits<{ navigate: [href: string] }>();
 type Pane = 'library' | 'sheets' | 'editor';
 const root = ref<HTMLElement>();
 const first = ref<string>();
+const emptyReason = ref<LibraryPreviewReason>();
+const previewTitles: Record<LibraryPreviewReason, string> = {
+  empty: '这里还没有文稿',
+  searching: '正在搜索正文…',
+  'no-matches': '没有匹配的文稿',
+  'search-incomplete': '搜索未完成',
+  unavailable: '文稿暂时无法读取',
+};
 const compact = ref(window.matchMedia('(max-width: 639px)').matches);
 const focus = ref(false);
 const wideLibrary = ref(false);
@@ -55,7 +64,10 @@ function setPane(pane: Pane) {
 }
 
 watch([() => props.url, compact], ([url], [previous]) => {
-  if (url.href !== previous?.href) first.value = undefined;
+  if (url.href !== previous?.href) {
+    first.value = undefined;
+    emptyReason.value = undefined;
+  }
   const saved = history.state?.manuscriptPane;
   activePane.value = ['library', 'sheets', 'editor'].includes(saved) ? saved : defaultPane(url);
   // Compact collections do not mount the preview reader. Normalize an editor
@@ -68,7 +80,10 @@ watch([() => props.url, compact], ([url], [previous]) => {
   if (collectionRoute(url)) focus.value = false;
 }, { immediate: true });
 
-function preview(href: string) { first.value = href; }
+function preview(href: string, reason?: LibraryPreviewReason) {
+  first.value = href;
+  emptyReason.value = reason;
+}
 function backToSheets() { setPane('sheets'); }
 provide(manuscriptView, {
   focus, library: wideLibrary,
@@ -100,8 +115,8 @@ function handleLinks(event: MouseEvent) {
       <slot v-if="editorUrl && !listOnly" :editor-url="editorUrl" />
       <section v-else-if="collection && !listOnly" class="ms-empty-editor">
         <AppIcon name="book" />
-        <h1>{{ first === undefined ? '正在打开文稿…' : '这里还没有文稿' }}</h1>
-        <div v-if="first !== undefined">
+        <h1>{{ emptyReason ? previewTitles[emptyReason] : '正在打开文稿…' }}</h1>
+        <div v-if="emptyReason === 'empty'">
           <a :href="emptyAction.href">{{ emptyAction.label }}</a>
         </div>
       </section>

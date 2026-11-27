@@ -21,7 +21,7 @@ async function seed(origin) {
     return data.result;
   }
   const book = await invoke('project.create', { title: '第三声以后' });
-  await invoke('project.create', { title: '另一部作品' });
+  const emptyBook = await invoke('project.create', { title: '另一部作品' });
   const chapter = await invoke('chapter.create', { projectId: book.projectId, title: '旧港来信' });
   const scenes = [];
   let candidate;
@@ -49,7 +49,7 @@ async function seed(origin) {
     if (index === 23) last = scene;
   }
   await invoke('chapter.arrange', { chapterId: chapter.chapterId, expectedRevision: chapter.revision, sceneIds: scenes.map(scene => scene.sceneId) });
-  return { book, chapter, scenes, candidate, last, invoke };
+  return { book, emptyBook, chapter, scenes, candidate, last, invoke };
 }
 
 async function ready(page) {
@@ -225,6 +225,7 @@ test('L1 review regressions through the real workspace', { skip: baseline, timeo
   const viewport = { width: 1280, height: 800 };
   const search = page => page.getByRole('searchbox', { name: '搜索文稿' });
   const footerCount = page => page.locator('.library-sheets-footer > span').first();
+  const emptyPreview = page => page.locator('.ms-editor .ms-empty-editor');
 
   await t.test('an adopted match previews while an off-screen candidate is still loading', async t => {
     const page = await openBrowser(t, origin, viewport);
@@ -268,6 +269,8 @@ test('L1 review regressions through the real workspace', { skip: baseline, timeo
     await page.getByText('搜索未完成，部分正文无法读取。', { exact: true }).waitFor();
     assert.equal(await page.locator('#passage-body').count(), 0);
     assert.equal(await page.locator('.ms-editor .wr-reader-toolbar').count(), 0);
+    await emptyPreview(page).getByRole('heading', { name: '搜索未完成', exact: true }).waitFor();
+    assert.equal(await emptyPreview(page).getByRole('link').count(), 0);
   });
 
   await t.test('inline save in a current draft refreshes the project shelf without navigating', async t => {
@@ -318,9 +321,47 @@ test('L1 review regressions through the real workspace', { skip: baseline, timeo
     await search(page).fill(fixture.chapter.title);
     await footerCount(page).getByText('搜索未完成', { exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '没有匹配的文稿', exact: true }).count(), 0);
+    await emptyPreview(page).getByRole('heading', { name: '搜索未完成', exact: true }).waitFor();
+    assert.equal(await emptyPreview(page).getByRole('link').count(), 0);
     chapterListAvailable = true;
     await page.getByRole('button', { name: '重试章节', exact: true }).click();
     await footerCount(page).getByText('24 / 24 幕', { exact: true }).waitFor();
     assert.equal(await page.locator('.library-sheet').count(), 24);
+    await page.locator('#passage-body').getByText(/海盐结在信封边上/).waitFor();
+  });
+
+  await t.test('Frame shows search progress and a confirmed zero without offering to create', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    const release = Promise.withResolvers();
+    await page.route('**/api/web/invoke', async route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId === 'draft.list' && call.input.sceneId === fixture.scenes[18].sceneId) await release.promise;
+      await route.continue();
+    });
+    try {
+      await page.goto(project);
+      await ready(page);
+      await page.locator('#passage-body').getByText(/海盐结在信封边上/).waitFor();
+      await search(page).fill('没有这段原文');
+      const preview = emptyPreview(page);
+      await preview.getByRole('heading', { name: '正在搜索正文…', exact: true }).waitFor();
+      assert.equal(await preview.getByRole('link').count(), 0);
+      assert.equal(await preview.getByRole('heading', { name: '没有匹配的文稿', exact: true }).count(), 0);
+      release.resolve();
+      await preview.getByRole('heading', { name: '没有匹配的文稿', exact: true }).waitFor();
+      assert.equal(await preview.getByRole('link').count(), 0);
+    } finally {
+      release.resolve();
+      await page.unrouteAll({ behavior: 'wait' });
+    }
+  });
+
+  await t.test('Frame keeps the creation action for a genuinely empty project', async t => {
+    const page = await openBrowser(t, origin, viewport);
+    await page.goto(`/projects/${fixture.emptyBook.projectId}`);
+    const preview = emptyPreview(page);
+    await preview.getByRole('heading', { name: '这里还没有文稿', exact: true }).waitFor();
+    assert.equal(await preview.getByRole('link', { name: '新建章节', exact: true }).getAttribute('href'),
+      `/chapters/new?projectId=${fixture.emptyBook.projectId}`);
   });
 });

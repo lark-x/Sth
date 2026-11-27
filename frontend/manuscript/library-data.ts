@@ -6,6 +6,7 @@ import { loadRecentManuscripts } from './recent.ts';
 import { collectionRoute } from './routes.ts';
 
 export type { Project };
+export type LibraryPreviewReason = 'empty' | 'searching' | 'no-matches' | 'search-incomplete' | 'unavailable';
 export interface LibraryChapter {
   chapterId: string;
   projectId: string;
