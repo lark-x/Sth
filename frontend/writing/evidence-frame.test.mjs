@@ -50,7 +50,7 @@ test('actual manuscript toolbar opens the fixed panel on Chromium and mobile Web
           assert.ok(box);
           assert.equal(box.y, 0);
           assert.ok(Math.abs(box.height - viewport.height) < 1, 'panel fills the dynamic viewport including browser subpixel rounding');
-          const expectedWidth = viewport.width < 640 ? viewport.width : Math.min(336, Math.max(272, viewport.width * .34));
+          const expectedWidth = viewport.width < 640 ? viewport.width : Math.min(320, viewport.width * .4);
           assert.ok(Math.abs(box.width - expectedWidth) < 1, `panel uses the frame width at ${viewport.width}px`);
           assert.ok(Math.abs(box.x + box.width - viewport.width) < 1);
           if (viewport.width >= 640) {
