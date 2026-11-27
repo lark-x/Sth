@@ -1,6 +1,7 @@
 """Focused regression checks for Hermes distribution and runtime selection."""
 
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from adapters.hermes_plugin import native, workspace_cli
+from adapters.tests.hermes_onboarding import installed_evidence, source_payload
 
 spec = importlib.util.spec_from_file_location("sth_package_plugin", ROOT / "adapters/hermes_plugin/package_plugin.py")
 exporter = importlib.util.module_from_spec(spec)
@@ -89,6 +91,152 @@ class DistributionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaises(ValueError):
                 exporter.package(Path(temporary))
+
+
+class OnboardingEvidenceTests(unittest.TestCase):
+    def test_native_source_payload_validates_only_the_exact_presentation_url(self):
+        origin = "http://127.0.0.1:12345"
+        source = {"sourceId": "fixture", "revision": 2, "body": "original", "href": "/sources/fixture?revision=2"}
+        self.assertEqual(source_payload(source, origin), source)
+        linked = {**source, "portalUrl": origin + source["href"]}
+        self.assertEqual(source_payload(linked, origin), source)
+        self.assertIn("portalUrl", linked)
+        for url in (None, "/sources/fixture?revision=2", "http://other.invalid" + source["href"],
+                    origin + "/sources/other?revision=2", origin + "/sources/fixture?revision=1"):
+            with self.subTest(url=url), self.assertRaises(AssertionError):
+                source_payload({**source, "portalUrl": url}, origin)
+        for field, value in (("sourceId", "changed"), ("revision", 3), ("body", "changed"), ("extra", True)):
+            with self.subTest(field=field):
+                self.assertNotEqual(source_payload({**linked, field: value}, origin), source)
+
+    def fixture(self, root, *, result_links=False):
+        received, installed = root / "received", root / "installed"
+        files = {"plugin.yaml": "name: fixture", "__init__.py": "", "README.md": "fixture",
+                 "runtime/frontend/dist/index.html": "fixture index",
+                 "runtime/package.json": json.dumps({"dependencies": {"fixture": "1.0.0"}}),
+                 "runtime/package-lock.json": json.dumps({"packages": {
+                     "": {"dependencies": {"fixture": "1.0.0"}}, "node_modules/fixture": {"version": "1.0.0"}}}),
+                 "runtime/node_modules/fixture/package.json": json.dumps({"version": "1.0.0"}),
+                 "runtime/node_modules/fixture/index.js": "export default 1;"}
+        if result_links:
+            files["result_links.py"] = "def result_link(): pass"
+        for name, content in files.items():
+            path = received / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        self.write_manifest(received)
+        shutil.copytree(received, installed)
+        return {"directory": str(received)}, installed
+
+    def write_manifest(self, root):
+        files = [item for item in exporter.audit_payload(root) if item["path"] != "distribution.json"]
+        (root / "distribution.json").write_text(json.dumps({"format": 1, "files": files}), encoding="utf-8")
+
+    def test_each_release_uses_its_own_manifest_not_current_plugin_files(self):
+        self.assertIn("result_links.py", exporter.FILES)
+        for result_links in (False, True):
+            with self.subTest(result_links=result_links), tempfile.TemporaryDirectory() as temporary:
+                distribution, installed = self.fixture(Path(temporary), result_links=result_links)
+                evidence = installed_evidence(distribution, installed, exporter)
+                self.assertEqual("result_links.py" in evidence["pluginFilesVerified"], result_links)
+                self.assertEqual(evidence["manifestFilesVerified"], 8 + result_links)
+                self.assertEqual(evidence["productionDependenciesVerified"], 1)
+
+    def test_missing_declared_files_fail_on_either_side(self):
+        for side in ("received", "installed"):
+            for name in ("result_links.py", "runtime/node_modules/fixture/index.js"):
+                with self.subTest(side=side, name=name), tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    distribution, installed = self.fixture(root, result_links=True)
+                    (root / side / name).unlink()
+                    with self.assertRaisesRegex(AssertionError, "payload files differ"):
+                        installed_evidence(distribution, installed, exporter)
+
+    def test_same_tampering_on_both_sides_still_fails_manifest_hash(self):
+        for name in ("result_links.py", "README.md", "runtime/node_modules/fixture/index.js"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                distribution, installed = self.fixture(root, result_links=True)
+                for side in ("received", "installed"):
+                    path = root / side / name
+                    # Same byte count ensures the hash, not just size, is checked.
+                    path.write_bytes(b"x" * path.stat().st_size)
+                with self.assertRaisesRegex(AssertionError, "payload hash/size differs"):
+                    installed_evidence(distribution, installed, exporter)
+
+    def test_undeclared_files_and_stale_upgrade_files_fail(self):
+        for side in ("received", "installed"):
+            for name in ("obsolete.py", "runtime/node_modules/fixture/extra.js", "__pycache__/hidden.py",
+                         "__pycache__/obsolete.cpython-314.pyc", "runtime/__pycache__/hidden.pyc"):
+                with self.subTest(side=side, name=name), tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    distribution, installed = self.fixture(root)
+                    path = root / side / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(b"unexpected")
+                    with self.assertRaisesRegex(AssertionError, "payload files differ"):
+                        installed_evidence(distribution, installed, exporter)
+
+    def test_only_git_metadata_and_installed_source_bytecode_are_exempt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            distribution, installed = self.fixture(root)
+            for side in ("received", "installed"):
+                (root / side / ".git").mkdir()
+                (root / side / ".git" / "HEAD").write_text("fixture", encoding="utf-8")
+            cache = installed / "__pycache__" / "__init__.cpython-314.pyc"
+            cache.parent.mkdir()
+            cache.write_bytes(b"generated bytecode")
+            installed_evidence(distribution, installed, exporter)
+            shutil.copytree(cache.parent, root / "received" / "__pycache__")
+            with self.assertRaisesRegex(AssertionError, "payload files differ"):
+                installed_evidence(distribution, installed, exporter)
+
+    def test_private_payload_files_still_fail(self):
+        for name in (".env", "owner.binding", "runtime/state.db"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                distribution, installed = self.fixture(Path(temporary))
+                (installed / name).write_bytes(b"private")
+                with self.assertRaisesRegex(AssertionError, "Private payload state"):
+                    installed_evidence(distribution, installed, exporter)
+
+    def test_manifest_bytes_must_match_and_paths_must_be_unique_and_relative(self):
+        for name in (None, "README.md", "../escape.py", "runtime/../escape.py", "C:/escape.py", "runtime\\escape.py"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                distribution, installed = self.fixture(root)
+                manifest = json.loads((installed / "distribution.json").read_bytes())
+                manifest["files"].append({**manifest["files"][0], "path": name or "extra.py"})
+                (installed / "distribution.json").write_text(json.dumps(manifest), encoding="utf-8")
+                if name is not None:
+                    shutil.copyfile(installed / "distribution.json", root / "received" / "distribution.json")
+                with self.assertRaises(AssertionError):
+                    installed_evidence(distribution, installed, exporter)
+
+    def test_production_lock_and_installed_versions_are_checked_even_with_matching_hashes(self):
+        for fault in ("dev", "version", "missing", "root-dependencies", "devDependencies"):
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                distribution, installed = self.fixture(root)
+                for side in ("received", "installed"):
+                    payload = root / side
+                    path = payload / "runtime/package-lock.json"
+                    lock = json.loads(path.read_bytes())
+                    entry = lock["packages"]["node_modules/fixture"]
+                    if fault == "dev":
+                        entry["dev"] = True
+                    elif fault == "version":
+                        entry["version"] = "2.0.0"
+                    elif fault == "missing":
+                        (payload / "runtime/node_modules/fixture/package.json").unlink()
+                    elif fault == "root-dependencies":
+                        lock["packages"][""]["dependencies"] = {}
+                    else:
+                        lock["packages"][""]["devDependencies"] = {"vite": "1.0.0"}
+                    path.write_text(json.dumps(lock), encoding="utf-8")
+                    self.write_manifest(payload)
+                with self.assertRaises(AssertionError):
+                    installed_evidence(distribution, installed, exporter)
 
 
 if __name__ == "__main__":

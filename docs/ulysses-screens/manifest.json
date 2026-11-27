@@ -3,51 +3,51 @@
   "files": [
     {
       "file": "desktop-chapter.png",
-      "source": "screens-desktop-final/chromium-desktop-directory-03-chapter-selected.png",
-      "sha256": "304a33f9b76318f7033c5c1ffe2c4ccac2f2bdd4aa4e455681e9a80a6efa90c7",
+      "source": "release-chromium-desktop/chromium-desktop-directory-03-chapter-selected.png",
+      "sha256": "48a12adcfaad6a1d99bbc9b867407b6213d6d34e3c19a60db75b8c2d616d3453",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "phone-reading.png",
-      "source": "screens-phone-final-retry/chromium-phone-focus-01-single-screen-reading.png",
+      "source": "release-chromium-phone/chromium-phone-focus-01-single-screen-reading.png",
       "sha256": "82d1a745bce608ec65ee9628cd9d016071a699ff2ec772e1924678c77deaebdb",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "phone-evidence.png",
-      "source": "screens-phone-final-retry/chromium-phone-evidence-02-basis-expanded.png",
+      "source": "release-chromium-phone/chromium-phone-evidence-02-basis-expanded.png",
       "sha256": "f78fdcc49e055f64f8740d344320e0e8dfae063ee1e919c93a13fd002d1ce62e",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "webkit-320-chapter.png",
-      "source": "screens-webkit-compact-final/webkit-compact-directory-03-chapter-selected.png",
+      "source": "release-webkit-compact/webkit-compact-directory-03-chapter-selected.png",
       "sha256": "7cd17f0d4c334fe3ce72cbab3b73ed6e23640401e7e8a5a913c06d7faebb51b7",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "webkit-320-passage.png",
-      "source": "screens-webkit-compact-final/webkit-compact-passage-01-assistant-link.png",
+      "source": "release-webkit-compact/webkit-compact-passage-01-assistant-link.png",
       "sha256": "4235c0f885f51775bbe22f260cb328303cfc8669244eb16c0e078707400a8917",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "webkit-320-diary.png",
-      "source": "screens-webkit-compact-final/webkit-compact-diary-01-diary-read.png",
+      "source": "release-webkit-compact/webkit-compact-diary-01-diary-read.png",
       "sha256": "26c616ae5e947dbf7e09fbf1dbd47d4f82726a878fb37c4e2e22dbb76bb54632",
       "stage": "after",
-      "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
-      "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     },
     {
       "file": "phone-home.png",
@@ -88,6 +88,22 @@
       "stage": "after",
       "sourceSha256": "588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14",
       "bundleSha256": "8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505"
+    },
+    {
+      "file": "phone-receipt-reopened.png",
+      "source": "release-chromium-phone/chromium-phone-receipt-02-uncertain-reopened.png",
+      "sha256": "115160516d29c608ff88cddab46b0c25c854474e8494436742538bc9ac562112",
+      "stage": "after",
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
+    },
+    {
+      "file": "webkit-320-receipt-reopened.png",
+      "source": "release-webkit-compact/webkit-compact-receipt-02-uncertain-reopened.png",
+      "sha256": "c18f5cb6493d3984af21738b1d233f6e69baee03f18b205ebbb2d3bb943928af",
+      "stage": "after",
+      "sourceSha256": "5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034",
+      "bundleSha256": "ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d"
     }
   ]
 }

@@ -43,6 +43,14 @@ def request(origin, path, payload=None):
         return json.load(response)
 
 
+def source_payload(result, origin):
+    """Validate the native presentation link before comparing persisted data."""
+    payload = dict(result)
+    if "portalUrl" in payload:
+        assert payload.pop("portalUrl") == origin + payload["href"], "Native result link differs from its exact source URL."
+    return payload
+
+
 def native_probe(fixture):
     from gateway.session_context import clear_session_vars, set_session_vars
     from hermes_cli.lifecycle import invoke_hook
@@ -125,6 +133,71 @@ def private_root():
     return directory
 
 
+def installed_evidence(distribution, installed, module):
+    """Check each release against its own manifest, never the checkout's FILES."""
+    received = Path(distribution["directory"])
+    manifest_bytes = (received / "distribution.json").read_bytes()
+    assert (installed / "distribution.json").read_bytes() == manifest_bytes
+    manifest = json.loads(manifest_bytes)
+    assert manifest["format"] == 1 and manifest["files"], "Expected a complete distribution manifest."
+    expected, seen = {}, set()
+    for item in manifest["files"]:
+        name = item["path"]
+        path = Path(name)
+        assert (name and not path.is_absolute() and not path.drive and "\\" not in name
+                and all(part not in ("", ".", "..") for part in name.split("/"))), f"Invalid manifest path: {name}"
+        assert path.parts[0] not in (".git", "__pycache__", "distribution.json"), f"Invalid payload path: {name}"
+        assert name.casefold() not in seen, f"Duplicate manifest path: {name}"
+        seen.add(name.casefold())
+        expected[name] = item
+    for label, root in (("received", received), ("installed", installed)):
+        actual = {}
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root)
+            name = relative.as_posix()
+            assert not path.is_symlink() and not getattr(path, "is_junction", lambda: False)(), f"Payload link: {name}"
+            # Git is transport metadata. Hermes may compile installed Python
+            # sources; only their root-level CPython cache files are exempt.
+            if relative.parts[0] == ".git":
+                continue
+            if label == "installed" and len(relative.parts) == 2 and relative.parts[0] == "__pycache__":
+                cache = re.fullmatch(r"(.+)\.cpython-\d+(?:\.opt-\d+)?\.pyc", path.name)
+                if cache and cache[1] + ".py" in expected:
+                    continue
+            assert not any(part in module.PRIVATE_NAMES or part.startswith(".env") or part.endswith(".binding")
+                           for part in relative.parts), f"Private payload state: {name}"
+            if path.is_file() and name != "distribution.json":
+                actual[name] = {"path": name, "bytes": path.stat().st_size,
+                                "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        assert actual.keys() == expected.keys(), (f"{label} payload files differ: "
+            f"missing={sorted(expected.keys() - actual.keys())}, extra={sorted(actual.keys() - expected.keys())}")
+        for name, item in expected.items():
+            assert actual[name] == item, f"{label} payload hash/size differs: {name}"
+    expected_files = [{**item, "path": item["path"].removeprefix("runtime/")}
+                      for item in manifest["files"] if item["path"].startswith("runtime/")]
+    assert expected_files and module.audit_payload(installed / "runtime") == expected_files
+    assert not (installed / "runtime" / "node_modules" / "vite").exists()
+    runtime = installed / "runtime"
+    package = json.loads((runtime / "package.json").read_bytes())
+    lock = json.loads((runtime / "package-lock.json").read_bytes())["packages"]
+    assert package["dependencies"] == lock[""]["dependencies"]
+    assert not package.get("devDependencies") and not lock[""].get("devDependencies")
+    assert all("node_modules/" + name in lock for name in package["dependencies"])
+    for name, entry in lock.items():
+        assert not entry.get("dev"), f"Development dependency in runtime lock: {name}"
+        if name:
+            assert "runtime/" + name + "/package.json" in expected, f"Missing locked dependency: {name}"
+            metadata = json.loads((runtime / name / "package.json").read_bytes())
+            assert metadata["version"] == entry["version"], f"Locked dependency version differs: {name}"
+    index = (received / "runtime" / "frontend" / "dist" / "index.html").read_bytes()
+    assert (installed / "runtime" / "frontend" / "dist" / "index.html").read_bytes() == index
+    return {"source": str(received), "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "runtimeManifestSha256": hashlib.sha256(json.dumps(expected_files, sort_keys=True).encode()).hexdigest(),
+            "frontendIndexSha256": hashlib.sha256(index).hexdigest(),
+            "pluginFilesVerified": [name for name in expected if not name.startswith("runtime/")],
+            "manifestFilesVerified": len(expected), "productionDependenciesVerified": len(lock) - 1}
+
+
 def run_acceptance(args):
     import yaml
 
@@ -191,23 +264,6 @@ def run_acceptance(args):
             archive = sources[0].parent
         return {"installIdentifier": archive.as_uri(), "directory": str(archive)}
 
-    def installed_evidence(distribution):
-        received = Path(distribution["directory"])
-        manifest_bytes = (received / "distribution.json").read_bytes()
-        assert (installed / "distribution.json").read_bytes() == manifest_bytes
-        for name in module.FILES:
-            assert (installed / name).read_bytes() == (received / name).read_bytes(), f"Installed plugin file differs: {name}"
-        manifest = json.loads(manifest_bytes)
-        expected_files = [{**item, "path": item["path"].removeprefix("runtime/")}
-                          for item in manifest["files"] if item["path"].startswith("runtime/")]
-        assert expected_files and module.audit_payload(installed / "runtime") == expected_files
-        assert not (installed / "runtime" / "node_modules" / "vite").exists()
-        index = (received / "runtime" / "frontend" / "dist" / "index.html").read_bytes()
-        assert (installed / "runtime" / "frontend" / "dist" / "index.html").read_bytes() == index
-        return {"source": str(received), "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
-                "runtimeManifestSha256": hashlib.sha256(json.dumps(expected_files, sort_keys=True).encode()).hexdigest(),
-                "frontendIndexSha256": hashlib.sha256(index).hexdigest(), "pluginFilesVerified": list(module.FILES)}
-
     def workspace_runtime():
         with sqlite3.connect(f"{registry.as_uri()}?mode=ro", uri=True) as db:
             return json.loads(db.execute("SELECT runtime FROM workspaces WHERE name='fixture'").fetchone()[0])
@@ -251,7 +307,7 @@ def run_acceptance(args):
         status = json.loads(cli("sth", "status", expected=1))
         assert status["connected"] is False
         assert installed.is_dir()
-        initial_evidence = installed_evidence(initial)
+        initial_evidence = installed_evidence(initial, installed, module)
         report["checks"].append("received_complete_runtime_and_production_dependencies_without_private_state")
         # Creation can start a daemon before pairing/output fails.
         workspace_started = True
@@ -288,7 +344,7 @@ def run_acceptance(args):
             stop_workspace("upgrade-stop")
             # The documented replacement uses the new source's file URI.
             cli("plugins", "install", distribution["installIdentifier"], "--force", "--enable", timeout=150, log="upgrade-install")
-            after = upgrade["after"] = installed_evidence(distribution)
+            after = upgrade["after"] = installed_evidence(distribution, installed, module)
             assert after["manifestSha256"] != initial_evidence["manifestSha256"], "Upgrade ZIPs must have different manifests."
             cli("plugins", "doctor", "sth-personal-operations", "--ci", log="upgrade-doctor")
             resumed = json.loads(cli("sth", "workspace", "start", "--workspace", "fixture", log="upgrade-start"))
@@ -302,9 +358,13 @@ def run_acceptance(args):
                          connectionId=resumed["connectionId"], schemaVersion=request(report["origin"], "/api/health")["schemaVersion"])
             assert after["schemaVersion"] >= upgrade["before"]["schemaVersion"]
             replayed = probe("first", session="native-upgrade", replay=True)
-            assert replayed["saved"] == {**seed["saved"], "replayed": True}
+            # The current native plugin adds a presentation URL to old receipts;
+            # require that exact addition while preserving every original field.
+            upgraded_seed = {**seed["saved"], "result": {**seed["saved"]["result"],
+                             "portalUrl": report["origin"] + seed["saved"]["result"]["href"]}}
+            assert replayed["saved"] == {**upgraded_seed, "replayed": True}
             assert replayed["connectionId"] == seed["connectionId"]
-            assert probe("restart", session="native-upgrade-read-original", saved=seed["saved"])["saved"] == seed["saved"]
+            assert probe("restart", session="native-upgrade-read-original", saved=upgraded_seed)["saved"] == upgraded_seed
             continued = probe("first", session="native-upgrade-write")
             assert continued["connectionId"] == seed["connectionId"]
             assert continued["saved"]["result"]["sourceId"] != seed["saved"]["result"]["sourceId"]
@@ -312,7 +372,7 @@ def run_acceptance(args):
             for label, receipt in (("original", seed["saved"]), ("continued", continued["saved"])):
                 result = request(report["origin"], "/api/web/invoke", {"operationId": "source.read", "stepId": "upgrade-" + label,
                                  "input": {"sourceId": receipt["result"]["sourceId"], "revision": receipt["result"]["revision"]}})
-                assert result["result"] == receipt["result"]
+                assert result["result"] == source_payload(receipt["result"], report["origin"])
                 after[label + "Source"] = result["result"]
             after["replayedReceipt"] = replayed["saved"]
             upgrade["passed"] = True
@@ -374,7 +434,7 @@ def run_acceptance(args):
         report["checks"].extend(["native_save_replay_and_result_link", "new_process_read_and_original_receipt", "deny_foreign_platform_profile_delegation_and_session"])
         web = request(created["origin"], "/api/web/invoke", {"operationId": "source.read", "stepId": "web-read-native",
                        "input": {"sourceId": first["saved"]["result"]["sourceId"]}})
-        assert web["result"] == first["saved"]["result"]
+        assert web["result"] == source_payload(first["saved"]["result"], report["origin"])
         before_restart = json.loads(cli("sth", "status"))["connectionId"]
         relaunched = json.loads(cli("sth", "workspace", "restart", "--workspace", "fixture", log="restart"))
         assert relaunched["origin"] == created["origin"] and relaunched["connectionId"] == before_restart

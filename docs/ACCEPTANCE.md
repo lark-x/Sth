@@ -4,7 +4,7 @@
 
 ## 2026-11-28 · Ulysses 方向整合验收
 
-本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。应用代码在 `91be384` 后保持一致，后续提交为测试和交付记录。部署与安装包的版本另行核对，不用本地源码代替运行版本。
+本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。初轮整合应用代码为 `91be384`，最后独立视觉复核又修正了待确认回执重开时的按钮遮挡。部署与安装包的版本另行核对，不用本地源码代替运行版本。
 
 | 体验 | 正式页面截图 |
 | --- | --- |
@@ -12,13 +12,14 @@
 | 手机首屏读稿与依据 | [390px 读稿](ulysses-screens/phone-reading.png) · [原文与人物依据](ulysses-screens/phone-evidence.png) |
 | 窄屏书库、旧版选段、日记 | [WebKit 320px 章节](ulysses-screens/webkit-320-chapter.png) · [旧版选段](ulysses-screens/webkit-320-passage.png) · [日记](ulysses-screens/webkit-320-diary.png) |
 | 首页与辅助资料 | [390px 首页](ulysses-screens/phone-home.png) · [角色正文](ulysses-screens/phone-character.png) |
+| 保存响应丢失后重开 | [390px 重试入口](ulysses-screens/phone-receipt-reopened.png) · [WebKit 320px](ulysses-screens/webkit-320-receipt-reopened.png) |
 | 同一样本前后对照 | [旧首页](ulysses-screens/before-phone-home.png) / [新首页](ulysses-screens/phone-home.png)；[旧读稿](ulysses-screens/before-phone-reading.png) / [新读稿](ulysses-screens/after-phone-reading.png) |
 
-以上为隔离样例；每张图片的原路径、阶段、源码与构建摘要在 [截图清单](ulysses-screens/manifest.json)。完整六组为 Chromium 1280/768/390/320 与 WebKit 390/320，每组 20 个场景，合计 120/120、349 张图。采集构建摘要 `8819bcce78a6ebfbb088078d3bf45232521bc8c63ebf0fcbddf40f1d1cbff505`，应用源码摘要 `588bd0070a39b0a0f7dd1109789e77709e3e2a6ba46c8fed5e62339c14fc6e14`；所有通过组的 `sourceStable`、`servedBuildStable` 均为 true。
+以上为隔离样例；首页/角色与前后对照保留对应采样阶段，书库、读稿、依据、日记与回执图已由最后六组 `release-*` 图更新。每张图片的原路径、阶段、源码与构建摘要在 [截图清单](ulysses-screens/manifest.json)。完整六组为 Chromium 1280/768/390/320 与 WebKit 390/320，每组 20 个场景，合计 120/120、349 张图。采集构建摘要 `ef40fb75a0e561171a1f18fbf0f571ef76a35630bf5317c98e8cb1999d2e332d`，应用源码摘要 `5b6c11c751e817f9551c08462a6efdee00675cb72282a0efe98d7cedb969a034`；所有通过组的 `sourceStable`、`servedBuildStable` 均为 true。
 
-最终完整浏览器回归 222/222，文稿专项 154/154；核心 130 通过、1 条真实 ComfyUI 条件用例跳过；适配器 18 通过、3 条真实宿主启动/登录条件用例跳过。已安装 Hermes 的 CLI、合成 QQ/微信上下文及公共结果链接通过，不作为新一轮真人设备或真实模型验收。构建和类型检查通过。
+改造整合完整浏览器回归 222/222；最终回执焦点修复后的文稿专项 159/159；核心 130 通过、1 条真实 ComfyUI 条件用例跳过；适配器 18 通过、3 条真实宿主启动/登录条件用例跳过。已安装 Hermes 的 CLI、合成 QQ/微信上下文及公共结果链接通过，不作为新一轮真人设备或真实模型验收。构建和类型检查通过。
 
-完整浏览器回归过程中发现旧菜单入口和旧预览标题断言不再对应正式界面；更新为实际展开菜单、精确选择行/正文/版本后，经独立审查通过。书库异步摘要测试改为等待准确 preview href。原业务、API、安全与版本断言保留，未增加超时、删除或跳过失败用例。最终全套日志为本机 `frontend/.artifacts/ulysses-baseline/final-{browser,manuscript}-accepted.log`，严格标题补验为 `chapter-create-reviewed-final.log`（10/10）。失败轮次也保留。
+完整浏览器回归过程中发现旧菜单入口和旧预览标题断言不再对应正式界面；更新为实际展开菜单、精确选择行/正文/版本后，经独立审查通过。书库异步摘要测试改为等待准确 preview href。原业务、API、安全与版本断言保留，未增加超时、删除或跳过失败用例。最终全套日志为本机 `frontend/.artifacts/ulysses-baseline/final-{browser,manuscript}-accepted.log`，严格标题补验为 `chapter-create-reviewed-final.log`（10/10）。最后回执修复的完整文稿日志为 `frontend/.artifacts/ulysses-release/manuscript-release.log`，六组新图保存在 `frontend/.artifacts/ulysses-baseline/release-*`。失败轮次也保留。
 
 请求量、首屏位置、包体及本机布局位移的前后变化见 [治理对照](ULYSSES_EXECUTION.md#最终整合的收益与代价)。真实 iOS、WKWebView、真人私聊及大库慢设备性能仍属于后续范围。
 
