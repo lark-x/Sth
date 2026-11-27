@@ -158,6 +158,8 @@ test('contextual scene creation preserves work and chapter placement', { timeout
     });
     await create.click();
     await expectHeading(page, '新建场景');
+    await page.getByText('章节内新建验收 · 已有章节 · 下一步确认本章编排', { exact: true }).waitFor();
+    assert.equal(await field(page, 'IF 分支').count(), 0);
     await field(page, '标题').fill('本章新增的一幕');
     await click(page, '新建场景');
     await expectHeading(page, '编排章节');
@@ -194,6 +196,8 @@ test('contextual scene creation preserves work and chapter placement', { timeout
     const page = await open(t, origin, `/projects/${project.projectId}`, viewport);
     await page.locator('.library-empty').getByRole('link', { name: '新建场景', exact: true }).click();
     await expectHeading(page, '新建场景');
+    await page.getByText('空书新建验收 · 下一步选择或新建章节', { exact: true }).waitFor();
+    assert.equal(await field(page, 'IF 分支').count(), 0);
     await field(page, '标题').fill('空书的第一幕');
     await click(page, '新建场景');
     await expectHeading(page, '选择章节');
@@ -247,6 +251,7 @@ test('contextual scene creation preserves work and chapter placement', { timeout
   await t.test('creation without work context keeps its existing independent-scene flow', async t => {
     const page = await open(t, origin, '/scenes/new', phone);
     await expectHeading(page, '新建场景');
+    assert.ok(await field(page, 'IF 分支').isVisible());
     await field(page, '标题').fill('保持独立创建');
     await click(page, '新建场景');
     await expectHeading(page, '保持独立创建');

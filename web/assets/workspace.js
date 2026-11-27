@@ -183,6 +183,7 @@ async function createPage(ctx, catalog, domain) {
   const chapterPlacement = domain === domains.chapters && values.projectId && params.get('addSceneId');
   let placementProject;
   let placementChapter;
+  let placementSubtitle;
   if (scenePlacement || chapterPlacement) {
     const projects = await listAll('project.list', {}, ctx.signal);
     placementProject = projects.find(project => project.projectId === values.projectId);
@@ -196,6 +197,10 @@ async function createPage(ctx, catalog, domain) {
       placementChapter = await read('chapter.read', { chapterId: params.get('chapterId') }, ctx.signal);
       if (placementChapter.projectId !== values.projectId) throw new ApiError(400, 'chapter_project_mismatch', '章节不属于当前作品。');
     }
+    if (scenePlacement) fixed.branchId = undefined;
+    if (placementChapter) placementSubtitle = `${placementProject.title} · ${placementChapter.title} · 下一步确认本章编排`;
+    else if (scenePlacement) placementSubtitle = `${placementProject.title} · 下一步选择或新建章节`;
+    else placementSubtitle = `${placementProject.title} · 新建章节后继续编排已保存的场景`;
   }
   if (domain === domains.scenes && values.branchId) {
     fixed.branchId = values.branchId;
@@ -256,8 +261,7 @@ async function createPage(ctx, catalog, domain) {
     } } },
   } };
   return operationPage(ctx, catalog, { id, title: domain.create, backTo: fixed.sceneId ? path('scenes', fixed.sceneId) : backTo, schema,
-    subtitle: placementProject ? `${placementProject.title}${placementChapter ? ` · ${placementChapter.title}` : ''} · ${scenePlacement ? '创建后请选择或新建章节，保存编排后才会归入作品。' : '新建章节后继续编排已保存的场景。'}`
-      : fixed.story ? `${values.title} · 讲述${version(fixed.story.revision)}${fixed.story.checkpointRevision ? ` · 接续${version(fixed.story.checkpointRevision)}` : ''}` : undefined,
+    subtitle: placementSubtitle ?? (fixed.story ? `${values.title} · 讲述${version(fixed.story.revision)}${fixed.story.checkpointRevision ? ` · 接续${version(fixed.story.checkpointRevision)}` : ''}` : undefined),
     referenceExtras: character && (controls => characterSelections(ctx, controls)),
     values, fixed, orderable: domain === domains.templates ? ['fields'] : undefined,
     complete(result) {
