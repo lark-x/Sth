@@ -16,7 +16,7 @@ const url = ref(new URL(location.href));
 const refreshVersion = ref(0);
 const announcement = ref('');
 const routeError = ref(false);
-const returnToManuscript = ref<string>();
+const returnToManuscript = ref<string | undefined>(history.state?.sthManuscriptReturn);
 let announcementTimer: ReturnType<typeof setTimeout> | undefined;
 let focusNextMount = false;
 let evidencePosition: ReadingPosition | undefined;

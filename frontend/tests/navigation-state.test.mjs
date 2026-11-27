@@ -97,7 +97,8 @@ test('return to the same manuscript revision, passage and viewport from evidence
   for (const [engine, layout, viewport] of layouts) {
     const browser = await engine.launch();
     try {
-      const paths = [['character', 'back'], ['source', 'back'], ['character', 'link'], ['source', 'link']];
+      const paths = [['character', 'back'], ['source', 'back'], ['character', 'link'], ['source', 'link'],
+        ...(engine === chromium && layout === 'phone' ? [['character', 'reload']] : [])];
       for (const [resource, mode] of paths) {
         const label = `${engine.name()}-${layout}-${resource}-${mode}`;
         await t.test(label, async subtest => {
@@ -125,12 +126,16 @@ test('return to the same manuscript revision, passage and viewport from evidence
           await openEvidenceLink(page, fixture.links[resource]);
           const title = resource === 'source' ? fixture.source.title : fixture.character.name;
           await page.getByRole('heading', { name: title, level: 1, exact: true }).waitFor();
+          if (mode === 'reload') {
+            await page.reload();
+            await page.getByRole('heading', { name: title, level: 1, exact: true }).waitFor();
+          }
           await settle(page);
           const auxiliary = await inspect(page);
           const returnLink = await backLink(page).getAttribute('href');
           await capture(page, directory, label, 'auxiliary');
 
-          if (mode === 'link') await backLink(page).click();
+          if (mode === 'link' || mode === 'reload') await backLink(page).click();
           else await page.goBack();
           await page.locator(mark).waitFor();
           await waitForReadingReturn(page, before);
