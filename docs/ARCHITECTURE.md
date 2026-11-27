@@ -6,7 +6,7 @@
 
 | 入口或流程 | 权威实现和边界 |
 | --- | --- |
-| 服务与工作区生命周期 | [主进程](../src/main.ts#L9)和[工作区 daemon](../scripts/workspace-daemon.mjs#L105)打开同一套 [SQLite 初始化和迁移入口](../src/database.ts#L15)，并启动媒体、生成和外部检索 worker。 |
+| 服务与工作区生命周期 | [主进程](../src/main.ts#L9)和[工作区 daemon](../scripts/workspace-daemon.mjs#L105)打开同一套 [SQLite 初始化和迁移入口](../src/database.ts#L15)，并启动媒体、生成和外部检索 worker。工作区、宿主绑定和启动尝试登记由 [withRegistry](../scripts/workspace-store.mjs#L39) 管理。 |
 | 网页与宿主的操作契约 | [工作区注册表](../src/workspace.ts#L18)装配各域操作和资源路径。[HTTP 服务](../src/server.ts#L99)分别校验网页与个人连接，再调用同一 [Operations 执行器](../src/core/operations.ts#L163)。[通用请求、回执及描述符](../src/core/contracts.ts#L20)与[目录筛选](../src/core/discovery.ts#L13)各有一个入口。 |
 | 网页路由 | [HTML 入口](../web/index.html#L10)挂载 [Vue 壳](../frontend/main.ts#L1)，由[路由表](../frontend/routes.ts#L35)分发。未迁完的路径通过 [LegacyRoute](../frontend/LegacyRoute.vue#L9)加载旧页面，其[渲染入口](../web/assets/app.js#L15)调用同一网页 API。 |
 | 首页速记与日记 | [首页速记](../frontend/HomePage.vue#L43)和[日记编辑](../frontend/diary/useDiaryRoute.ts#L281)都调用[资料库操作](../src/library/index.ts#L172)。日记与角色修订的存储定义在[资料库 schema](../src/library/storage.ts#L8)。 |
@@ -31,17 +31,17 @@ node scripts/architecture-baseline.mjs --write
 
 只读审查和跨工作树比较使用 `--skip-build`。该参数跳过构建及产物对照，输出 `build.status: "skipped"`。源码、构建配置和锁文件哈希、架构指标、operation 与空库 schema 仍参与过期判断。默认检查会重跑 `npm run build` 并更新本工作树的 `frontend/dist`。完整构建对照要求参考快照来自同一工作树的该命令，历史内存快照和其他工作树的快照可用静态模式对照。
 
-每批先保留旧快照，再核对文件、依赖及循环、重复区段、复杂度热点、operation 和 schema 对象的增减。确认差异后在采集工作树执行 `--write` 和 `--check`，随代码检查受影响的源码入口链接。链接锚点用于定位，逐文件分析和实测数值以快照为准。这一阶段以可重跑快照、可定位入口和有证据的处理决定为完成条件。行为、性能与真实设备验证由迭代验收记录追踪。 [迭代约束](WORKSPACE_ITERATION.md#2026-11-28-补充执行约束)
+每批先保留旧快照，再核对文件、依赖及循环、重复区段、复杂度热点、operation 和 schema 对象的增减。文件增删和内容变化纳入过期判断，包括未忽略的新增测试。确认差异后在采集工作树执行 `--write` 和 `--check`，随代码检查受影响的源码入口链接。链接锚点用于定位，逐文件分析和实测数值以快照为准。这一阶段以可重跑快照、可定位入口和有证据的处理决定为完成条件。行为、性能与真实设备验证由迭代验收记录追踪。 [迭代约束](WORKSPACE_ITERATION.md#2026-11-28-补充执行约束)
 
 ## 采集口径
 
 | 指标 | 方法与边界 |
 | --- | --- |
-| 清单与覆盖 | 从 Git 索引和未忽略的新增路径读取 `src`、`frontend`、`web`、`adapters`、`scripts` 中的普通文件。保留测试源码并单独标识，排除 vendor、构建目录、依赖、fixture 目录、缓存和生成产物。仓库根的 npm 清单、锁文件、TypeScript 与 Vite 配置作为补充哈希输入。范围内首采 247 个文件，其中 29 个测试文件、231 个有依赖采集、230 个有复杂度和重复扫描。覆盖计数按根目录、格式和测试归类。 |
-| 依赖与循环 | 使用 TypeScript AST、Vue SFC 解析、Python AST 和 HTML 的入口标签。保存已解析的内部文件边、行列、分域边数和强连通分量。`runtimeCycles` 排除显式 `import type` 等类型边，保留函数字面动态导入与局部 Python 导入，表示潜在运行时依赖。首采 748 处边、1 个循环分量。5 处计算式动态导入与 20 处范围外引用列在待解析清单。第三方、隐式 Python 父包、Vue 模板表达式、CSS `url()` 或 `@import`、运行时拼出的路径、子进程参数及服务间调用超出图的覆盖。 |
-| 重复区段 | JS、TS 和 Vue 脚本属于同一词法组，Python 单独采集；源文件和测试各自比较。跨文件匹配连续完全相同的 token 序列，门槛为 80 个 token 且两侧各跨至少 5 行。忽略注释及普通空白，保留 token 类型、标识符、字面值和 Python 缩进结构。记录经逐 token 验证的最大区段、哈希和两侧行号。首采 1 对源码、10 对测试。导入、测试装配和惯用写法可能命中。改名、改常量、换语言、换结构或同文件的语义重复可能漏掉。 |
+| 清单与覆盖 | 从 Git 索引和未忽略的新增路径读取 `src`、`frontend`、`web`、`adapters`、`scripts`、`tests` 中的普通文件。保留测试源码并单独标识，排除 vendor、构建目录、依赖、fixture 目录、缓存和生成产物。仓库根的 npm 清单、锁文件、TypeScript 与 Vite 配置作为补充哈希输入。本次采集 281 个文件，其中 63 个归类为测试代码，包含 `tests/` 的 31 个测试及 3 个辅助文件。265 个文件有依赖采集，264 个有复杂度和重复扫描。覆盖计数按根目录、格式和测试归类。 |
+| 依赖与循环 | 使用 TypeScript AST、Vue SFC 解析、Python AST 和 HTML 的入口标签。内部依赖和待解析引用都保留行、列，供增量区分同一行的多次引用。保存分域边数和强连通分量。`runtimeCycles` 排除显式 `import type` 等类型边，保留函数字面动态导入与局部 Python 导入，表示潜在运行时依赖。本次采集 908 处边、1 个循环分量，待解析清单含 5 处计算式动态导入和 1 处未解析的本地引用。第三方、隐式 Python 父包、Vue 模板表达式、CSS `url()` 或 `@import`、运行时拼出的路径、子进程参数及服务间调用超出图的覆盖。 |
+| 重复区段 | JS、TS 和 Vue 脚本属于同一词法组，Python 单独采集，源文件和测试各自比较。跨文件匹配连续完全相同的 token 序列，门槛为 80 个 token 且两侧各跨至少 5 行。忽略注释及普通空白，保留 token 类型、标识符、字面值和 Python 缩进结构。记录经逐 token 验证的最大区段、哈希和两侧行号。本次命中 1 对源码、19 对测试。导入、测试装配和惯用写法可能命中。改名、改常量、换语言、换结构或同文件的语义重复可能漏掉。 |
 | 认知复杂度代理 | 每个函数、方法、回调与顶层范围独立计分。`if`、循环、`switch`/`match`、`catch`/`except` 和条件表达式各计 `1 + 当前计分分支嵌套深度`，布尔短路与 JS 空值合并的每个操作符计 `1`。单独的 `else`、各 `case`、递归、Python 推导式与模板表达式没有专门加分。保留文件总分、最高分和分数至少 12 的范围。此代理用于同口径查阅变化，与 Sonar 认知复杂度及跨语言绝对分数无一一对应。PowerShell、CSS、配置和 SVG 只有文件级哈希。 |
-| 公共契约与持久化 | [契约入口](../scripts/contract.ts#L9)在内存 SQLite 注册完整 operation 目录。对完整目录及 116 个描述符分别哈希，JSON 对象键排序，数组保留原顺序。范围是 operation 描述符及资源路径，HTTP 路由、认证和宿主封装仍通过源码及验收检查。用明确的系统临时目录运行真实 [openDatabase](../src/database.ts#L15)，记录应用 ID、格式版本、`sqlite_schema` 及 147 个对象各自的指纹，并保存两个迁移入口的源文件摘要。采集结束清理临时 SQLite。已有数据上的升级结果、落盘 JSON 语义和业务行为需通过迁移及操作测试验证。 |
+| 公共契约与持久化 | [契约入口](../scripts/contract.ts#L9)在内存 SQLite 注册完整 operation 目录。对完整目录及 116 个描述符分别哈希，JSON 对象键排序，数组保留原顺序。范围是 operation 描述符及资源路径，HTTP 路由、认证和宿主封装仍通过源码及验收检查。采集将系统临时目录显式传给 [openDatabase](../src/database.ts#L15) 和 [withRegistry](../scripts/workspace-store.mjs#L39)。两库各自记录应用 ID、`user_version`、`sqlite_schema` 和逐对象指纹，结束后清理数据库及其临时文件。`sth.sqlite` 当前为版本 4、147 个对象，`persistence.registry` 记录版本 1 的 `registry.sqlite`，包含 `workspaces`、`hosts`、`attempts` 及其 4 个自动索引。登记库版本和对象差异在 `--check` 与 `--compare` 中可见。已有数据上的升级结果、落盘 JSON 语义和业务行为需通过迁移及操作测试验证。 |
 | 构建尺寸 | `build` 只记录 `F:/Project/Sth-worktrees/architecture` 本机工作树的 `npm run build` 落盘产物。仓库脚本执行 `vue-tsc --noEmit -p frontend/tsconfig.json && vite build`，调用没有追加参数，使用 Vite CLI 默认生产模式及默认配置加载方式。[配置](../vite.config.ts#L28)指定 `frontend/dist`、`emptyOutDir: true`、资产目录 `vue` 和目标 `es2022`。本次 25 个文件共 501,703 未压缩字节，逐文件记录 SHA-256。主树 summary 单独保留。此总量的范围为 `frontend/dist`，服务另行返回的旧资源和线上指标由主线采集。 [构建命令](../package.json#L28) |
 
 ## 有证据的结构问题

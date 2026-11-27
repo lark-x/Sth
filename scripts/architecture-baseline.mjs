@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { parse as parseVue } from '@vue/compiler-sfc';
 import { NodeTypes, parse as parseHtml } from '@vue/compiler-dom';
+import { withRegistry } from './workspace-store.mjs';
 
 const root = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
 const worktree = root.split(sep).join('/');
 const savedPath = join(root, 'docs/architecture-baseline.json');
-const roots = ['src', 'frontend', 'web', 'adapters', 'scripts'];
+const roots = ['src', 'frontend', 'web', 'adapters', 'scripts', 'tests'];
 const rootInputs = ['package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts'];
 const scripts = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'];
 const formats = new Set([...scripts, '.vue', '.py', '.ps1', '.css', '.html', '.svg', '.json', '.yaml', '.yml']);
@@ -256,7 +257,7 @@ function analyze(files) {
         hotspots: scopes.filter(scope => scope.score >= hotspotScore),
       };
       for (const region of regions) {
-        region.imports.forEach(([type, specifier, line]) => link(type, specifier, line));
+        for (const reference of region.imports) link(...reference);
         tokenStreams.push({ file, kind, family: extension === '.py' ? 'python' : 'javascript', tokens: region.tokens });
       }
     } else if (extension === '.vue') record.analysis.push('dependencies');
@@ -341,25 +342,34 @@ function publicContract() {
   return { schemaVersion, resourcePaths, sha256: digest(catalog), operations: operations.map(operation => ({ id: operation.id, effect: operation.effect, sha256: digest(operation) })).sort(byJson) };
 }
 
+function sqliteSchema(db) {
+  const applicationId = db.prepare('PRAGMA application_id').get().application_id;
+  const userVersion = db.prepare('PRAGMA user_version').get().user_version;
+  const rows = db.prepare('SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name').all();
+  return {
+    applicationId, userVersion, sha256: digest({ applicationId, userVersion, rows }),
+    objects: rows.map(({ type, name, tbl_name, sql }) => ({ type, name, table: tbl_name, sha256: digest(sql) })),
+  };
+}
+
 async function persistence() {
   const { openDatabase } = await import('../src/database.ts');
   const directory = mkdtempSync(join(tmpdir(), 'sth-architecture-'));
   try {
     const db = openDatabase(directory);
     try {
-      const applicationId = db.prepare('PRAGMA application_id').get().application_id;
-      const userVersion = db.prepare('PRAGMA user_version').get().user_version;
-      const rows = db.prepare('SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name').all();
       return {
-        applicationId, userVersion, sha256: digest({ applicationId, userVersion, rows }),
-        objects: rows.map(({ type, name, tbl_name, sql }) => ({ type, name, table: tbl_name, sha256: digest(sql) })),
-        migrationSources: ['src/database.ts', 'src/story/decision-schema.ts'].map(file => ({ file, sha256: hash(readFileSync(join(root, file))) })),
+        ...sqliteSchema(db), registry: withRegistry(directory, sqliteSchema),
+        migrationSources: ['src/database.ts', 'src/story/decision-schema.ts', 'scripts/workspace-store.mjs']
+          .map(file => ({ file, sha256: hash(readFileSync(join(root, file))) })),
       };
     } finally {
       db.close();
     }
   } finally {
-    for (const suffix of ['', '-journal', '-wal', '-shm']) rmSync(join(directory, `sth.sqlite${suffix}`), { force: true });
+    for (const file of ['sth.sqlite', 'registry.sqlite']) {
+      for (const suffix of ['', '-journal', '-wal', '-shm']) rmSync(join(directory, file + suffix), { force: true });
+    }
     rmdirSync(directory);
   }
 }
@@ -436,6 +446,11 @@ function compare(before, after) {
   const { build: beforeBuild, ...beforeStatic } = before;
   const { build: afterBuild, ...afterStatic } = after;
   const change = (left, right) => digest(left) === digest(right) ? null : { before: left, after: right };
+  const schemaDiff = (previous, current) => ({
+    ...diffRows(previous?.objects ?? [], current.objects, item => `${item.type}:${item.name}`),
+    sha256: change(previous?.sha256 ?? null, current.sha256), userVersion: change(previous?.userVersion ?? null, current.userVersion),
+    applicationId: change(previous?.applicationId ?? null, current.applicationId),
+  });
   const json = item => JSON.stringify(item);
   const dependencies = {};
   for (const field of ['edges', 'unresolved', 'runtimeCycles', 'allCycles']) dependencies[field] = diffRows(before.dependencies[field], after.dependencies[field], json);
@@ -452,9 +467,8 @@ function compare(before, after) {
     contract: { ...diffRows(before.contract.operations, after.contract.operations, item => item.id),
       sha256: change(before.contract.sha256, after.contract.sha256), schemaVersion: change(before.contract.schemaVersion, after.contract.schemaVersion),
       resourcePaths: change(before.contract.resourcePaths, after.contract.resourcePaths) },
-    persistence: { ...diffRows(before.persistence.objects, after.persistence.objects, item => `${item.type}:${item.name}`),
-      sha256: change(before.persistence.sha256, after.persistence.sha256), userVersion: change(before.persistence.userVersion, after.persistence.userVersion),
-      applicationId: change(before.persistence.applicationId, after.persistence.applicationId),
+    persistence: { ...schemaDiff(before.persistence, after.persistence),
+      registry: schemaDiff(before.persistence.registry, after.persistence.registry),
       migrationSources: diffRows(before.persistence.migrationSources, after.persistence.migrationSources, item => item.file) },
     build,
   };
