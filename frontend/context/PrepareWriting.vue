@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue';
 import type { Generation, GenerationAuthorContextRef, GenerationStoryRef, Template } from '../../src/generation/contracts.ts';
+import type { ReferenceInput } from '../../src/generation/contracts.ts';
+import type { Scene } from '../../src/story/contracts.ts';
 import { ApiError, errorText, invoke, operation, type OperationCall } from '../api.ts';
 import { recover } from '../workspace/api.ts';
 import { retain, savedText } from '../workspace/useSubmission.ts';
+import EvidencePicker from '../writing/evidence-picker.vue';
+import { validReferences } from '../writing/evidence-model.ts';
 
-const props = defineProps<{ authorContext: GenerationAuthorContextRef; story?: GenerationStoryRef; returnHref: string }>();
-const authorContext = { ...props.authorContext };
-const key = `sth:context:writing:v1:${JSON.stringify([authorContext, props.story ?? null])}`;
+const props = defineProps<{ authorContext?: GenerationAuthorContextRef; story?: GenerationStoryRef; scene?: Scene; returnHref: string }>();
+const emit = defineEmits<{ prepared: [record: Generation] }>();
+const authorContext = props.authorContext ? { ...props.authorContext } : undefined;
+const manuscript = props.scene ? { sceneId: props.scene.sceneId, sceneRevision: props.scene.revision } : undefined;
+const key = `sth:context:writing:v1:${JSON.stringify([authorContext, props.story ?? null])}${manuscript ? `:${JSON.stringify(manuscript)}` : ''}`;
 type TemplateChoice = Pick<Template, 'templateId' | 'title' | 'revision'>;
 type Prepared = Pick<Generation, 'generationId' | 'title'>;
 const values = reactive({ title: '', brief: '', templateId: '' });
+const references = ref<ReferenceInput[]>([]);
 const pending = shallowRef<OperationCall>();
 const prepared = shallowRef<Prepared>();
 const busy = ref(false);
@@ -26,6 +33,7 @@ const controller = new AbortController();
 let disposed = false;
 
 function sameScope(value: GenerationAuthorContextRef | undefined) {
+  if (!authorContext) return value === undefined;
   return value?.projectId === authorContext.projectId && value.branchId === authorContext.branchId
     && value.contextRevision === authorContext.contextRevision;
 }
@@ -34,6 +42,7 @@ try {
   const saved = JSON.parse(savedText(key) || 'null');
   if (saved && typeof saved.title === 'string' && typeof saved.brief === 'string' && typeof saved.templateId === 'string') {
     Object.assign(values, { title: saved.title, brief: saved.brief, templateId: saved.templateId });
+    if (validReferences(saved.references)) references.value = saved.references;
     if (saved.prepared && typeof saved.prepared.generationId === 'string'
       && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(saved.prepared.generationId) && typeof saved.prepared.title === 'string') {
       prepared.value = saved.prepared;
@@ -42,18 +51,22 @@ try {
   const call = JSON.parse(savedText(`${key}:pending`) || 'null');
   if (call?.operationId === 'generations.prepare' && typeof call.stepId === 'string' && sameScope(call.input?.authorContext)
     && JSON.stringify(call.input?.story ?? null) === JSON.stringify(props.story ?? null)
+    && JSON.stringify(call.input?.manuscript ?? null) === JSON.stringify(manuscript ?? null)
+    && (call.input?.references === undefined || validReferences(call.input.references))
     && typeof call.input.title === 'string' && typeof call.input.brief === 'string' && typeof call.input.templateId === 'string') {
     pending.value = call;
     prepared.value = undefined;
     Object.assign(values, { title: call.input.title, brief: call.input.brief, templateId: call.input.templateId });
+    references.value = call.input.references ?? [];
     failure.value = '上次准备的结果尚未确认。请重试本次准备，找回原组稿。';
   }
 } catch { /* A fresh form remains available when a stored draft cannot be read. */ }
 
 function saveDraft() {
-  retain(key, JSON.stringify({ ...values, prepared: prepared.value }));
+  retain(key, JSON.stringify({ ...values, references: references.value, prepared: prepared.value }));
 }
 watch(values, saveDraft, { flush: 'sync' });
+watch(references, saveDraft, { deep: true, flush: 'sync' });
 
 async function loadTemplates() {
   if (templateLoading.value) return;
@@ -74,6 +87,8 @@ function prepareError(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === 'generation_author_context_too_large') return '此版决定与问题超过组稿容量。请返回作品整理内容后，选择新的版本。';
     if (error.code === 'generation_context_too_large' || error.code === 'generation_provenance_too_large') return '组稿内容超过容量，请缩短写作要求，或返回选择较小的作者上下文。';
+    if (error.code === 'source_excerpt_mismatch' || error.code === 'source_range_invalid') return '引用原句或位置与所选版本不一致，请核对原文后重试。';
+    if (error.code === 'generation_viewpoint_reference_forbidden') return '此人物视角仅允许讲法中可见的事件。请移除额外引用，或返回选择合适的讲法。';
     if (error.status === 409) return '作品、分支或讲法版本不一致，请返回核对固定版本链接。';
     if (error.status === 404) return '找不到所选模板或上下文版本。请重新读取模板，或返回核对版本链接。';
   }
@@ -93,8 +108,9 @@ async function submit() {
     const template = templates.value.find(item => item.templateId === values.templateId);
     if (!template) { templateFailure.value = '请选择已读取的可用模板。'; return; }
     call = operation('generations.prepare', { title: values.title.trim(), brief: values.brief.trim(),
-      projectId: authorContext.projectId, templateId: template.templateId, templateRevision: template.revision,
-      authorContext, ...(props.story ? { story: props.story } : {}) });
+      ...(authorContext ? { projectId: authorContext.projectId, authorContext } : props.scene?.placement ? { projectId: props.scene.placement.projectId } : {}),
+      templateId: template.templateId, templateRevision: template.revision,
+      references: JSON.parse(JSON.stringify(references.value)), ...(manuscript ? { manuscript } : {}), ...(props.story ? { story: props.story } : {}) });
   }
   pending.value = call;
   retain(`${key}:pending`, JSON.stringify(call));
@@ -111,6 +127,7 @@ async function submit() {
     saveDraft();
     pending.value = undefined;
     retain(`${key}:pending`, '');
+    emit('prepared', result);
   } catch (error) {
     if (disposed) return;
     const uncertain = !(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500;
@@ -136,10 +153,11 @@ if (!prepared.value && !pending.value) void loadTemplates();
 <template>
   <section class="prepare-writing" aria-labelledby="prepare-writing-heading">
     <h2 id="prepare-writing-heading">按此版准备写作</h2>
-    <p class="form-note">固定{{ authorContext.branchId ? ' IF 分支' : '主线' }}第 {{ authorContext.contextRevision }} 版作者上下文，包含其它分页。已确认决定在视角可见范围内作为约束，提案与待决问题保持未确定。</p>
+    <p v-if="authorContext" class="form-note">固定{{ authorContext.branchId ? ' IF 分支' : '主线' }}第 {{ authorContext.contextRevision }} 版作者上下文，包含其它分页。已确认决定在视角可见范围内作为约束，提案与待决问题保持未确定。</p>
+    <p v-if="scene" class="form-note">为《{{ scene.title }}》场景第 {{ scene.revision }} 版准备新稿。可临时增减下面的本次依据。</p>
     <p v-if="story" class="form-note">沿用讲法第 {{ story.revision }} 版{{ story.checkpointRevision ? `及断点第 ${story.checkpointRevision} 版` : '' }}，按既有视角可见性准备内容。</p>
     <template v-if="prepared">
-      <p role="status">已准备《{{ prepared.title }}》，作者上下文固定在第 {{ authorContext.contextRevision }} 版。</p>
+      <p role="status">已准备《{{ prepared.title }}》<template v-if="authorContext">，作者上下文固定在第 {{ authorContext.contextRevision }} 版</template>。本次依据已随组稿保存。</p>
       <div class="form-actions">
         <a class="button primary" :href="`/generations/${encodeURIComponent(prepared.generationId)}/prompt`">查看提示词与出处</a>
         <a :href="`/generations/${encodeURIComponent(prepared.generationId)}`">生成记录</a>
@@ -166,6 +184,7 @@ if (!prepared.value && !pending.value) void loadTemplates();
           <option v-for="item in templates" :key="item.templateId" :value="item.templateId">{{ item.title }} · 第 {{ item.revision }} 版</option>
         </select>
       </fieldset>
+      <EvidencePicker v-model="references" :scene="scene" :disabled="busy || !!pending" />
       <p v-if="templateLoading" role="status">正在读取模板…</p>
       <p v-else-if="!templates.length && !templateFailure && !pending" role="status">暂无可用模板。可以先<a href="/templates/new">新建模板</a>，再重新读取。</p>
       <p v-if="templateFailure" role="alert">{{ templateFailure }}</p>

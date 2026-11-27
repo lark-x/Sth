@@ -2,7 +2,7 @@
 
 Sth 是个人创作工作区。网页、Hermes 私聊和 MCP 客户端共用一套操作，可以管理作品、角色和日记，引用资料、选用场景稿件、套用写作模板，以及委托模型和批量出图。
 
-当前开发按[六阶段迭代计划](docs/WORKSPACE_ITERATION.md)推进，包括 Hermes 安装、Codex 与 Antigravity 接续、Vue 桌面与手机网页、作者决定和升级验收。
+Sth 让作者和助手读写同一份创作资料库。首页可以记一句日记；进入作品后，桌面按资料库、文稿列表和正文三栏写作，手机逐屏选稿。每一幕可以有多份候选稿，作者可以对照、修订、采用或另开 IF。从 Hermes、Codex 或 Antigravity 返回的文稿链接可以指定版本和段落。读稿时打开「本次依据」，即可查看这份稿件实际关联的资料和决定。[迭代计划与工作流程](docs/WORKSPACE_ITERATION.md)
 
 基础工作区的交付范围见 [AI 原生创作工作区四阶段计划](docs/AI_NATIVE_ROADMAP.md)。从原文研究、归纳判断到按视角写故事的模块边界和场景验收见 [资料研究与故事创作计划](docs/RESEARCH_STORY_PLAN.md)。
 
@@ -64,11 +64,14 @@ Hermes 和 MCP 各自的安装、隔离配置与验证方式见 [适配器说明
 ```sh
 npm run typecheck
 npm test
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:browser
+npm run test:manuscript
 npm ci --prefix adapters
 npm test --prefix adapters
 ```
+
+用 `node scripts/capture-manuscript.mjs --ui snapshot --stage final --out frontend/.artifacts/manuscript-review` 在新的输出目录生成浏览器截图。脚本构建当前版本，在临时工作区写入多章、多稿、来源与日记样例。`manifest.json` 记录每一步的页面、浏览器、视口、截图文件和构建版本。
 
 业务模块通过 `src/core` 的 `defineOperation` 声明 ID、读写类型、输入与输出 schema、执行函数和可选的交互提示。在 `src/library` 可找到作品、角色与日记的实现。执行上下文提供当前 SQLite 事务。操作按自身的输入解析业务资源，连接只代表已配对的个人助手。外部副作用应交给事务提交后的工作进程。
 

@@ -40,7 +40,10 @@ export type OperationEffect = Static<typeof OperationEffectSchema>;
 export const OperationInteractionSchema = Type.Object({
   identityFields: Type.Optional(Type.Array(Type.String())),
   localDateField: Type.Optional(Type.String()),
-  resultLink: Type.Optional(Type.Object({ hrefField: Type.String(), labelField: Type.String() }, strict)),
+  resultLink: Type.Optional(Type.Object({
+    hrefField: Type.String(), labelField: Type.String(),
+    revisionField: Type.Optional(Type.String()), rangeField: Type.Optional(Type.String()),
+  }, strict)),
 }, strict);
 export type OperationInteraction = Static<typeof OperationInteractionSchema>;
 

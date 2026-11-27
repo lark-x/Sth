@@ -2,6 +2,8 @@
 
 import importlib.util
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -18,6 +20,17 @@ spec.loader.exec_module(exporter)
 
 
 class DistributionTests(unittest.TestCase):
+    def test_packaged_plugin_imports_with_its_result_link_dependency(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plugin = root / "sth_plugin"
+            plugin.mkdir()
+            for name in exporter.FILES:
+                shutil.copyfile(ROOT / "adapters/hermes_plugin" / name, plugin / name)
+            result = subprocess.run([sys.executable, "-B", "-c", "import sth_plugin; assert callable(sth_plugin.operations.result_link)"],
+                                    cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_copy_allows_public_code_and_excludes_private_state_and_build_outputs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

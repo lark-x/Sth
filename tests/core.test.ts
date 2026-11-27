@@ -121,11 +121,33 @@ test('catalog publishes detached schemas and interaction hints', t => {
     { identityFields: ['caption'] },
     { localDateField: 'toString' },
     { resultLink: { hrefField: 'target', labelField: 'missing' } },
+    { resultLink: { hrefField: 'target', labelField: 'caption', revisionField: 'missing' } },
+    { resultLink: { hrefField: 'target', labelField: 'caption', rangeField: 'caption.range' } },
     { resultLink: extraLinkOption },
   ]) {
     assert.throws(() => new Operations(db, [{ ...preview, interaction: hints }]), invalid);
   }
   assert.throws(() => new Operations(db, [{ ...read, interaction: { identityFields: ['count'] } }]), invalid);
+});
+
+test('result link hints declare exact revisions and optional nested selection coordinates', t => {
+  const db = openMemory(t);
+  const definition = defineOperation({
+    id: 'passage.read', effect: 'read', description: 'Read an exact passage.', inputSchema: Type.Object({}),
+    outputSchema: Type.Object({ href: Type.String(), title: Type.String(), revision: Type.Integer(),
+      context: Type.Optional(Type.Object({ range: Type.Object({ start: Type.Integer(), end: Type.Integer() }) })) }),
+    interaction: { resultLink: { hrefField: 'href', labelField: 'title', revisionField: 'revision', rangeField: 'context.range' } },
+    run: () => ({ href: '/sources/passage', title: 'Passage', revision: 1 }),
+  });
+  const core = new Operations(db, [definition]);
+  assert.deepEqual(core.catalog().operations[0].interaction, definition.interaction);
+  assert.equal(Value.Check(OperationCatalogSchema, core.catalog()), true);
+  const invalid = operationError(500, 'operation_invalid_registration');
+  for (const rangeField of ['context.missing', 'context.range.start.missing', '__proto__.range', '']) {
+    assert.throws(() => new Operations(db, [{ ...definition, interaction: {
+      resultLink: { ...definition.interaction!.resultLink!, rangeField },
+    } }]), invalid);
+  }
 });
 
 test('registration rejects malformed descriptors and duplicate IDs', t => {

@@ -85,6 +85,7 @@ test('character cards upload real media, preserve order and revisions, and link 
   await button(page, '保存日记').click();
   await title(page, '晚班日记').waitFor();
   const diaryPath = currentPath(page);
+  await button(page, '依据与修订').click();
   await link(page, '查看角色证据 · 第 1 版').click();
   await title(page, '未命名角色').waitFor();
   assert.match(page.url(), /\?revision=1$/);
@@ -117,10 +118,12 @@ test('character cards upload real media, preserve order and revisions, and link 
   assert.deepEqual(latest.entries[1].blocks.map(block => block.type), ['image', 'reference', 'text']);
   await link(page, '场景 · 第 1 版').click();
   await title(page, '夜航').waitFor();
+  await page.locator('summary').filter({ hasText: /^场景上下文与角色证据$/ }).click();
   await link(page, '渡船领航员 · 第 2 版 · 港口记录').click();
   await title(page, '渡船领航员').waitFor();
   assert.match(page.url(), /\?revision=2$/);
   await page.goto(diaryPath);
+  await button(page, '依据与修订').click();
   await link(page, '查看角色证据 · 第 1 版').click();
   await title(page, '未命名角色').waitFor();
   assert.equal(currentPath(page), characterPath);

@@ -54,6 +54,12 @@ const fill = (page, name, text) => control(page, name).fill(text);
 const choose = (page, name, label) => control(page, name).selectOption({ label });
 const idAt = page => new URL(page.url()).pathname.split('/').at(-1);
 
+async function toolLink(page, name) {
+  const tools = page.getByRole('navigation', { name: '读写工具', exact: true });
+  await tools.getByRole('button', { name: '更多', exact: true }).click();
+  await tools.getByRole('link', { name, exact: true }).click();
+}
+
 async function goto(page, href, title) {
   assert.equal((await page.goto(href)).status(), 200);
   await heading(page, title).waitFor().catch(async error => {
@@ -99,6 +105,7 @@ test('workspace phase 1: create and search sources, revise, and follow exact dia
   const diary = await invoke('diary.read', { noteId });
   assert.equal(diary.sourcePins[0].revision, 1);
 
+  await click(page, '依据与修订');
   await clickLink(page, '查看资料原文 · 第 1 版');
   await heading(page, '北港渡船').waitFor();
   assert.match(page.url(), /\/sources\/[^?]+\?revision=1$/);
@@ -134,25 +141,26 @@ test('workspace phase 2: compare and adopt exact drafts, arrange a chapter, and 
   await heading(page, '北港夜航').waitFor();
   const sceneId = idAt(page);
   for (const [title, body] of [['远景', '风吹过百盏港灯。'], ['近景', '船票在她手里打湿了。']]) {
-    await clickLink(page, '新建候选稿');
+    await toolLink(page, '新建候选稿');
     await fill(page, '标题', title);
     await fill(page, '正文', body);
     await click(page, '新建候选稿');
     await heading(page, title).waitFor();
     await goto(page, `/scenes/${sceneId}`, '北港夜航');
   }
-  await clickLink(page, '对照候选稿');
+  await toolLink(page, '对照候选稿');
   await page.getByRole('article').getByText('风吹过百盏港灯。').waitFor();
   await page.getByRole('article').getByText('船票在她手里打湿了。').waitFor();
   await assertFitsViewport(page);
   await screenshot(page, 'desktop', 'workspace-draft-comparison');
+  await page.getByRole('article', { name: '右稿', exact: true }).locator('summary').filter({ hasText: /^采用与 IF$/ }).click();
   await clickLink(page, '采纳右稿');
   await click(page, '采纳候选稿');
   await heading(page, '北港夜航').waitFor();
   const scene = await invoke('scene.read', { sceneId });
   assert.equal(scene.adopted.title, '近景');
   await goto(page, `/drafts/${scene.adopted.draftId}?revision=1`, '近景');
-  await page.getByText('船票在她手里打湿了。', { exact: true }).waitFor();
+  await page.getByRole('main').getByText('船票在她手里打湿了。', { exact: true }).waitFor();
 
   await goto(page, '/chapters', '章节');
   await clickLink(page, '新建章节');
@@ -175,7 +183,7 @@ test('workspace phase 2: compare and adopt exact drafts, arrange a chapter, and 
   assert.equal(chapter.scenes[1].adopted.draftId, scene.adopted.draftId);
 
   await goto(page, `/scenes/${sceneId}?revision=2`, '北港夜航');
-  await clickLink(page, '建立 IF 分支');
+  await toolLink(page, '建立 IF 分支');
   await fill(page, '分歧点', '她没有上船。');
   await fill(page, '标题', '错过末班船');
   await click(page, '建立 IF 分支');
@@ -316,6 +324,7 @@ test('workspace phase 4: select compositions, retry a failed job item, reconcile
   const selected = [];
   for (const prompt of ['失败后重试', '需要核对']) {
     await goto(page, `/scenes/${scene.sceneId}`, '渡船甲板');
+    await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
     await clickLink(page, '新建构图');
     await fill(page, '标题', prompt);
     await fill(page, '画面描述', prompt);
@@ -407,6 +416,7 @@ test('research: disambiguate a repeated excerpt and keep historical evidence thr
   const noteId = idAt(page);
   await invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '末班九点。' });
   await page.reload();
+  await click(page, '依据与修订');
   await clickLink(page, '查看资料原文 · 第 1 版');
   assert.equal(await page.locator('#passage-body mark').textContent(), excerpt);
   assert.deepEqual((await invoke('diary.read', { noteId })).sourcePins[0].range, range);
@@ -419,6 +429,7 @@ test('research: disambiguate a repeated excerpt and keep historical evidence thr
   const draftHref = `/drafts/${draft.draftId}?revision=1&start=${draftStart}&end=${draftText.length}`;
   for (let attempt = 0; attempt < 2; attempt++) {
     await goto(page, draftHref, '两次喊话');
+    await click(page, '更多');
     await click(page, '采纳为角色条目');
     await choose(page, '采纳到角色', '守船人');
     await fill(page, '条目名称', '第二次喊话');
@@ -454,6 +465,7 @@ test('story: record partial event order, save a limited telling and resume its I
   await click(page, '记录事件先后');
   await page.getByRole('listitem').filter({ hasText: '船离岸 先于 秘密命令' }).waitFor();
   await goto(page, `/scenes/${scene.sceneId}`, '码头分歧');
+  await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
   await clickLink(page, '新建讲述');
   await fill(page, '标题', '岸上目击');
   await choose(page, '类型', '角色');
@@ -508,6 +520,7 @@ test('story: record partial event order, save a limited telling and resume its I
   const continuationId = idAt(page);
   const continuation = await invoke('narrative.save', { title: '沿岸接续讲述', sceneId: continuationId, sceneRevision: 1,
     viewpoint: { kind: 'character', characterId: character.characterId, revision: 1 }, eventOrder: [], knownEvents: [] });
+  await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
   await clickLink(page, '查看 IF 接续');
   await page.getByRole('listitem').filter({ hasText: '沿岸追船' }).getByRole('link', { name: '设为接续位置' }).click();
   await fill(page, '接续笔记', '从岸上继续。');
@@ -543,6 +556,7 @@ test('story: record partial event order, save a limited telling and resume its I
   await goto(page, branch.href, '没搭上船');
   await page.getByRole('heading', { name: '接续位置', exact: true }).locator('..').getByRole('link', { name: '沿岸追船' }).click();
   await heading(page, '沿岸追船').waitFor();
+  await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
   await clickLink(page, '查看 IF 接续');
   await clickLink(page, '查看原讲述');
   await heading(page, '岸上目击').waitFor();
@@ -652,7 +666,7 @@ test('source impact: page and filter historical version links', { timeout }, asy
   await screenshot(page, 'narrow', 'source-impact');
   await links.first().click();
   await page.waitForURL(/\/diaries\/.*revision=1/);
-  await page.getByText('已泊船。', { exact: true }).waitFor();
+  await page.getByRole('article', { name: '日记正文', exact: true }).getByText('已泊船。', { exact: true }).waitFor();
 });
 
 test('a lost write response recovers the original source through its receipt', { timeout }, async t => {

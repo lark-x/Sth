@@ -291,6 +291,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     await click(page, '保存日记');
     await h1(page, '晚班日记').waitFor();
     const diaryId = idAt(page);
+    await click(page, '依据与修订');
     await link(page, '查看角色证据 · 第 1 版').click();
     await h1(page, '未命名角色').waitFor();
     assert.equal(new URL(page.url()).searchParams.get('revision'), '1');

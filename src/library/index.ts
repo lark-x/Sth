@@ -58,7 +58,7 @@ function assertDiaryDate(date: string) {
   }
 }
 
-const resultLink = { hrefField: 'href', labelField: 'title' };
+const resultLink = { hrefField: 'href', labelField: 'title', revisionField: 'revision' };
 const characterResultLink = { hrefField: 'href', labelField: 'name' };
 
 export const libraryOperations = [

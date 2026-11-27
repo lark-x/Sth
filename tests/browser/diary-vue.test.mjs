@@ -203,8 +203,11 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
       await fill(page, revised);
       await click(page, '保存修改');
       await expectDiary(page, revised);
-      await page.locator('.diary-back').click();
-      await h1(page, '我的日记').waitFor();
+      if (viewport.width < 640) await click(page, '返回文稿列表');
+      else await page.getByRole('navigation', { name: '文稿资料库', exact: true }).getByRole('link', { name: '日记', exact: true }).click();
+      await page.locator('.manuscript-sheets').getByRole('heading', { name: '日记', exact: true }).waitFor();
+      await page.locator(`.manuscript-sheets a[href="/diaries/${noteId}"]`).click();
+      await expectDiary(page, revised);
       await assertFitsViewport(page);
     });
   }
@@ -469,6 +472,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     const readback = await invoke('diary.read', { noteId });
     assert.deepEqual(readback.sourcePins[0], { ...expectedPin, href: source.href });
     const sourceHref = `/sources/${source.sourceId}?revision=1&start=${range.start}&end=${range.end}`;
+    await click(page, '依据与修订');
     assert.equal(await link(page, '查看资料原文 · 第 1 版').getAttribute('href'), sourceHref);
     await invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '北港末班渡船是晚上九点。' });
     const witness = await invoke('character.create', { name: '港口证人', entries: [{ label: '夜航记录', blocks: [{
@@ -476,6 +480,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     }] }] });
     await page.reload();
     await h1(page, first.title).waitFor();
+    await click(page, '依据与修订');
     await link(page, '港口证人 · 第 1 版 · 夜航记录').waitFor();
     assert.equal(await link(page, '港口证人 · 第 1 版 · 夜航记录').getAttribute('href'), `/characters/${witness.characterId}?revision=1`);
     await link(page, '编辑').click();

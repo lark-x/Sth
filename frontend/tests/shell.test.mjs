@@ -7,6 +7,15 @@ import { pairPersonalClient } from '../../tests/browser/personal-api.mjs';
 
 const artifacts = new URL('../.artifacts/', import.meta.url);
 
+async function home(page) {
+  if (page.viewportSize().width < 640 && await page.locator('.manuscript-frame').count()) {
+    await page.locator('.diary-route[aria-busy="false"]').waitFor();
+    await page.getByRole('button', { name: '返回文稿列表', exact: true }).click();
+    await page.getByRole('button', { name: '资料库', exact: true }).click();
+  }
+  await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+}
+
 async function capture(page, name) {
   if (process.env.STH_BROWSER_ARTIFACTS !== '1') return;
   await mkdir(artifacts, { recursive: true });
@@ -40,7 +49,7 @@ for (const [name, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     await page.getByRole('heading', { name: saved.title, exact: true }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get('revision'), '1');
     await assertFitsViewport(page);
-    await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+    await home(page);
     await page.getByRole('heading', { name: '记一句', exact: true }).waitFor();
     await page.getByRole('link', { name: '整理角色', exact: true }).click();
     await page.getByRole('heading', { name: '角色', exact: true }).waitFor();
@@ -108,10 +117,10 @@ test('a late quick capture response preserves a newer draft after a successful r
     await committed;
     await page.getByRole('link', { name: '查看资料', exact: true }).click();
     await page.getByRole('heading', { name: '资料', exact: true }).waitFor();
-    await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+    await home(page);
     await page.getByRole('button', { name: '核对并重试', exact: true }).click();
     await page.waitForURL(/\/diaries\/[a-f0-9-]+$/);
-    await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+    await home(page);
     await page.getByLabel('此刻想记下什么', { exact: true }).fill('这是接下来要写的第二句。');
     const completed = page.waitForResponse(response => response.request() === first);
     release();
@@ -153,7 +162,13 @@ test('home shows empty and recoverable error states and preserves an unsaved cap
 test('shell dispatches exact migration routes and keeps unknown subroutes on the legacy fallback', { timeout: 30_000 }, async t => {
   const origin = await startService(t);
   const page = await openBrowser(t, origin, { width: 1280, height: 900 });
-  for (const path of ['/create', '/workspace', '/projects']) {
+  for (const path of ['/create', '/projects']) {
+    await page.goto(path);
+    await page.locator('.manuscript-frame').waitFor();
+    assert.equal(await page.getByRole('link', { name: '作品', exact: true }).getAttribute('aria-current'), 'page');
+    await assertFitsViewport(page);
+  }
+  for (const path of ['/workspace']) {
     await page.goto(path);
     await page.locator('.creative-entry').waitFor();
     assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '创作', exact: true }).getAttribute('aria-current'), 'page');
@@ -194,7 +209,8 @@ test('shell dispatches exact migration routes and keeps unknown subroutes on the
   for (const path of ['/drafts/new', '/scenes/id?revision=1', '/scenes/id?action=compare', '/scenes/id?action=branch', '/drafts/id?action=revise', '/drafts/id?action=adopt']) {
     await page.goto(path);
     await page.locator('.writing-route').waitFor();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '创作', exact: true }).getAttribute('aria-current'), 'page');
+    await page.locator('.manuscript-frame').waitFor();
+    await page.getByRole('navigation', { name: '文稿资料库', exact: true }).waitFor();
   }
   for (const path of ['/scenes/id?narrativeId=story', '/scenes/id?action=revise', '/scenes/id?action=adopt', '/drafts/id?action=adopt-entry', '/scenes/id/unknown']) {
     await page.goto(path);

@@ -4,6 +4,7 @@ import { OperationError } from '../core/index.ts';
 import { nameKey } from '../library/storage.ts';
 import type { Execution, Failure, Field, Generation, GenerationResult, Plan, PromptInspection, PromptRequestOptions, Template } from './contracts.ts';
 import { discloseRequestOptions, type DelegationPromptStatus, type StoredComposition } from './prompt.ts';
+import { manuscriptEvidenceDDL } from './evidence-contracts.ts';
 
 const sectionText = (key: string, label: string): Extract<Field, { type: 'text' }> => ({ key, label, type: 'text' });
 const starters: Pick<Template, 'templateId' | 'title' | 'kind' | 'fields'>[] = [
@@ -95,6 +96,8 @@ CREATE INDEX IF NOT EXISTS generation_batches_created ON generation_batches(crea
 CREATE INDEX IF NOT EXISTS generation_records_queue ON generation_records(status, created_at, generation_id);
 CREATE INDEX IF NOT EXISTS generation_records_lease ON generation_records(lease_until) WHERE status = 'running';
 CREATE INDEX IF NOT EXISTS generation_records_project ON generation_records(project_id, created_at DESC, generation_id);
+
+${manuscriptEvidenceDDL}
 
 ${starters.map(({ templateId, ...body }) => `
 INSERT INTO generation_definitions (kind, definition_id, name_key) VALUES ('template', '${templateId}', '${nameKey(body.title)}')
@@ -263,7 +266,10 @@ export function enqueueDelegation(db: DatabaseSync, sourceGenerationId: string, 
   if (source.mode !== 'current-chat') {
     throw new OperationError(409, 'generation_context_required', 'Use the current-chat generation ID from generations.prepare.');
   }
-  return insertGeneration(db, readComposition(source.composition_json), { plan, sourceGenerationId });
+  const generationId = insertGeneration(db, readComposition(source.composition_json), { plan, sourceGenerationId });
+  db.prepare(`INSERT INTO generation_manuscript_targets SELECT ?, scene_id, scene_revision
+    FROM generation_manuscript_targets WHERE generation_id = ?`).run(generationId, sourceGenerationId);
+  return generationId;
 }
 
 export function insertGeneration(db: DatabaseSync, composition: StoredComposition, delegation?: { plan: Plan; sourceGenerationId: string }) {

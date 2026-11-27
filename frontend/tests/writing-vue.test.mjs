@@ -21,6 +21,12 @@ const click = (page, name) => page.getByRole('button', { name, exact: true }).cl
 const link = (page, name) => page.getByRole('link', { name, exact: true });
 const idAt = page => new URL(page.url()).pathname.split('/').at(-1);
 
+async function toolLink(page, name) {
+  const tools = page.getByRole('navigation', { name: '读写工具', exact: true });
+  await tools.getByRole('button', { name: '更多', exact: true }).click();
+  await tools.getByRole('link', { name, exact: true }).click();
+}
+
 test('writing matcher preserves unimplemented operations and complete legacy addresses', () => {
   const matches = path => matchWritingRoute(new URL(path, 'http://sth.test'));
   for (const path of ['/scenes/id', '/scenes/id/', '/scenes/id?revision=3', '/scenes/id?action=compare&left=a@1&right=b@2',
@@ -121,7 +127,7 @@ async function capture(page, name) {
   await page.screenshot({ path: join(directory, `${name}.png`), fullPage: true, animations: 'disabled' });
 }
 async function candidate(page, title, body) {
-  await link(page, '新建候选稿').click();
+  await toolLink(page, '新建候选稿');
   await expectHeading(page, '新建候选稿');
   await field(page, '标题').fill(title);
   await field(page, '正文').fill(body);
@@ -145,19 +151,21 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       await expectHeading(page, scene.title);
       assert.equal(await page.locator('.writing-route').count(), 1);
       const left = await candidate(page, '远景', '风吹过百盏港灯。\n她在岸上停步。');
-      await link(page, `返回${scene.title}`).click();
+      await toolLink(page, `返回${scene.title}`);
       const right = await candidate(page, '近景', '风吹过百盏港灯。\n船票在她手里打湿了。');
-      await link(page, `返回${scene.title}`).click();
-      await link(page, '对照候选稿').click();
+      await toolLink(page, `返回${scene.title}`);
+      await toolLink(page, '对照候选稿');
       await expectHeading(page, '对照候选稿');
       assert.equal(await page.getByRole('combobox', { name: '左稿', exact: true }).inputValue(), `${left}@1`);
       assert.equal(await page.getByRole('combobox', { name: '右稿', exact: true }).inputValue(), `${right}@1`);
       assert.equal(await page.getByRole('article', { name: '左稿', exact: true }).locator('del').innerText(), '她在岸上停步。');
+      if (viewport.width <= 768) await click(page, '右稿');
       assert.equal(await page.getByRole('article', { name: '右稿', exact: true }).locator('ins').innerText(), '船票在她手里打湿了。');
       assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted, undefined);
       await assertFitsViewport(page);
       await capture(page, `${name}-comparison`);
       await invoke('draft.revise', { draftId: right, expectedRevision: 1, body: '随后修订的文字。' });
+      await page.getByRole('article', { name: '右稿', exact: true }).locator('summary').filter({ hasText: /^采用与 IF$/ }).click();
       await link(page, '采纳右稿').click();
       await expectHeading(page, '采纳候选稿');
       await page.getByRole('region', { name: '即将采用的稿件' }).getByText('风吹过百盏港灯。\n船票在她手里打湿了。', { exact: true }).waitFor();
@@ -171,9 +179,10 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       await invoke('character.revise', { characterId: character.characterId, expectedRevision: 1, persona: '已离开港口。' });
       await page.reload();
       await expectHeading(page, scene.title);
+      await page.locator('summary').filter({ hasText: /^场景上下文与角色证据$/ }).click();
       assert.equal(await link(page, '查看资料原文 · 第 1 版').getAttribute('href'), `/sources/${source.sourceId}?revision=1&start=5&end=7`);
       await page.locator('summary').filter({ hasText: `${character.name} · 第 1 版` }).click();
-      await page.getByText('负责巡夜。', { exact: true }).waitFor();
+      await page.getByRole('region', { name: '场景上下文', exact: true }).getByText('负责巡夜。', { exact: true }).waitFor();
       await assertFitsViewport(page);
       await capture(page, `${name}-scene`);
 
@@ -192,9 +201,12 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       await expectHeading(page, '第一章');
       assert.equal((await invoke('chapter.read', { chapterId })).scenes[0].adopted.draftId, right);
       await goto(page, `/scenes/${scene.sceneId}?revision=2`, scene.title);
+      await click(page, '更多');
       assert.equal(await link(page, '返回作品').getAttribute('href'), `/projects/${project.projectId}`);
-      assert.equal(await link(page, '创作决定').getAttribute('href'), `/author-context?projectId=${project.projectId}`);
-      await link(page, '建立 IF 分支').click();
+      await page.keyboard.press('Escape');
+      await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
+      assert.equal(await link(page.getByRole('navigation', { name: '构图操作', exact: true }), '创作决定').getAttribute('href'), `/author-context?projectId=${project.projectId}`);
+      await toolLink(page, '建立 IF 分支');
       await expectHeading(page, '建立 IF 分支');
       await field(page, '分歧点').fill('她没有上船。');
       await field(page, '标题').fill(`${name} 错过末班船`);
@@ -207,6 +219,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       assert.equal((await invoke('branch.read', { branchId: branch.sceneId })).name, `${name} 岸上路线`);
       assert.deepEqual((await invoke('draft.list', { sceneId: branch.sceneId })).items, []);
       assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted.draftId, right);
+      await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
       await link(page, '查看 IF 接续').click();
       await expectHeading(page, `${name} 岸上路线`);
       assert.equal(await link(page, '新建接续场景').count(), 1);
@@ -224,6 +237,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     await page.getByRole('article', { name: '左稿', exact: true }).getByText(/<script>danger<\/script>/).waitFor();
     assert.equal(await page.locator('.writing-route script').count(), 0);
     await assertFitsViewport(page);
+    await page.getByRole('article', { name: '左稿', exact: true }).locator('summary').filter({ hasText: /^采用与 IF$/ }).click();
     await link(page, '采纳左稿').click();
     await expectHeading(page, '采纳候选稿');
     assert.match(await page.locator('main').innerText(), /第 1 版/);
@@ -235,6 +249,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     const end = start + '等一下。'.length;
     await goto(page, `/drafts/${draft.draftId}?revision=1&start=${start}&end=${end}`, draft.title);
     assert.equal(await page.locator('#passage-body mark').innerText(), '等一下。');
+    await click(page, '更多');
     await click(page, '采纳为角色条目');
     await field(page, '采纳到角色').selectOption(character.characterId);
     await field(page, '条目名称').fill('第二次喊话');
@@ -256,6 +271,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       const range = document.createRange(); range.setStart(node, start); range.setEnd(node, end);
       const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
     }, { start, end });
+    await click(page, '更多');
     await click(page, '提炼为事件');
     await expectHeading(page, '新建事件');
     assert.equal(new URL(page.url()).searchParams.get('start'), String(start));
@@ -314,7 +330,7 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     await invoke('scene.adopt', { sceneId: scene.sceneId, expectedRevision: 1, draftId: first.draftId, draftRevision: 1 });
     const page = await open(t, origin, `/drafts/${other.draftId}?revision=1`, phone);
     await expectHeading(page, '岸上稿');
-    await link(page, '从此稿建立 IF').click();
+    await toolLink(page, '从此稿建立 IF');
     await expectHeading(page, '建立 IF 分支');
     await page.getByText('她留在岸上。', { exact: true }).waitFor();
     await field(page, '分歧点').fill('另一种选择。');
@@ -353,8 +369,10 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     });
     await click(page, '新建候选稿');
     await saved;
-    await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '日记', exact: true }).click();
-    await expectHeading(page, '我的日记');
+    await click(page, '返回文稿列表');
+    await click(page, '资料库');
+    await page.getByRole('navigation', { name: '文稿资料库', exact: true }).getByRole('link', { name: '日记', exact: true }).click();
+    await page.locator('.manuscript-sheets').getByRole('heading', { name: '日记', exact: true }).waitFor();
     release();
     await goto(page, path, '新建候选稿');
     await click(page, '重试同一次提交');
@@ -407,16 +425,17 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     const draft = await invoke('draft.create', { sceneId: scene.sceneId, sceneRevision: 1, title: '多版稿', body: '版本1' });
     for (let i = 2; i <= 52; i++) await invoke('draft.revise', { draftId: draft.draftId, expectedRevision: i - 1, body: `版本${i}` });
     const page = await openBrowser(t, origin, compact);
-    let failed = false;
+    let failing = true;
     await page.route('**/api/web/invoke', async route => {
-      if (!failed && route.request().postDataJSON().operationId === 'scene.read') { failed = true; return route.fulfill({ status: 503, json: { error: { code: 'temporary' } } }); }
+      if (failing && route.request().postDataJSON().operationId === 'scene.read') return route.fulfill({ status: 503, json: { error: { code: 'temporary' } } });
       return route.continue();
     });
     await goto(page, `/scenes/${scene.sceneId}`);
     await page.getByRole('alert').waitFor();
+    failing = false;
     await click(page, '重试读取');
     await expectHeading(page, scene.title);
-    await link(page, '对照候选稿').click();
+    await toolLink(page, '对照候选稿');
     await expectHeading(page, '对照候选稿');
     assert.equal(await page.getByRole('combobox', { name: '左稿', exact: true }).locator('option').count(), 52);
     await page.getByRole('combobox', { name: '左稿', exact: true }).selectOption(`${draft.draftId}@1`);
@@ -433,11 +452,12 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
       assert.equal(await page.getByRole('button', { name: '采纳候选稿', exact: true }).count(), 0);
     }
     await goto(page, `/scenes/${scene.sceneId}`, scene.title);
-    await link(page, '修订场景').click();
+    await toolLink(page, '修订场景');
     await expectHeading(page, '修订场景');
     assert.equal(await page.locator('.legacy-route').count(), 1);
     await page.goBack();
     await expectHeading(page, scene.title);
+    await page.locator('summary').filter({ hasText: /^候选稿与场景操作$/ }).click();
     await link(page, '新建讲述').click();
     await expectHeading(page, '新建讲述');
     assert.equal(new URL(page.url()).searchParams.get('sceneRevision'), '1');
