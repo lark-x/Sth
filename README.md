@@ -10,7 +10,13 @@ Sth 是个人创作工作区。网页、Hermes 私聊和 MCP 客户端共用一�
 
 本机可直接打开的分镜与出图样例、可复现测试以及手机验收步骤见 [交付验收记录](docs/ACCEPTANCE.md)。
 
-## 启动
+## 选择入口
+
+- 已有 Hermes 的作者可以安装对应平台的完整插件包，创建自己的持久工作区，或在连接页配对已有的 Sth。[Hermes 安装与首篇日记](docs/HERMES_SETUP.md)
+- Codex 和 Antigravity 可以连接同一工作区，各自持有独立的凭据，按作品 ID 与版本继续写作。[宿主接入](docs/AGENT_HOSTS.md)
+- 需要在本地管理多个工作区时，可以为每位助手选择工作区、查看端口、重启服务并核对连接。[工作区管理](docs/WORKSPACE_SETUP.md)
+
+## 从源码启动
 
 安装 Node.js 24.15 或更新版本，在仓库根目录运行：
 
@@ -21,7 +27,7 @@ npm start
 
 网页默认位于 <http://127.0.0.1:9321>。连接管理位于 <http://127.0.0.1:9321/settings/connections>。服务只监听本机回环地址。`STH_PORT` 可修改端口，`STH_DATA_DIR` 可指定数据目录，默认数据库为 `.data/sth.sqlite`。运行时只需要本仓库和自身的依赖。首次启动时作品、角色、日记和助手连接均为空。
 
-使用 Docker 时，在仓库根目录运行 `docker compose up -d --build`。Compose 使用独立的 `workspace` 命名卷，本机默认入口同为 `9321`。当前数据库格式为 3，启动时会把格式 2 的 Sth 库在事务中就地升级。升级前可运行 `docker compose exec web node scripts/backup.ts /tmp/sth-export.sqlite`，随后用 `docker compose cp web:/tmp/sth-export.sqlite ./sth-export.sqlite` 将快照存到宿主机。恢复到旧程序时使用升级前快照。
+使用 Docker 时，在仓库根目录运行 `docker compose up -d --build`。Compose 使用独立的 `workspace` 命名卷，本机默认入口同为 `9321`。当前数据库格式为 4，启动时会将格式 2 或 3 的 Sth 数据库在事务中升级，格式 4 的旧库会补上创作决定所需的表。升级前可运行 `docker compose exec web node scripts/backup.ts /tmp/sth-export.sqlite`，随后用 `docker compose cp web:/tmp/sth-export.sqlite ./sth-export.sqlite` 将快照存到宿主机。恢复到旧程序时使用升级前快照。
 
 本机并行验收实例使用 `docker compose --env-file examples/local-providers.env -p sth-authoring up -d --build --wait`，网页地址为 <http://127.0.0.1:9322>。该命令使用单独的数据卷和镜像。Hermes 若要连接此实例，应在用于验收的 profile 中设置 `STH_PERSONAL_OPERATIONS_ORIGIN=http://127.0.0.1:9322`，加载本仓库插件，再领取 **9322 网页**签发的连接码。MCP 配对前同样指定该 origin。
 

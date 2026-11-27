@@ -122,6 +122,18 @@ async function navigate(page, href) {
   await page.locator('.diary-route[aria-busy="false"]').waitFor();
 }
 
+async function reload(page) {
+  const accept = dialog => dialog.accept();
+  page.on('dialog', accept);
+  try {
+    await page.reload();
+    await page.locator('.diary-route[aria-busy="false"]').waitFor();
+  } finally { page.off('dialog', accept); }
+}
+
+const draftKey = href => `sth:diary:draft:v1:${href}`;
+const storedDraft = (page, href) => page.evaluate(key => sessionStorage.getItem(key), draftKey(href));
+
 async function capture(page, name) {
   const folder = process.env.STH_DIARY_VUE_ARTIFACTS;
   if (!folder) return;
@@ -224,6 +236,132 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     await field(page, '日期').fill('2024-02-29');
     await click(page, '保存日记');
     await expectDiary(page, { ...first, title: '有效标题', diaryDate: '2024-02-29' });
+  });
+
+  await t.test('phone reload restores text, date, context, persona version and unfinished citation fields in this tab', async t => {
+    const project = await invoke('project.create', { title: '可恢复的海边手记' });
+    const character = await invoke('character.create', { name: '守灯人', persona: '夜里记录潮声。', projectId: project.projectId });
+    const sourceBody = '🌧️潮声在这里。明天再回来。';
+    const source = await invoke('source.create', { kind: 'setting', title: '旧灯塔记录', body: sourceBody });
+    const excerpt = '潮声在这里';
+    const range = { start: sourceBody.indexOf(excerpt), end: sourceBody.indexOf(excerpt) + excerpt.length };
+    const href = `/diaries/new?projectId=${project.projectId}`;
+    const page = await open(t, origin, href);
+    await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
+    await field(page, '叙述者').selectOption(character.characterId);
+    await page.getByText('夜里记录潮声。', { exact: true }).waitFor();
+    const local = { ...first, title: '刷新后接着写', body: '第一行还没有写完。\n🌧️ 留在这一页。' };
+    await fill(page, local);
+    await page.locator('summary').filter({ hasText: /^资料引用/ }).click();
+    await click(page, '添加资料引用');
+    await field(page, '资料').selectOption(source.sourceId);
+    await field(page, '引用原文').fill(excerpt);
+    await page.getByRole('checkbox', { name: '限定原文位置', exact: true }).check();
+    await field(page, '原文起点').fill(String(range.start));
+    await field(page, '原文终点').fill(String(range.end));
+    await field(page, '资料版本').fill('');
+    await invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '资料已经更新。' });
+    await invoke('character.revise', { characterId: character.characterId, expectedRevision: 1, persona: '白天记录船只。' });
+
+    await reload(page);
+    for (const [label, value] of [['标题', local.title], ['日期', local.diaryDate], ['正文', local.body],
+      ['项目', project.projectId], ['叙述者', character.characterId], ['引用原文', excerpt], ['资料版本', ''],
+      ['原文起点', String(range.start)], ['原文终点', String(range.end)]]) {
+      assert.equal(await field(page, label).inputValue(), value, label);
+    }
+    assert.equal(await page.getByRole('checkbox', { name: '限定原文位置', exact: true }).isChecked(), true);
+    await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
+    await page.getByText('角色设定 · 第 1 版', { exact: true }).waitFor();
+    await field(page, '资料版本').fill('1');
+    await assertFitsViewport(page);
+
+    const otherTab = await page.context().newPage();
+    await otherTab.goto(href);
+    await h1(otherTab, '写日记').waitFor();
+    assert.equal(await field(otherTab, '正文').inputValue(), '', 'a separate tab has its own draft');
+    await otherTab.close();
+
+    await click(page, '保存日记');
+    await page.getByRole('region', { name: '版本冲突' }).getByText('白天记录船只。', { exact: true }).waitFor();
+    await reload(page);
+    await page.getByRole('region', { name: '版本冲突' }).getByText('白天记录船只。', { exact: true }).waitFor();
+    assert.equal(await field(page, '正文').inputValue(), local.body);
+    assert.equal(await field(page, '资料版本').inputValue(), '1');
+    await click(page, '采用最新角色设定');
+    await click(page, '保存日记');
+    const noteId = await expectDiary(page, local);
+    assert.equal(await storedDraft(page, href), null);
+    const saved = await invoke('diary.read', { noteId });
+    assert.equal(saved.character.revision, 2);
+    assert.deepEqual(saved.sourcePins, [{ sourceId: source.sourceId, revision: 1, excerpt, range, href: source.href }]);
+    await reload(page);
+    await expectDiary(page, local);
+    assert.equal((await invoke('diary.read', { noteId })).revision, 1);
+    await navigate(page, href);
+    assert.equal(await field(page, '正文').inputValue(), '');
+    assert.equal(await field(page, '引用原文').count(), 0);
+    assert.equal((await invoke('diary.list', { projectId: project.projectId })).items.length, 1);
+  });
+
+  await t.test('phone edit reload retains its original baseline, local citations and conflict decisions', async t => {
+    const source = await invoke('source.create', { kind: 'setting', title: '续写证据', body: '开场。后来。' });
+    const pin = { sourceId: source.sourceId, revision: 1, excerpt: '开场。', range: { start: 0, end: 3 } };
+    const localPin = { ...pin, excerpt: '后来。', range: { start: 3, end: 6 } };
+    const saved = await invoke('diary.create', { ...first, sourcePins: [pin] });
+    const href = `${saved.href}?edit=1`;
+    const page = await open(t, origin, href);
+    const body = '手机上还没提交的补写。';
+    await field(page, '正文').fill(body);
+    await field(page, '引用原文').fill(localPin.excerpt);
+    await field(page, '原文起点').fill('3');
+    await field(page, '原文终点').fill('6');
+    await invoke('diary.revise', { ...revised, noteId: saved.noteId, expectedRevision: 1 });
+    await reload(page);
+    assert.equal(await field(page, '标题').inputValue(), first.title);
+    assert.equal(await field(page, '正文').inputValue(), body);
+    assert.equal(await field(page, '引用原文').inputValue(), localPin.excerpt);
+    await click(page, '保存修改');
+    const conflict = page.getByRole('region', { name: '版本冲突' });
+    await conflict.getByText(revised.body, { exact: true }).waitFor();
+    const newest = { ...revised, title: '冲突期间又有了新版', diaryDate: '2026-11-23' };
+    await invoke('diary.revise', { ...newest, noteId: saved.noteId, expectedRevision: 2 });
+    await reload(page);
+    await conflict.getByText(newest.title, { exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '保存修改', exact: true }).isDisabled(), true);
+    assert.equal(await field(page, '正文').inputValue(), body);
+    await click(page, '保留我的修改并采用新版');
+    await reload(page);
+    assert.equal(await field(page, '标题').inputValue(), newest.title);
+    assert.equal(await field(page, '日期').inputValue(), newest.diaryDate);
+    assert.equal(await field(page, '正文').inputValue(), body);
+    assert.equal(await field(page, '引用原文').inputValue(), localPin.excerpt);
+    await click(page, '保存修改');
+    await expectDiary(page, { ...newest, body });
+    const readback = await invoke('diary.read', { noteId: saved.noteId });
+    assert.equal(readback.revision, 4);
+    assert.deepEqual(readback.sourcePins, [{ ...localPin, href: source.href }]);
+    assert.equal(await storedDraft(page, href), null);
+    await reload(page);
+    await expectDiary(page, { ...newest, body });
+    assert.equal((await invoke('diary.read', { noteId: saved.noteId })).revision, 4);
+  });
+
+  await t.test('explicit discard removes a restored phone draft and reload does not resurrect it', async t => {
+    const page = await open(t, origin);
+    await fill(page, first);
+    await reload(page);
+    assert.equal(await field(page, '正文').inputValue(), first.body);
+    page.once('dialog', dialog => dialog.dismiss());
+    await click(page, '清除草稿');
+    assert.notEqual(await storedDraft(page, '/diaries/new'), null);
+    page.once('dialog', dialog => dialog.accept());
+    await click(page, '清除草稿');
+    await h1(page, '写日记').waitFor();
+    assert.equal(await storedDraft(page, '/diaries/new'), null);
+    await reload(page);
+    assert.equal(await field(page, '标题').inputValue(), '');
+    assert.equal(await field(page, '正文').inputValue(), '');
+    assert.equal(await page.getByRole('button', { name: '清除草稿', exact: true }).count(), 0);
   });
 
   await t.test('diary conflict merges local fields with latest title, date and sources', async t => {
@@ -396,7 +534,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     }]);
   });
 
-  await t.test('uncertain committed write retries its receipt after leaving and remounting', async t => {
+  await t.test('uncertain committed write retries its receipt after leaving, remounting and phone reload', async t => {
     const page = await open(t, origin);
     await fill(page, { ...first, title: '回执读回' });
     const attempts = [];
@@ -416,6 +554,7 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     assert.equal(await field(page, '正文').isDisabled(), true);
     await navigate(page, '/__diary_outside');
     await navigate(page, '/diaries/new');
+    await reload(page);
     assert.equal(await field(page, '正文').inputValue(), first.body);
     assert.equal(await field(page, '正文').isDisabled(), true);
     const receipt = page.waitForRequest('**/api/web/receipt');
@@ -425,9 +564,12 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
     const noteId = await expectDiary(page, { ...first, title: '回执读回' });
     assert.equal(attempts.length, 1, 'receipt recovery does not create a second diary');
     assert.equal((await invoke('diary.read', { noteId })).revision, 1);
+    assert.equal(await storedDraft(page, '/diaries/new'), null);
+    await navigate(page, '/diaries/new');
+    assert.equal(await field(page, '正文').inputValue(), '');
   });
 
-  await t.test('receipt missing replays identical step and input', async t => {
+  await t.test('receipt missing after phone reload replays identical step and input', async t => {
     const page = await open(t, origin);
     await fill(page, { ...first, title: '同一步骤重试' });
     const calls = [];
@@ -438,10 +580,179 @@ test('Vue diary independent routes and public API readback', { timeout: 180_000 
       return calls.length === 1 ? route.abort('failed') : route.continue();
     });
     await click(page, '保存日记');
+    await page.getByRole('button', { name: '重试保存', exact: true }).waitFor();
+    await reload(page);
+    assert.equal(await field(page, '正文').isDisabled(), true);
     await click(page, '重试保存');
     await expectDiary(page, { ...first, title: '同一步骤重试' });
     assert.equal(calls.length, 2);
     assert.deepEqual(calls[0], calls[1]);
+  });
+
+  await t.test('phone reload during an in-flight write recovers its pre-dispatch receipt without a second create', async t => {
+    const project = await invoke('project.create', { title: '刷新中保存' });
+    const href = `/diaries/new?projectId=${project.projectId}`;
+    const page = await open(t, origin, href);
+    const local = { ...first, title: '保存时意外刷新' };
+    await fill(page, local);
+    let release;
+    let started;
+    const gate = new Promise(resolve => { release = resolve; });
+    const pending = new Promise(resolve => { started = resolve; });
+    t.after(() => release());
+    const calls = [];
+    await page.route('**/api/web/invoke', async route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId !== 'diary.create') return route.continue();
+      calls.push(call);
+      const response = await route.fetch();
+      started();
+      await gate;
+      await route.fulfill({ response }).catch(() => {});
+    });
+    await click(page, '保存日记');
+    await pending;
+    assert.deepEqual(JSON.parse(await storedDraft(page, href)).call, calls[0]);
+    await reload(page);
+    assert.equal(await field(page, '正文').inputValue(), local.body);
+    assert.equal(await field(page, '正文').isDisabled(), true);
+    const receipt = page.waitForRequest('**/api/web/receipt');
+    await click(page, '重试保存');
+    assert.deepEqual((await receipt).postDataJSON(), { operationId: calls[0].operationId, stepId: calls[0].stepId });
+    const noteId = await expectDiary(page, local);
+    release();
+    assert.equal(await storedDraft(page, href), null);
+    assert.equal(calls.length, 1);
+    assert.equal((await invoke('diary.read', { noteId })).revision, 1);
+    assert.equal((await invoke('diary.list', { projectId: project.projectId })).items.length, 1);
+    await navigate(page, href);
+    await reload(page);
+    assert.equal(await field(page, '正文').inputValue(), '');
+  });
+
+  await t.test('phone reload of an uncertain revision keeps the original request despite reading the saved server version', async t => {
+    const saved = await invoke('diary.create', first);
+    const href = `${saved.href}?edit=1`;
+    const page = await open(t, origin, href);
+    await fill(page, revised);
+    const calls = [];
+    await page.route('**/api/web/invoke', async route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId !== 'diary.revise') return route.continue();
+      calls.push(call);
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      return route.abort('failed');
+    });
+    await click(page, '保存修改');
+    await page.getByRole('button', { name: '重试保存', exact: true }).waitFor();
+    await reload(page);
+    const restored = JSON.parse(await storedDraft(page, href));
+    assert.equal(restored.record.revision, 1);
+    assert.deepEqual(restored.call, calls[0]);
+    assert.equal(await field(page, '正文').isDisabled(), true);
+    const receipt = page.waitForRequest('**/api/web/receipt');
+    await click(page, '重试保存');
+    assert.equal((await receipt).postDataJSON().stepId, calls[0].stepId);
+    await expectDiary(page, revised);
+    assert.equal(calls.length, 1);
+    assert.equal((await invoke('diary.read', { noteId: saved.noteId })).revision, 2);
+    assert.equal(await storedDraft(page, href), null);
+    await navigate(page, href);
+    await reload(page);
+    assert.equal(await field(page, '正文').inputValue(), revised.body);
+    assert.equal(await page.getByRole('button', { name: '清除草稿', exact: true }).count(), 0);
+  });
+
+  for (const outcome of ['success', 'uncertain']) {
+    await t.test(`an older module copy's ${outcome} response cannot overwrite or clear a newer phone draft`, async t => {
+      const page = await open(t, origin);
+      await fill(page, { ...first, title: `旧副本 ${outcome}` });
+      await page.evaluate(async key => {
+        const store = await import('/frontend/diary/drafts.ts');
+        const { initial } = JSON.parse(sessionStorage.getItem(key));
+        window.__olderDiaryDraft = store.getDraft('/diaries/new', initial);
+      }, draftKey('/diaries/new'));
+      let release;
+      let started;
+      const gate = new Promise(resolve => { release = resolve; });
+      const pending = new Promise(resolve => { started = resolve; });
+      t.after(() => release());
+      await page.route('**/api/web/invoke', async route => {
+        if (route.request().postDataJSON().operationId !== 'diary.create') return route.continue();
+        const response = await route.fetch();
+        started();
+        await gate;
+        if (outcome === 'uncertain') return route.fulfill({ status: 503, json: { code: 'temporarily_unavailable' } }).catch(() => {});
+        return route.fulfill({ response }).catch(() => {});
+      });
+      await click(page, '保存日记');
+      await pending;
+      await navigate(page, '/__diary_outside');
+      const newer = { ...revised, title: `新副本 ${outcome}` };
+      const snapshot = await page.evaluate(async ({ key, newer }) => {
+        // A separately loaded domain instance recovers the same receipt and starts a new draft.
+        const store = await import('/frontend/diary/drafts.ts?newer-copy');
+        const api = await import('/frontend/diary/api.ts');
+        const { initial } = JSON.parse(sessionStorage.getItem(key));
+        const recovered = store.getDraft('/diaries/new', initial);
+        const saved = await api.retryWrite(recovered.call);
+        if (!saved.noteId || !store.forgetDraft('/diaries/new', recovered)) throw new Error('newer copy did not recover the save');
+        const draft = store.getDraft('/diaries/new', initial);
+        Object.assign(draft.values, newer);
+        return sessionStorage.getItem(key);
+      }, { key: draftKey('/diaries/new'), newer });
+      release();
+      await page.waitForFunction(() => window.__olderDiaryDraft.busy === false);
+      assert.match(page.url(), /\/__diary_outside$/);
+      assert.equal(await storedDraft(page, '/diaries/new'), snapshot, 'late completion leaves the newer snapshot intact');
+      await navigate(page, '/diaries/new');
+      await reload(page);
+      assert.equal(await field(page, '标题').inputValue(), newer.title);
+      assert.equal(await field(page, '正文').inputValue(), newer.body);
+      assert.equal(await field(page, '正文').isDisabled(), false);
+    });
+  }
+
+  for (const mode of ['disabled', 'full']) {
+    await t.test(`${mode} session storage preserves editing, in-memory remounts, discard and saving`, async t => {
+      const page = await open(t, origin);
+      await page.evaluate(mode => {
+        if (mode === 'disabled') Object.defineProperty(window, 'sessionStorage', {
+          get() { throw new DOMException('Storage is disabled', 'SecurityError'); },
+        });
+        else Storage.prototype.setItem = () => { throw new DOMException('Storage is full', 'QuotaExceededError'); };
+      }, mode);
+      const local = { ...first, title: `存储不可用 ${mode}` };
+      await fill(page, local);
+      await navigate(page, '/__diary_outside');
+      await navigate(page, '/diaries/new');
+      assert.equal(await field(page, '正文').inputValue(), local.body);
+      page.once('dialog', dialog => dialog.accept());
+      await click(page, '清除草稿');
+      await h1(page, '写日记').waitFor();
+      assert.equal(await field(page, '正文').inputValue(), '');
+      await fill(page, local);
+      await click(page, '保存日记');
+      const noteId = await expectDiary(page, local);
+      assert.equal((await invoke('diary.read', { noteId })).revision, 1);
+      await navigate(page, '/diaries/new');
+      assert.equal(await field(page, '正文').inputValue(), '');
+    });
+  }
+
+  await t.test('malformed session snapshots do not block a fresh phone editor', async t => {
+    const page = await open(t, origin);
+    for (const snapshot of ['{broken', JSON.stringify({ values: { body: 'partial' } })]) {
+      await page.evaluate(({ key, snapshot }) => sessionStorage.setItem(key, snapshot), { key: draftKey('/diaries/new'), snapshot });
+      await reload(page);
+      assert.equal(await field(page, '标题').inputValue(), '');
+      assert.equal(await field(page, '正文').inputValue(), '');
+      assert.equal(await storedDraft(page, '/diaries/new'), null);
+    }
+    await fill(page, { ...first, title: '损坏草稿后仍可写' });
+    await click(page, '保存日记');
+    await expectDiary(page, { ...first, title: '损坏草稿后仍可写' });
   });
 
   await t.test('save completes while off route and read cancellation cannot redirect another page', async t => {

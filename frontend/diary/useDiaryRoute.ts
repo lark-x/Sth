@@ -1,7 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { ApiError, catalog, errorText, invoke, listAll, read, retryWrite, revision, step } from './api';
 import type { Backlink, Character, Diary, Operation, Project, Source, SourcePin } from './api';
-import { copy, dirty, forgetDraft, getDraft, indexHref, resourceHref, same, today, updateWarning, valuesFor } from './drafts';
+import { copy, dirty, forgetDraft, getDraft, indexHref, ownsDraft, resourceHref, same, today, updateWarning, valuesFor } from './drafts';
 import type { Draft } from './drafts';
 
 type Emit = { (event: 'navigate', href: string): void; (event: 'refresh'): void };
@@ -269,7 +269,7 @@ export function useDiaryRoute(props: { url: URL }, emit: Emit) {
 
   async function save() {
     const current = draft.value;
-    if (!current || current.busy || current.conflict) return;
+    if (!current || current.busy || current.conflict || !ownsDraft(routeKey.value, current)) return;
     if (!current.uncertain && !validate(current)) return;
     const key = routeKey.value;
     const operationId = current.record ? 'diary.revise' : 'diary.create';
@@ -278,12 +278,15 @@ export function useDiaryRoute(props: { url: URL }, emit: Emit) {
     updateWarning();
     try {
       const retry = Boolean(current.call);
-      current.call ??= step(operationId, await inputFor(current));
+      if (!current.call) {
+        const input = await inputFor(current);
+        if (!ownsDraft(key, current)) return;
+        current.call = step(operationId, input);
+      }
       const saved = await (retry ? retryWrite<Diary>(current.call) : invoke<Diary>(current.call));
       if (!saved.noteId) throw new ApiError(502, '', '服务未返回日记编号。');
       revision(saved);
-      forgetDraft(key);
-      current.saved = saved;
+      if (forgetDraft(key, current)) current.saved = saved;
     } catch (error) {
       current.uncertain = Boolean(current.call && (!(error instanceof ApiError) || error.uncertain));
       if (!current.uncertain) current.call = undefined;
@@ -314,7 +317,7 @@ export function useDiaryRoute(props: { url: URL }, emit: Emit) {
 
   function discard() {
     if (locked.value || !window.confirm('清除这份未保存的草稿？')) return;
-    forgetDraft(routeKey.value);
+    if (!draft.value || !forgetDraft(routeKey.value, draft.value)) return;
     void load();
     emit('refresh');
   }
