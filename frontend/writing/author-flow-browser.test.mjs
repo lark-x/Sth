@@ -13,7 +13,7 @@ async function more(page, name) {
   await page.locator('.wr-more-menu').getByRole('link', { name, exact: true }).click();
 }
 async function selectedTitle(page) {
-  return page.getByRole('combobox', { name: '切换稿件', exact: true }).evaluate(select => select.selectedOptions[0]?.textContent.trim());
+  return page.locator('[aria-label="切换稿件"]').evaluate(select => select.selectedOptions[0]?.textContent.trim());
 }
 
 test('author reading, inline revision and comparison keep manuscript identity and navigation', { timeout: 240_000 }, async t => {
@@ -76,9 +76,11 @@ test('author reading, inline revision and comparison keep manuscript identity an
         await button(page, '编辑').click();
         await body(page).waitFor();
         await body(page).fill(revised + '\n切稿前的未保存文字。');
+        await button(page, '稿件与版本').click();
         await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(alternate.draftId);
         await page.locator('#passage-body').waitFor();
         assert.equal(await selectedTitle(page), alternate.title);
+        await button(page, '稿件与版本').click();
         await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(draft.draftId);
         await body(page).waitFor();
         assert.equal(await body(page).inputValue(), revised + '\n切稿前的未保存文字。');
@@ -91,6 +93,7 @@ test('author reading, inline revision and comparison keep manuscript identity an
         }), true, 'toolbar action remains clickable after scrolling');
         await more(page, '对照候选稿');
         await page.locator('.wr-comparison').waitFor();
+        await page.locator('.wr-compare-versions > summary').click();
         await page.locator('#wr-right').selectOption(`${alternate.draftId}@1`);
         await button(page, '对照').click();
         await page.locator('.wr-comparison').waitFor();
@@ -106,6 +109,7 @@ test('author reading, inline revision and comparison keep manuscript identity an
       await t.test(`${engine.name()} ${width} scene versions, candidate links and comparison preserve the return path`, async t => {
         const { scene, draft, chapterHref, sceneHref } = await fixture(true);
         const page = await open(t, sceneHref);
+        await button(page, '稿件与版本').click();
         await page.getByRole('combobox', { name: '切换场景版本', exact: true }).selectOption('1');
         await page.locator('#passage-body').waitFor();
         assert.equal(address(page).searchParams.get('returnTo'), chapterHref);
@@ -149,7 +153,8 @@ test('author reading, inline revision and comparison keep manuscript identity an
         await body(page).fill(draft.body + '\n从旧采用稿继续修订。');
         await button(page, '保存修订').click();
         await page.locator('#passage-body').waitFor();
-        assert.equal(await page.getByRole('combobox', { name: '切换稿件', exact: true }).inputValue(), `${draft.draftId}@3`);
+        assert.equal(await page.locator('[aria-label="切换稿件"]').inputValue(), `${draft.draftId}@3`);
+        await button(page, '稿件与版本').click();
         await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(`${draft.draftId}@1`);
         await page.locator('#passage-body').waitFor();
         assert.equal(address(page).searchParams.get('returnTo'), sceneHref);

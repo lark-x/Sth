@@ -116,6 +116,9 @@ const adopted = computed(
     data.value?.scene.adopted &&
     draftKey(manuscript.value) === draftKey(data.value.scene.adopted),
 );
+const latestManuscriptRevision = computed(() =>
+  data.value?.drafts.find(draft => draft.draftId === manuscript.value?.draftId)?.revision,
+);
 const back = computed(() =>
   returnHref(
     props.url,
@@ -212,6 +215,13 @@ function versionHref(revision?: number) {
       :back="back"
       :back-label="data.scene.placement ? '返回章节' : '返回场景列表'"
       :title="manuscript?.title ?? data.scene.title"
+      :revision="manuscript?.revision"
+      :latest-revision="latestManuscriptRevision"
+      :status="adopted ? '采用稿' : manuscript ? '候选稿' : '暂无稿件'"
+      :scene-historical="data.scene.revision !== data.revisions[0]?.revision"
+      :alternate="!!(data.scene.branchFrom || data.scene.branchId)"
+      :placement="data.scene.placement"
+      :chapter-title="data.chapter?.title"
       :editing="editing"
       :saveable="editing"
       :save-disabled="!editor || editor.saving"
@@ -219,6 +229,23 @@ function versionHref(revision?: number) {
       @edit="edit"
       @save="editor?.requestSave()"
     >
+      <template #versions>
+        <label v-if="manuscript">稿件<select aria-label="切换稿件" :value="draftKey(manuscript)" @change="switchDraft">
+          <option v-if="data.scene.adopted" :value="draftKey(data.scene.adopted)">
+            {{ data.scene.adopted.title }} · 已采用{{ version(data.scene.adopted.revision) }}
+          </option>
+          <option
+            v-for="draft in data.drafts.filter(item => !data!.scene.adopted || draftKey(item) !== draftKey(data!.scene.adopted))"
+            :key="draftKey(draft)"
+            :value="draftKey(draft)"
+          >{{ draft.title }} · {{ version(draft.revision) }} · 最新</option>
+        </select></label>
+        <label>场景版本<select aria-label="切换场景版本" :value="data.scene.revision" @change="switchVersion">
+          <option v-for="item in data.revisions" :key="item.revision" :value="item.revision">
+            {{ version(item.revision) }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新' : '' }}
+          </option>
+        </select></label>
+      </template>
       <a
         :href="
           href('/drafts/new', {
@@ -285,61 +312,6 @@ function versionHref(revision?: number) {
     </ManuscriptTools>
     <header class="wr-heading wr-reader-heading">
       <h1>{{ data.scene.title }}</h1>
-      <div class="wr-version-bar">
-        <label v-if="manuscript"
-          >稿件<select
-            aria-label="切换稿件"
-            :value="draftKey(manuscript)"
-            @change="switchDraft"
-          >
-            <option
-              v-if="data.scene.adopted"
-              :value="draftKey(data.scene.adopted)"
-            >
-              {{ data.scene.adopted.title }} · 已采用{{
-                version(data.scene.adopted.revision)
-              }}
-            </option>
-            <option
-              v-for="draft in data.drafts.filter(
-                (item) =>
-                  !data!.scene.adopted ||
-                  draftKey(item) !== draftKey(data!.scene.adopted),
-              )"
-              :key="draft.draftId"
-              :value="draftKey(draft)"
-            >
-              {{ draft.title }} · {{ version(draft.revision) }}
-            </option>
-          </select></label
-        >
-        <label
-          >场景版本<select
-            aria-label="切换场景版本"
-            :value="data.scene.revision"
-            @change="switchVersion"
-          >
-            <option
-              v-for="item in data.revisions"
-              :key="item.revision"
-              :value="item.revision"
-            >
-              {{ version(item.revision)
-              }}{{
-                item.revision === data.revisions[0]?.revision ? ' · 最新' : ''
-              }}
-            </option>
-          </select></label
-        >
-        <span class="wr-muted"
-          >{{ adopted ? '采用稿' : '候选稿'
-          }}<template v-if="manuscript">
-            · {{ version(manuscript.revision) }}</template
-          ><span v-if="data.scene.branchFrom || data.scene.branchId">
-            · IF 分支</span
-          ></span
-        >
-      </div>
     </header>
     <p v-if="revisedDraft" role="status" class="wr-save-message">
       修订已保存为候选稿。核对后可采用此版本。

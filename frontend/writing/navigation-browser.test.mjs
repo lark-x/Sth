@@ -86,6 +86,7 @@ test('writing navigation preserves return context and records the explicitly edi
       await more(page, '查看当前版本');
       await page.waitForFunction(text => document.querySelector('#passage-body')?.textContent === text, latest.body);
       assert.equal(address(page).searchParams.get('returnTo'), returnTo);
+      await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
       await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption('1');
       await page.waitForFunction(text => document.querySelector('#passage-body')?.textContent === text, draft.body);
       await assertBack(page, returnTo);

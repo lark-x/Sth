@@ -96,7 +96,7 @@ const { data, busy, error, reload } = useRead(async (signal) => {
       )
     : [];
   if (!signal.aborted) document.title = `对照候选稿 · ${scene.title} · Sth`;
-  return { scene, versions, compared, contexts };
+  return { scene, drafts, versions, compared, contexts };
 });
 const lines = computed(() =>
   data.value?.compared
@@ -253,16 +253,25 @@ function compare() {
     }),
   );
 }
+function isAdopted(draft: DraftSummary) {
+  const adopted = data.value?.scene.adopted;
+  return !!adopted && draftKey(adopted) === draftKey(draft);
+}
+function latestRevision(draft: DraftSummary) {
+  return data.value?.drafts.find(item => item.draftId === draft.draftId)?.revision;
+}
 </script>
 <template>
   <ReadState :busy="busy" :error="error" @retry="reload" />
   <template v-if="data && !busy && !error">
-    <header class="wr-heading wr-reader-heading">
+    <header class="wr-heading wr-reader-heading wr-compare-heading">
       <a :href="back">返回{{ data.scene.title }}</a>
       <h1>对照候选稿</h1>
-      <p class="wr-muted">{{ data.scene.title }}</p>
+      <p v-if="data.scene.branchFrom || data.scene.branchId" class="wr-muted">IF 分支</p>
     </header>
     <template v-if="data.compared && lines">
+      <details class="wr-compare-versions">
+        <summary>选择对照版本</summary>
       <form
         class="wr-compare-form"
         aria-label="选择对照版本"
@@ -278,7 +287,7 @@ function compare() {
               :key="draftKey(draft)"
               :value="draftKey(draft)"
             >
-              {{ draft.title }} · {{ version(draft.revision) }}
+              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ' · 采用稿' : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
             </option>
           </select>
         </div>
@@ -290,12 +299,13 @@ function compare() {
               :key="draftKey(draft)"
               :value="draftKey(draft)"
             >
-              {{ draft.title }} · {{ version(draft.revision) }}
+              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ' · 采用稿' : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
             </option>
           </select>
         </div>
         <button type="submit" class="wr-button">对照</button>
       </form>
+      </details>
       <nav class="wr-compare-switch" aria-label="同段切换">
         <button
           type="button"
@@ -326,7 +336,6 @@ function compare() {
       >
         两稿正文一致。
       </p>
-      <p v-else-if="differences" class="wr-muted">删线与下划线标记不同段落。</p>
       <div ref="comparison" class="wr-comparison wr-aligned-comparison">
         <article
           v-for="(side, index) in ['left', 'right'] as const"
@@ -355,7 +364,9 @@ function compare() {
                 {{ version(data.compared[side].revision) }}</a
               >
             </h2>
-            <p class="wr-muted">
+            <p class="wr-compare-meta">
+              <span :class="{ 'wr-adopted-label': isAdopted(data.compared[side]) }">{{ isAdopted(data.compared[side]) ? '采用稿' : '候选稿' }}</span>
+              <span>{{ latestRevision(data.compared[side]) === data.compared[side].revision ? '最新修订' : '旧版' }}</span>
               <a
                 :href="
                   recordHref(
@@ -366,15 +377,6 @@ function compare() {
                 "
                 >上下文 · {{ version(data.compared[side].sceneRevision) }}</a
               >
-            </p>
-            <p
-              v-if="
-                data.scene.adopted &&
-                draftKey(data.scene.adopted) === draftKey(data.compared[side])
-              "
-              class="wr-selected"
-            >
-              此场景版本已采用
             </p>
             <details class="wr-compare-actions" @toggle="alignParagraphs">
               <summary>采用与 IF</summary>

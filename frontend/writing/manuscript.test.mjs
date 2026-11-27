@@ -224,8 +224,10 @@ test('manuscript reading and revision through the real shell and isolated API', 
     const candidate = await invoke('draft.create', { sceneId: sourceScene.sceneId, sceneRevision: 1, title: '留在北岸', body: '她没有登船。' });
     await invoke('draft.revise', { draftId: candidate.draftId, expectedRevision: 1, body: '第二版，她仍留在北岸。' });
     const page = await open(t, origin, `/drafts/${candidate.draftId}?revision=1`);
+    await button(page, '稿件与版本').click();
     await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption('2');
     await page.waitForFunction(() => document.querySelector('#passage-body')?.textContent === '第二版，她仍留在北岸。');
+    await button(page, '稿件与版本').click();
     await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption('1');
     await more(page, '采纳此版本');
     await heading(page, '采纳候选稿').waitFor();
@@ -459,6 +461,7 @@ test('manuscript reading and revision through the real shell and isolated API', 
       await assertFitsViewport(page);
       await snapshot(page, `${name}-same-paragraph-comparison`);
       if (name === 'phone') {
+        await page.locator('.wr-compare-versions > summary').click();
         await page.locator('#wr-left').selectOption(`${alternate.draftId}@1`);
         const comparisonKey = `sth:writing:comparison:${scene.sceneId}:${draft.draftId}@1:${alternate.draftId}@1`;
         await page.evaluate(key => sessionStorage.removeItem(key), comparisonKey);

@@ -45,12 +45,13 @@ const { data, busy, error, reload } = useRead(async (signal) => {
     { draftId, revision: revisionParam(props.url.searchParams) },
     signal,
   );
-  const [scene, revisions, drafts, evidence] = await Promise.all([
+  const [scene, currentScene, revisions, drafts, evidence] = await Promise.all([
     read<Scene>(
       'scene.read',
       { sceneId: draft.sceneId, revision: draft.sceneRevision },
       signal,
     ),
+    read<Scene>('scene.read', { sceneId: draft.sceneId }, signal),
     all<DraftSummary>('draft.revisions', { draftId }, signal),
     all<DraftSummary>('draft.list', { sceneId: draft.sceneId }, signal),
     all<Backlink>(
@@ -69,7 +70,7 @@ const { data, busy, error, reload } = useRead(async (signal) => {
       sceneId: draft.sceneId,
     }, true);
   }
-  return { draft, scene, revisions, drafts, evidence };
+  return { draft, scene, currentScene, revisions, drafts, evidence };
 });
 const back = computed(() =>
   returnHref(
@@ -82,6 +83,10 @@ const historical = computed(
     !!data.value &&
     data.value.revisions[0]?.revision !== data.value.draft.revision,
 );
+const adopted = computed(() => {
+  const current = data.value?.currentScene.adopted;
+  return current && draftKey(current) === draftKey(data.value!.draft);
+});
 function edit() {
   if (!editing.value) {
     selection.value = passage.value?.selection();
@@ -203,6 +208,12 @@ function cite(kind: 'character' | 'event') {
       :back="back"
       :back-label="`返回${data.scene.title}`"
       :title="data.draft.title"
+      :revision="data.draft.revision"
+      :latest-revision="data.revisions[0]?.revision"
+      :status="adopted ? '采用稿' : '候选稿'"
+      :placement="data.currentScene.placement"
+      :scene-title="data.scene.title"
+      :alternate="!!(data.scene.branchFrom || data.scene.branchId)"
       :editing="editing"
       :saveable="editing"
       :save-disabled="!editor || editor.saving"
@@ -210,6 +221,16 @@ function cite(kind: 'character' | 'event') {
       @edit="edit"
       @save="editor?.requestSave()"
     >
+      <template #versions>
+        <label>稿件<select aria-label="切换稿件" :value="data.draft.draftId" @change="switchDraft">
+          <option v-for="draft in data.drafts" :key="draft.draftId" :value="draft.draftId">{{ draft.title }}</option>
+        </select></label>
+        <label>版本<select aria-label="切换稿件版本" :value="data.draft.revision" @change="switchVersion">
+          <option v-for="item in data.revisions" :key="item.revision" :value="item.revision">
+            {{ version(item.revision) }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新' : '' }}{{ data.currentScene.adopted && draftKey(data.currentScene.adopted) === draftKey(item) ? ' · 采用稿' : '' }}
+          </option>
+        </select></label>
+      </template>
       <a
         :href="
           href(recordHref('drafts', data.draft.draftId), {
@@ -274,44 +295,6 @@ function cite(kind: 'character' | 'event') {
     </ManuscriptTools>
     <header class="wr-heading wr-reader-heading">
       <h1>{{ data.draft.title }}</h1>
-      <div class="wr-version-bar">
-        <label
-          >稿件<select
-            aria-label="切换稿件"
-            :value="data.draft.draftId"
-            @change="switchDraft"
-          >
-            <option
-              v-for="draft in data.drafts"
-              :key="draft.draftId"
-              :value="draft.draftId"
-            >
-              {{ draft.title }}
-            </option>
-          </select></label
-        >
-        <label
-          >版本<select
-            aria-label="切换稿件版本"
-            :value="data.draft.revision"
-            @change="switchVersion"
-          >
-            <option
-              v-for="item in data.revisions"
-              :key="item.revision"
-              :value="item.revision"
-            >
-              {{ version(item.revision)
-              }}{{
-                item.revision === data.revisions[0]?.revision ? ' · 最新' : ''
-              }}
-            </option>
-          </select></label
-        >
-        <span class="wr-muted"
-          >候选稿<span v-if="historical"> · 正在阅读旧版</span></span
-        >
-      </div>
     </header>
     <p v-if="savedMessage" role="status" class="wr-save-message">
       {{ savedMessage }}

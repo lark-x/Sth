@@ -99,7 +99,7 @@ test('real WebKit manuscript layouts fit 320px and 390px before and after intera
           }
           try {
             await page.goto(href);
-            await page.locator(name === 'compare' ? '.wr-compare-form' : '.wr-version-bar').waitFor();
+            await page.locator(name === 'compare' ? '.wr-comparison' : '.wr-reader-toolbar').waitFor();
             if (name === 'edit') await page.getByRole('textbox', { name: '正文', exact: true }).waitFor();
             await check('initial');
 
@@ -108,19 +108,25 @@ test('real WebKit manuscript layouts fit 320px and 390px before and after intera
               assert.ok(await page.locator('[data-side="right"]').isVisible());
               assert.equal(await page.locator('[data-side="left"]').isVisible(), false);
               await check('right-side');
+              await page.locator('.wr-compare-versions > summary').click();
+              await check('versions-open');
               await page.locator('#wr-right').selectOption(`${fixture.revised.draftId}@${fixture.revised.revision}`);
               await page.getByRole('button', { name: '对照', exact: true }).click();
               await page.waitForURL(url => url.searchParams.get('right') === `${fixture.revised.draftId}@${fixture.revised.revision}`);
-              await page.locator('.wr-compare-form').waitFor();
+              await page.locator('.wr-comparison').waitFor();
               assert.equal(await page.locator('#wr-right').inputValue(), `${fixture.revised.draftId}@${fixture.revised.revision}`);
               await check('versions-selected');
             } else if (name === 'scene') {
+              await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await check('versions-open');
               await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(`${fixture.drafts[1].draftId}@1`);
               await page.waitForURL(url => url.pathname === `/drafts/${fixture.drafts[1].draftId}`);
               await page.locator('#passage-body').waitFor();
               assert.equal(await page.locator('.wr-toolbar-title').innerText(), fixture.drafts[1].title);
               await check('draft-selected');
             } else if (name === 'draft') {
+              await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await check('versions-open');
               await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption(String(fixture.revised.revision));
               await page.waitForURL(url => url.searchParams.get('revision') === String(fixture.revised.revision));
               await page.locator('#passage-body').waitFor();
