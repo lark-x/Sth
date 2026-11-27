@@ -30,6 +30,7 @@ const chapterIdentity = { chapterId: id };
 const draftIdentity = { draftId: id };
 const expectedRevision = { expectedRevision: revision };
 const linkInteraction = { resultLink };
+const draftInteraction = { resultLink: { ...resultLink, revisionField: 'revision' } };
 const contextPins = { characters: Type.Optional(characterPins), sources: Type.Optional(sourcePins) };
 const clearableDetail = Type.Optional(Type.Union([sceneDetail, Type.Null()]));
 
@@ -280,7 +281,7 @@ export const storyOperations = [
   defineOperation({
     id: 'draft.create', effect: 'write',
     description: 'Save a new candidate for a scene. Provide the exact sceneRevision used for its context, title, and body. Use a separate call for each telling and scene.adopt when the author chooses one.',
-    interaction: linkInteraction,
+    interaction: draftInteraction,
     inputSchema: Type.Object({ ...sceneIdentity, sceneRevision: revision, title, body }, strict), outputSchema: draft,
     run({ sceneId, sceneRevision, title, body }, { db }) {
       assertText(title, body);
@@ -305,14 +306,14 @@ export const storyOperations = [
   }),
   defineOperation({
     id: 'draft.read', effect: 'read', description: "Read a candidate's current or exact revision, including its text and the sceneHref for its exact sceneRevision.",
-    interaction: linkInteraction,
+    interaction: draftInteraction,
     inputSchema: Type.Object({ ...draftIdentity, revision: Type.Optional(revision) }, strict), outputSchema: draft,
     run: ({ draftId, revision }, { db }) => readDraft(db, draftId, revision),
   }),
   defineOperation({
     id: 'draft.revise', effect: 'write',
     description: 'Revise a candidate using its current revision as expectedRevision. Omitted fields are preserved. Specify sceneRevision only to use different scene context. Use scene.adopt separately to select the revised text.',
-    interaction: linkInteraction,
+    interaction: draftInteraction,
     inputSchema: Type.Object({
       ...draftIdentity, ...expectedRevision, sceneRevision: Type.Optional(revision), title: Type.Optional(title), body: Type.Optional(body),
     }, strict), outputSchema: draft,

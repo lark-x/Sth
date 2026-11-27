@@ -116,7 +116,7 @@ export const sourceOperations = [
   defineOperation({
     id: 'source.read', effect: 'read',
     description: 'Read an exact source revision by ID, or omit revision for the latest. Supply a UTF-16 range to return a body window identified by context.bodyRange. contextChars sets the surrounding size on each side (default 200, use 0 for the selection alone).',
-    interaction: { resultLink },
+    interaction: { resultLink: { ...resultLink, revisionField: 'revision', rangeField: 'context.range' } },
     inputSchema: Type.Object({
       sourceId: id, revision: Type.Optional(revision), range: Type.Optional(SourceRangeSchema),
       contextChars: Type.Optional(Type.Integer({ minimum: 0, maximum: 4_000 })),

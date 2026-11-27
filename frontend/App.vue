@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, defineComponent, h, nextTick, onBeforeUnmount, onErrorCaptured, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onErrorCaptured, ref } from 'vue';
 import AppIcon from './AppIcon.vue';
-import HomePage from './HomePage.vue';
-import LegacyRoute from './LegacyRoute.vue';
-import { currentNavigation, routeLoader } from './routes.ts';
+import RouteDocument from './RouteDocument.vue';
+import ManuscriptFrame from './manuscript/ManuscriptFrame.vue';
+import { manuscriptRoute } from './manuscript/routes.ts';
+import { currentNavigation } from './routes.ts';
 import bookMark from '../web/assets/book.svg';
 
 const url = ref(new URL(location.href));
 const refreshVersion = ref(0);
-const main = ref<HTMLElement>();
 const announcement = ref('');
 const routeError = ref(false);
 let announcementTimer: ReturnType<typeof setTimeout> | undefined;
@@ -22,12 +22,7 @@ const destinations = [
 ];
 const active = computed(() => currentNavigation(url.value));
 const isHome = computed(() => url.value.pathname === '/' && !url.value.searchParams.has('projectId'));
-const loading = defineComponent({ setup: () => () => h('p', { class: 'loading', role: 'status' }, '正在打开…') });
-const route = computed(() => {
-  if (isHome.value) return HomePage;
-  const loader = routeLoader(url.value);
-  return loader ? defineAsyncComponent({ loader, loadingComponent: loading, delay: 100, timeout: 15_000 }) : LegacyRoute;
-});
+const workbench = computed(() => manuscriptRoute(url.value));
 
 async function updateRoute(focus = true) {
   focusNextMount = focus;
@@ -37,7 +32,8 @@ async function updateRoute(focus = true) {
   await nextTick();
   if (focus) {
     window.scrollTo({ top: 0, behavior: 'instant' });
-    const target = main.value?.querySelector<HTMLElement>('h1') ?? main.value;
+    const main = document.getElementById('main');
+    const target = main?.querySelector<HTMLElement>('h1') ?? main;
     target?.setAttribute('tabindex', '-1');
     target?.focus({ preventScroll: true });
   }
@@ -45,7 +41,7 @@ async function updateRoute(focus = true) {
 
 function focusPage() {
   if (!focusNextMount) return;
-  const heading = main.value?.querySelector<HTMLElement>('h1');
+  const heading = document.querySelector<HTMLElement>('#main h1');
   if (!heading) return;
   heading.setAttribute('tabindex', '-1');
   heading.focus({ preventScroll: true });
@@ -101,7 +97,10 @@ onErrorCaptured(() => {
 <template>
   <div class="sth-app" @click="onClick" @sth:replace="onReplace" @sth:announce="onAnnounce">
     <a class="skip-link" href="#main">跳到正文</a>
-    <div class="shell sth-shell">
+    <ManuscriptFrame v-if="workbench && !routeError" :url="url" @navigate="navigate" v-slot="{ editorUrl }">
+      <RouteDocument :key="editorUrl.href + ':' + refreshVersion" :url="editorUrl" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
+    </ManuscriptFrame>
+    <div v-else class="shell sth-shell">
       <header class="sidebar sth-sidebar">
         <a class="brand" href="/" aria-label="Sth 首页" :aria-current="isHome ? 'page' : undefined">
           <span class="brand-mark"><img :src="bookMark" width="24" height="24" alt=""></span>
@@ -116,14 +115,14 @@ onErrorCaptured(() => {
           <a href="/settings" :aria-current="active === '/settings' ? 'page' : undefined"><AppIcon name="settings" /><span>设置</span></a>
         </nav>
       </header>
-      <main id="main" ref="main" tabindex="-1" :class="{ 'sth-home-main': isHome }">
+      <main id="main" tabindex="-1" :class="{ 'sth-home-main': isHome }">
         <div v-if="routeError" class="sth-route-error">
           <h1 tabindex="-1">页面暂时无法打开</h1>
           <p role="alert">页面加载失败，请重试。</p>
           <button type="button" class="button primary" @click="refresh">重试</button>
           <a href="/" class="button quiet">返回首页</a>
         </div>
-        <component :is="route" v-else :key="url.href + ':' + refreshVersion" :url="url" @navigate="navigate" @refresh="refresh" @vue:mounted="focusPage" />
+        <RouteDocument v-else :key="url.href + ':' + refreshVersion" :url="url" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
       </main>
     </div>
     <div id="announcement" class="toast" role="status" aria-atomic="true">{{ announcement }}</div>

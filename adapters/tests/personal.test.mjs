@@ -56,7 +56,9 @@ async function mcpOperation(call, operationId, stepId, input) {
   const response = await call(invoke, { operationId, stepId, input });
   assert.ok(response.structuredContent, response.content[0].text);
   assert.equal(response.structuredContent.replayed, false);
-  return response.structuredContent.result;
+  const { portalUrl, ...result } = response.structuredContent.result;
+  if (portalUrl) assert.equal(response.content[1].text.includes(portalUrl), true);
+  return result;
 }
 
 test('SDK stdio pairs independently and round-trips real Sth writes, replay, receipts and revocation', { timeout: 30_000 }, async t => {
@@ -110,7 +112,9 @@ test('SDK stdio pairs independently and round-trips real Sth writes, replay, rec
   assert.equal(saved.result.href, `/diaries/${saved.result.noteId}`);
   assert.equal(saved.result.projectId, undefined);
   assert.equal(saved.result.body, input.body);
-  assert.deepEqual(await f.invoke('diary.read', 'web-read', { noteId: saved.result.noteId }), saved.result);
+  const { portalUrl: savedUrl, ...savedDiary } = saved.result;
+  assert.equal(savedUrl, `${f.origin}${savedDiary.href}?revision=1`);
+  assert.deepEqual(await f.invoke('diary.read', 'web-read', { noteId: saved.result.noteId }), savedDiary);
   assert.deepEqual((await call(invoke, { ...lookup, input })).structuredContent, { ...saved, replayed: true });
   toolError(await call(invoke, { ...lookup, input: { ...input, body: 'Regenerated text' } }), 'operation_step_conflict');
   for (const args of [{ ...lookup, input, stepId: 'x'.repeat(502) }, { ...lookup, input, projectId: 'forced' }]) {
@@ -233,6 +237,77 @@ test('MCP redacts echoed credentials and refuses redirected authenticated reques
   assert.equal(redirected, 0);
 });
 
+test('MCP keeps the paired API origin while rendering configured portal links and successful receipts', { timeout: 20_000 }, async t => {
+  const f = await setupService(t);
+  const issued = await pair(f.origin, join(f.directory, 'portal-mcp'), await f.code());
+  assert.equal(issued.status, 0, issued.stderr);
+  const call = await mcp(t, JSON.parse(issued.stdout).file, {
+    STH_PERSONAL_OPERATIONS_ORIGIN: 'https://ignored-api.example.test',
+    STH_PERSONAL_OPERATIONS_PORTAL_ORIGIN: 'https://portal.example.test',
+  });
+  const args = { operationId: 'diary.create', stepId: 'portal-diary',
+    input: { title: '普通写作', body: '普通写作保存。', diaryDate: '2024-02-29' } };
+  const response = await call(invoke, args);
+  const saved = response.structuredContent.result;
+  assert.equal(saved.portalUrl, `https://portal.example.test/diaries/${saved.noteId}?revision=1`);
+  assert.equal(response.content[1].text, `[${saved.title}](${saved.portalUrl})`);
+  assert.deepEqual((await call(receipt, { operationId: args.operationId, stepId: args.stepId })).structuredContent,
+    { ...response.structuredContent, replayed: true });
+  assert.equal(f.diaryCount(), 1);
+  assert.ok(f.calls.every(call => call.bearer === (call.action !== 'claim')));
+});
+
+test('MCP preserves a successful saved result when optional link discovery fails', { timeout: 20_000 }, async t => {
+  const token = randomBytes(32).toString('base64url');
+  const origin = await listen(t, createServer(async (req, res) => {
+    if (req.url.endsWith('/catalog')) return res.writeHead(503).end('{}');
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ operationId: body.operationId, stepId: body.stepId, replayed: false,
+      result: { noteId: 'saved-note', revision: 1, href: '/diaries/saved-note', title: '已保存' } }));
+  }));
+  const call = await mcp(t, undefined, { STH_PERSONAL_OPERATIONS_TOKEN: token, STH_PERSONAL_OPERATIONS_ORIGIN: origin });
+  const result = await call(invoke, { operationId: 'diary.create', stepId: 'saved', input: {} });
+  assert.ok(!result.isError);
+  assert.equal(result.structuredContent.result.noteId, 'saved-note');
+  assert.equal(result.structuredContent.result.portalUrl, undefined);
+  assert.equal(result.content.length, 1);
+});
+
+test('installed Hermes terminal returns ordinary manuscript links and exact receipts across turns', {
+  skip: !python && 'Set STH_TEST_HERMES_PYTHON to the installed Hermes interpreter', timeout: 90_000,
+}, async t => {
+  const f = await setupService(t);
+  const { run } = await hermesProfile(f);
+  const source = await f.invoke('source.create', 'native-link-source', {
+    kind: 'excerpt', title: 'Hermes 精确选段', body: '🌙序。同一句。过渡。同一句。结尾。',
+  });
+  const start = source.body.lastIndexOf('同一句');
+  const range = { start, end: start + '同一句'.length };
+  const first = await run('manuscript-first', { code: await f.code(), sourceInput: {
+    sourceId: source.sourceId, revision: source.revision, range, contextChars: 0,
+  } });
+  const [diary, draft, selected] = first.results;
+  assert.equal(diary.result.portalUrl, `${f.origin}/diaries/${diary.result.noteId}?revision=1`);
+  assert.equal(draft.result.portalUrl, `${f.origin}/drafts/${draft.result.draftId}?revision=1`);
+  assert.equal(selected.result.portalUrl, `${f.origin}${source.href}&start=${start}&end=${range.end}`);
+  assert.equal(selected.result.body, '同一句');
+  assert.deepEqual(selected.result.context.range, range);
+  await f.invoke('diary.revise', 'native-web-edit', {
+    noteId: diary.result.noteId, expectedRevision: 1, title: diary.result.title,
+    diaryDate: diary.result.diaryDate, body: '网页保存的日记新版。',
+  });
+  await f.invoke('draft.revise', 'native-web-edit-draft', {
+    draftId: draft.result.draftId, expectedRevision: 1, body: '网页保存的候选稿新版。',
+  });
+  const replay = await run('manuscript-receipt', { originals: first.results });
+  assert.deepEqual(replay.results, first.results.map(result => ({ ...result, replayed: true })));
+  assert.equal(f.diaryCount(), 1);
+  assert.deepEqual((await f.connections()).map(item => item.clientName), ['Sth Hermes Terminal']);
+});
+
 async function hermesProfile(f) {
   const home = join(f.directory, 'profiles', 'sth');
   await mkdir(home, { recursive: true });
@@ -290,7 +365,7 @@ test('installed Hermes admits synthetic QQ and WeChat, persists pairing and date
   assert.equal(files.filter(file => file.endsWith('.date')).length, 1);
   assert.equal(f.calls.filter(call => call.action === 'claim').length, 1);
   const restart = await run('restart', { portal: 'https://portal.example.test' });
-  assert.deepEqual(restart.write, { ...first.write, replayed: true, result: { ...diary, portalUrl: `https://portal.example.test${diary.href}` } });
+  assert.deepEqual(restart.write, { ...first.write, replayed: true, result: { ...diary, portalUrl: `https://portal.example.test${diary.href}?revision=1` } });
   assert.equal(f.diaryCount(), 1);
   const webBody = '在网页修改过的正文。';
   await f.invoke('diary.revise', 'web-edit', { noteId: diary.noteId, title: diary.title, diaryDate: diary.diaryDate,

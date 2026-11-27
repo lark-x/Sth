@@ -3,8 +3,14 @@ import { ApiError, catalog, errorText, invoke, listAll, read, retryWrite, revisi
 import type { Backlink, Character, Diary, Operation, Project, Source, SourcePin } from './api';
 import { copy, dirty, forgetDraft, getDraft, indexHref, ownsDraft, resourceHref, same, today, updateWarning, valuesFor } from './drafts';
 import type { Draft } from './drafts';
+import { rememberManuscript } from '../manuscript/recent';
 
 type Emit = { (event: 'navigate', href: string): void; (event: 'refresh'): void };
+
+function rememberDiary(record: Diary, title = record.title) {
+  rememberManuscript({ kind: 'diary', id: record.noteId, title: title.trim() || record.title,
+    href: `${resourceHref('diaries', record.noteId)}?edit=1` });
+}
 
 export function useDiaryRoute(props: { url: URL }, emit: Emit) {
   const loading = ref(true);
@@ -286,6 +292,7 @@ export function useDiaryRoute(props: { url: URL }, emit: Emit) {
       const saved = await (retry ? retryWrite<Diary>(current.call) : invoke<Diary>(current.call));
       if (!saved.noteId) throw new ApiError(502, '', '服务未返回日记编号。');
       revision(saved);
+      rememberDiary(saved);
       if (forgetDraft(key, current)) current.saved = saved;
     } catch (error) {
       current.uncertain = Boolean(current.call && (!(error instanceof ApiError) || error.uncertain));
@@ -322,8 +329,9 @@ export function useDiaryRoute(props: { url: URL }, emit: Emit) {
     emit('refresh');
   }
 
-  watch(() => draft.value?.values, () => {
+  watch(() => draft.value?.values, (values, previous) => {
     if (draft.value && !draft.value.conflict && !draft.value.uncertain) draft.value.error = '';
+    if (values && previous && draft.value?.record && changed.value && !locked.value) rememberDiary(draft.value.record, values.title);
     updateWarning();
   }, { deep: true, flush: 'sync' });
   watch(() => draft.value?.saved, saved => {

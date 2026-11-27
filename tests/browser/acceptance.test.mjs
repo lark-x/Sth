@@ -31,11 +31,28 @@ function nav(page, name) {
   return page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name, exact: true });
 }
 
-const settings = page => page.getByRole('navigation', { name: '应用设置' }).getByRole('link', { name: '设置' });
+const settings = page => page.getByRole('navigation', { name: /^(?:应用设置|工作区工具)$/ }).getByRole('link', { name: '设置', exact: true });
+
+async function showLibrary(page) {
+  if (page.viewportSize().width >= 640) return;
+  const frame = page.locator('.manuscript-frame');
+  if (await frame.getAttribute('data-pane') === 'editor') {
+    await page.getByRole('button', { name: '返回文稿列表', exact: true }).click();
+  }
+  if (await frame.getAttribute('data-pane') === 'sheets') {
+    await page.getByRole('button', { name: '资料库', exact: true }).click();
+  }
+}
+
+async function home(page) {
+  if (await page.locator('.manuscript-frame').count()) await showLibrary(page);
+  await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+}
 
 async function openProjects(page) {
+  await home(page);
   await nav(page, '创作').click();
-  await page.getByRole('navigation', { name: '创作入口' }).getByRole('link', { name: '作品', exact: true }).click();
+  await showLibrary(page);
 }
 
 function row(page, title) {
@@ -94,7 +111,10 @@ async function expectDiaryPage(page, diary) {
 }
 
 async function createPersonalDiary(page) {
-  await page.getByRole('link', { name: '写日记', exact: true }).click();
+  const entry = await page.locator('.manuscript-frame').count()
+    ? page.locator('.manuscript-sheets footer').getByRole('link', { name: '写日记', exact: true })
+    : page.getByRole('link', { name: '写日记', exact: true });
+  await entry.click();
   await heading(page, '写日记').waitFor();
   await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
   assert.equal(await projectField(page).inputValue(), '');
@@ -115,16 +135,20 @@ async function createScopedDiary(page, api, viewport) {
   const persona = '负责夜间巡逻，习惯把观察写进手记。';
 
   await openProjects(page);
-  await page.getByRole('heading', { name: '开始你的第一部作品', exact: true }).waitFor();
+  await page.getByText('还没有作品。', { exact: false }).waitFor();
   await page.getByRole('link', { name: '新建作品', exact: true }).first().click();
   await page.getByRole('textbox', { name: '作品名称（必填）', exact: true }).fill(title);
   await page.getByRole('button', { name: '创建作品', exact: true }).click();
-  await page.getByRole('article', { name: title, exact: true }).waitFor();
+  await page.waitForURL(/\/projects\/(?!new)[^/]+$/);
+  await page.locator('.library-sheet-scroll[aria-busy="false"]').waitFor();
+  assert.deepEqual(await page.locator('.manuscript-sheets').getByRole('alert').allTextContents(), [], 'a newly created work opens without a library error');
+  await page.locator('.manuscript-sheets').getByRole('heading', { name: title, exact: true }).waitFor();
   const { items: projects } = await api.invoke('project.list', {});
   assert.equal(projects.length, 1);
   const [{ projectId }] = projects;
   assert.deepEqual(projects, [{ projectId, title }]);
 
+  await home(page);
   await nav(page, '角色').click();
   await page.getByRole('link', { name: '新建角色', exact: true }).click();
   await page.getByRole('textbox', { name: '角色名称', exact: true }).fill(name);
@@ -157,7 +181,7 @@ async function createScopedDiary(page, api, viewport) {
   await assertFitsViewport(page);
   await screenshot(page, viewport, 'character-diary');
 
-  await openProjects(page);
+  await page.goto(`/projects/${projectId}?view=overview`);
   await page.getByRole('article', { name: title, exact: true }).getByRole('navigation', { name: '作品内容' }).getByRole('link', { name: '日记', exact: true }).click();
   await row(page, characterDiary.title).waitFor();
   assert.equal(await projectField(page).inputValue(), projectId);

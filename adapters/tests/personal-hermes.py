@@ -117,6 +117,56 @@ def workspace_turn(message, operation, plugin, writes, evidence):
     return MODEL
 
 
+def manuscript_turn(manager):
+    module = manager._plugins["sth-personal-operations"].module
+    native, plugin = module.native, module.operations
+    fields = {"session_id": "manuscript-session", "turn_id": STAGE, "user_message": "保存普通写作结果", "platform": "cli"}
+
+    def tool(name, args):
+        output = registry.dispatch(name, args, scope=manager.scope_key, session_id=fields["session_id"])
+        return json.loads(output) if isinstance(output, str) else output
+
+    def operation(name, step, payload):
+        result = tool(INVOKE, {"operationId": name, "stepId": step, "input": payload})
+        assert "result" in result, result
+        return result
+
+    assert tool(DISCOVER, {})["error"] == "personal_turn_required"
+    if "code" in FIXTURE:
+        native.connect(plugin._origin(), FIXTURE["code"])
+    policy = SimpleNamespace(source="oneshot", platform="cli")
+    with patch.object(native._context, "session_surface", return_value="oneshot"), patch("gateway.session_policy.active_policy", return_value=policy):
+        tokens = set_session_vars(platform="local", session_id=fields["session_id"])
+        try:
+            assert invoke_hook("pre_llm_call", **fields)
+            if STAGE == "manuscript-first":
+                diary = operation("diary.create", "ordinary-diary", {
+                    "title": "Hermes 普通日记", "body": "当前对话完成的正文。", "diaryDate": "2024-02-29"})
+                scene = operation("scene.create", "ordinary-scene", {"title": "普通写作场景"})["result"]
+                draft = operation("draft.create", "ordinary-draft", {
+                    "sceneId": scene["sceneId"], "sceneRevision": scene["revision"], "title": "Hermes 候选稿", "body": "当前对话完成的候选正文。"})
+                selected = operation("source.read", "selected-source", FIXTURE["sourceInput"])
+                results = [diary, draft, selected]
+            else:
+                results = [tool(plugin.RECEIPT, {"operationId": original["operationId"], "stepId": original["stepId"]})
+                           for original in FIXTURE["originals"]]
+                for original, replay in zip(FIXTURE["originals"], results):
+                    assert replay == {**original, "replayed": True}, replay
+            for result in results:
+                assert "portalUrl" in result["result"]
+                assert "?revision=1" in result["result"]["portalUrl"]
+                assert result["stepId"].startswith("sth.hermes.cli.v1:")
+            with patch("gateway.session_policy.active_policy", return_value=SimpleNamespace(source="qqbot", platform="qqbot")):
+                assert tool(DISCOVER, {})["error"] == "personal_turn_required"
+            reply = module.finish_turn(response_text="已保存普通写作结果", session_id=fields["session_id"])
+            for result in results[:2]:
+                assert result["result"]["portalUrl"] in reply
+            assert tool(DISCOVER, {})["error"] == "personal_turn_required"
+            return {"results": results, "reply": reply}
+        finally:
+            clear_session_vars(tokens)
+
+
 async def main():
     if FIXTURE.get("portal"):
         os.environ["STH_PERSONAL_OPERATIONS_PORTAL_ORIGIN"] = FIXTURE["portal"]
@@ -124,6 +174,9 @@ async def main():
     manager.discover_and_load()
     assert {DISCOVER, INVOKE} <= set(manager._plugin_tool_names)
     plugin = manager._plugins["sth-personal-operations"].module.operations
+    if STAGE.startswith("manuscript-"):
+        print("PERSONAL_QA " + json.dumps(manuscript_turn(manager)))
+        return
 
     def tool(name, args):
         output = registry.dispatch(name, args, scope=manager.scope_key)

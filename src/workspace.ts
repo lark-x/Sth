@@ -7,6 +7,7 @@ import { generationDDL, generationOperations } from './generation/index.ts';
 import { jobsDDL, jobsOperations } from './jobs/index.ts';
 import { assetsDDL, assetOperations } from './assets/index.ts';
 import { taskActivity } from './jobs/activity.ts';
+import { manuscriptDDL, recentManuscripts } from './manuscripts.ts';
 
 interface WorkspaceModule {
   ddl: string;
@@ -22,6 +23,7 @@ const modules: WorkspaceModule[] = [
   { ddl: storyDDL, operations: storyOperations, resourcePaths: ['scenes', 'drafts', 'chapters', 'events', 'narratives', 'branches'] },
   { ddl: generationDDL, operations: generationOperations, resourcePaths: ['templates', 'writing-requirements', 'generation-plans', 'generation-batches', 'generations'] },
   { ddl: jobsDDL, operations: [...jobsOperations, taskActivity], resourcePaths: ['jobs', 'media', 'compositions'] },
+  { ddl: manuscriptDDL, operations: [recentManuscripts], resourcePaths: [] },
 ];
 
 export const workspaceSchemaVersion = 4;

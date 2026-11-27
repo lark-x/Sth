@@ -426,6 +426,9 @@ test('creative entry renders through the current shared shell on desktop and pho
   await heading(page, '新建作品').waitFor();
   await page.getByLabel('作品名称（必填）').fill('从主入口开始的新作');
   await page.getByRole('button', { name: '创建作品', exact: true }).click();
-  await page.getByRole('heading', { name: '从主入口开始的新作', exact: true }).waitFor();
+  await page.waitForURL(/\/projects\/(?!new)[^/]+$/);
+  await page.locator('.library-sheet-scroll[aria-busy="false"]').waitFor();
+  assert.deepEqual(await page.locator('.manuscript-sheets').getByRole('alert').allTextContents(), [], 'a newly created work opens without a library error');
+  await page.locator('.manuscript-sheets').getByRole('heading', { name: '从主入口开始的新作', exact: true }).waitFor();
   assert.deepEqual(writes(calls).map(call => call.operationId), ['project.create']);
 });

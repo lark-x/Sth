@@ -1,6 +1,8 @@
 <script setup lang="ts">
 defineProps<{ name: string }>();
 const paths: Record<string, string[]> = {
+  panels: ['M3 4h18v16H3z', 'M9 4v16'],
+  library: ['M4 4v16m4-16v16m4-16v16', 'm15 5 4-1 3 15-4 1z'],
   diary: ['M8 3H5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V9', 'M2 7h4M2 12h4M2 17h4', 'm12 8 6-6 4 4-6 6-5 1z'],
   pen: ['m4 16-1 5 5-1L21 7l-4-4z', 'm14 6 4 4'],
   people: ['M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2', 'M20 21v-2a4 4 0 0 0-3-3.9', 'M12.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0', 'M16 3.5a3.5 3.5 0 0 1 0 7'],

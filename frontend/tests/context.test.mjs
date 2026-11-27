@@ -91,7 +91,8 @@ test('an explicit author action pins a mixed historical context through two reju
   const page = await openBrowser(t, origin, { width: 1280, height: 900 });
   const calls = callsFrom(page);
   await page.goto(`/projects/${projectId}`);
-  await link(page, '创作决定').click();
+  await link(page.getByRole('navigation', { name: '作品管理', exact: true }), '作品总览').click();
+  await link(page.getByRole('navigation', { name: '作品内容', exact: true }), '创作决定').click();
   await page.getByRole('region', { name: '作者已确认', exact: true }).getByText(approved.body).waitFor();
   await page.getByRole('region', { name: '待确认提案', exact: true }).getByText(pending.body).waitFor();
   await link(page, '固定此版本').click();

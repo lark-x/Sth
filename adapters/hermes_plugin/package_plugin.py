@@ -12,7 +12,7 @@ import urllib.request
 import zipfile
 
 
-FILES = ("plugin.yaml", "__init__.py", "personal_credentials.py", "personal_operations.py", "native.py", "workspace_cli.py")
+FILES = ("plugin.yaml", "__init__.py", "personal_credentials.py", "personal_operations.py", "result_links.py", "native.py", "workspace_cli.py")
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = {".html", ".js", ".css", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff", ".woff2", ".txt"}
 FRONTEND_SOURCE_SUFFIXES = {".ts", ".vue", ".css", ".js", ".mjs", ".svg"}

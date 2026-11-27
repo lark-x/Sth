@@ -72,7 +72,13 @@ function hasOperationIdentity(request: OperationReceiptQuery): boolean {
 
 function assertInteractionFields(id: string, schema: TSchema, fields: readonly string[], side: 'input' | 'output') {
   for (const field of fields) {
-    if (!TypeGuard.IsObject(schema) || !Object.hasOwn(schema.properties, field)) {
+    let target = schema;
+    const found = (side === 'output' ? field.split('.') : [field]).every(key => {
+      if (!TypeGuard.IsObject(target) || !Object.hasOwn(target.properties, key)) return false;
+      target = target.properties[key];
+      return true;
+    });
+    if (!found) {
       throw new OperationError(500, 'operation_invalid_registration',
         `Interaction field ${JSON.stringify(field)} is not declared on the ${side} object schema for ${id}.`);
     }
@@ -116,7 +122,9 @@ export class Operations {
         const { identityFields = [], localDateField, resultLink } = interaction;
         const inputFields = localDateField === undefined ? identityFields : [...identityFields, localDateField];
         assertInteractionFields(id, inputSchema, inputFields, 'input');
-        if (resultLink) assertInteractionFields(id, outputSchema, [resultLink.hrefField, resultLink.labelField], 'output');
+        if (resultLink) assertInteractionFields(id, outputSchema,
+          [resultLink.hrefField, resultLink.labelField, resultLink.revisionField, resultLink.rangeField]
+            .filter((field): field is string => field !== undefined), 'output');
         descriptor.interaction = structuredClone(interaction);
       }
 

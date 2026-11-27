@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Sth 写作工作区第一版离线交互样稿。所有正文均为虚构示例，可直接打开。">
+  <title>第三声以后 · Sth 样稿</title>
+  <style>
+    :root {
+      --library-width: 208px;
+      --list-width: 272px;
+      --ink: #28312c;
+      --muted: #5f695f;
+      --accent: #285a46;
+      --selected: #dce7df;
+      --line: #dfe2dd;
+      --library: #eeefeb;
+      --list: #fafaf8;
+      --paper: #fff;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+      color: var(--ink);
+      font: 13px/1.5 var(--sans);
+      background: var(--paper);
+      accent-color: var(--accent);
+      scrollbar-color: #c3c9c2 transparent;
+      scrollbar-width: thin;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button, summary, select { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    button { border: 0; background: transparent; }
+    button:disabled { opacity: .45; cursor: default; }
+    button, a, input, select, summary, textarea { outline-offset: 3px; }
+    :focus-visible { outline: 2px solid var(--accent); }
+    ::selection { background: #d8e8dc; color: #172b20; }
+    [hidden] { display: none !important; }
+    svg { display: block; inline-size: 18px; block-size: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .sprite { position: absolute; inline-size: 0; block-size: 0; }
+    .skip { position: fixed; inset-block-start: -60px; inset-inline-start: 20px; z-index: 10; background: white; padding: 12px; color: var(--accent); }
+    .skip:focus { inset-block-start: 8px; }
+    .workspace { display: grid; grid-template-columns: var(--library-width) var(--list-width) minmax(0, 1fr); block-size: 100dvh; min-block-size: 320px; }
+    .panel { display: flex; flex-direction: column; min-inline-size: 0; min-block-size: 0; }
+    .library { background: var(--library); border-inline-end: 1px solid #d9dcd6; }
+    .sheets { background: var(--list); border-inline-end: 1px solid var(--line); }
+    .chrome { min-block-size: 52px; display: flex; align-items: center; gap: 8px; padding-inline: 16px; flex: 0 0 auto; }
+    .brand { display: flex; align-items: center; gap: 9px; color: #244b39; font: 600 25px Georgia, serif; letter-spacing: -.6px; }
+    .brand svg { inline-size: 21px; block-size: 21px; stroke-width: 1.5; }
+    .icon-button { display: inline-flex; align-items: center; justify-content: center; min-inline-size: 32px; min-block-size: 32px; padding: 6px; border-radius: 5px; color: #626d65; }
+    .icon-button:hover, .text-button:hover { background: #e8ece6; color: #294936; }
+    .push { margin-inline-start: auto; }
+    .library-scroll, .sheet-scroll, .reading-scroll, .evidence-scroll { overflow: auto; min-block-size: 0; overscroll-behavior: contain; }
+    .library-scroll { flex: 1; padding: 22px 10px; }
+    .nav-row { display: flex; align-items: center; gap: 9px; inline-size: 100%; min-block-size: 34px; padding: 6px 10px; text-align: start; border-radius: 5px; }
+    .nav-row svg { inline-size: 17px; block-size: 17px; color: #69766b; }
+    .nav-row:hover { background: #e4e7e0; }
+    .nav-row[aria-current="page"] { background: #d7e1d5; color: #244c38; font-weight: 600; }
+    .nav-row[aria-current="page"] svg { color: #285a46; }
+    .count { margin-inline-start: auto; color: #586558; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+    .nav-label { color: #5c665d; font-size: 11px; font-weight: 600; margin: 30px 10px 9px; }
+    .book { margin-block-end: 9px; }
+    .book > summary { display: flex; align-items: center; gap: 8px; min-block-size: 36px; padding: 6px 10px; cursor: pointer; list-style: none; font-weight: 600; }
+    .book > summary::-webkit-details-marker { display: none; }
+    .book > summary .caret { inline-size: 12px; block-size: 12px; margin-inline-start: auto; }
+    .book[open] > summary .caret { transform: rotate(90deg); }
+    .book .nav-row { padding-inline-start: 36px; font-size: 12px; }
+    .book .nav-row svg { inline-size: 14px; block-size: 14px; }
+    .library-footer { padding: 12px 15px 14px; color: var(--muted); border-block-start: 1px solid #dee2da; font-size: 11px; display: flex; align-items: center; gap: 7px; }
+    .library-footer svg { inline-size: 14px; block-size: 14px; }
+    .list-chrome { justify-content: space-between; padding-inline: 19px 13px; }
+    .list-chrome h1 { margin: 0; font-size: 13px; font-weight: 600; }
+    .list-mobile-back, .tablet-library { display: none; }
+    .list-heading { padding: 19px 21px 12px; }
+    .list-heading h2 { margin: 0 0 4px; font-size: 19px; font-weight: 600; letter-spacing: -.3px; }
+    .list-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+    .search { margin: 0 15px 13px; border: 1px solid #e2e5de; background: #f0f2ec; border-radius: 5px; display: flex; align-items: center; padding-inline: 9px; gap: 7px; }
+    .search svg { inline-size: 14px; block-size: 14px; color: #6c776d; }
+    .search input { min-inline-size: 0; inline-size: 100%; min-block-size: 30px; background: transparent; border: 0; outline-offset: 0; font-size: 12px; }
+    input::placeholder, textarea::placeholder { color: #5e685e; opacity: 1; }
+    .list-filter { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 10px; border-block-end: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .filter-button { display: inline-flex; align-items: center; gap: 4px; padding: 3px 0; }
+    .filter-button svg { inline-size: 12px; block-size: 12px; }
+    .filter-button[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
+    .sheet-scroll { flex: 1; }
+    .sheet-list { list-style: none; margin: 0; padding: 0; }
+    .sheet { display: block; inline-size: 100%; padding: 18px 21px 16px; text-align: start; border-block-end: 1px solid #e7e9e3; border-radius: 0; }
+    .sheet:hover { background: #edf1e9; }
+    .sheet[aria-current="page"] { background: var(--selected); }
+    .sheet-title { display: block; margin-block-end: 7px; font-size: 14px; font-weight: 600; line-height: 1.6; }
+    .sheet-snippet { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: clip; color: #58665b; font-size: 12px; line-height: 1.8; min-block-size: 43px; }
+    .sheet-meta { display: flex; align-items: center; gap: 6px; margin-block-start: 11px; color: #59665c; font-size: 10px; }
+    .sheet-meta .adopted-dot { inline-size: 5px; block-size: 5px; border-radius: 50%; background: #597860; }
+    .sheet-meta .candidate-count { margin-inline-start: auto; }
+    .list-footer { border-block-start: 1px solid var(--line); padding: 10px 20px; min-block-size: 38px; font-size: 10px; color: var(--muted); }
+    .empty-list { padding: 30px 21px; color: var(--muted); }
+    .editor { position: relative; background: var(--paper); container: editor / inline-size; }
+    .editor-chrome { border-block-end: 1px solid #e9ebe6; padding-inline: 22px 17px; }
+    .breadcrumbs { display: flex; gap: 8px; align-items: center; min-inline-size: 0; color: #71796f; font-size: 11px; }
+    .breadcrumbs span { overflow: clip; text-overflow: ellipsis; white-space: nowrap; min-inline-size: 0; }
+    .breadcrumbs svg { inline-size: 11px; block-size: 11px; }
+    .text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 30px; padding: 4px 8px; border-radius: 4px; white-space: nowrap; font-size: 12px; color: #59675c; }
+    .text-button svg { inline-size: 16px; block-size: 16px; }
+    .text-button[aria-pressed="true"] { color: var(--accent); background: #e9f0e8; }
+    .mobile-back { display: none; }
+    .more { position: relative; }
+    .more summary { list-style: none; cursor: pointer; }
+    .more summary::-webkit-details-marker { display: none; }
+    .menu { position: absolute; inset-block-start: 38px; inset-inline-end: 0; z-index: 5; inline-size: 210px; padding: 6px; border-radius: 8px; background: white; box-shadow: 0 6px 24px #263b2526; }
+    .menu button, .menu a { display: flex; align-items: center; gap: 9px; inline-size: 100%; padding: 10px; border-radius: 4px; text-align: start; font-size: 12px; text-decoration: none; color: var(--ink); }
+    .menu button:hover, .menu a:hover { background: #edf2e9; }
+    .menu hr { border: 0; border-block-start: 1px solid var(--line); margin: 5px 6px; }
+    .draftbar { display: flex; align-items: center; gap: 9px; min-block-size: 43px; padding-inline: 25px 23px; color: var(--muted); flex: 0 0 auto; }
+    .select-wrap { display: flex; align-items: center; gap: 4px; min-inline-size: 0; }
+    select { border: 0; background: transparent; font-size: 11px; max-inline-size: 160px; min-block-size: 30px; cursor: pointer; }
+    #revision { max-inline-size: 73px; }
+    .draftbar-separator { block-size: 12px; border-inline-start: 1px solid var(--line); }
+    .draftbar .text-button { font-size: 11px; }
+    .reading-scroll { flex: 1; scrollbar-gutter: stable; scroll-behavior: auto; }
+    .manuscript { inline-size: min(100% - 112px, 36em); margin-inline: auto; padding-block: 29px 100px; font-size: 18px; }
+    .manuscript h1 { font: 600 27px/1.55 var(--sans); letter-spacing: -.5px; margin: 0 0 11px; overflow-wrap: anywhere; }
+    .manuscript-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; color: var(--muted); font: 11px/1.8 var(--sans); margin-block-end: 34px; }
+    .manuscript-meta .state { color: var(--accent); }
+    .prose, .edit-body { font: 400 18px/1.85 var(--serif); letter-spacing: .015em; overflow-wrap: anywhere; }
+    .sans .prose, .sans .edit-body { font-family: var(--sans); line-height: 1.8; letter-spacing: 0; }
+    .prose p { margin: 0 0 1.25em; scroll-margin-block: 24px; }
+    .prose p.target { background: #f5f1d9; box-shadow: 0 0 0 6px #f5f1d9; border-radius: 1px; }
+    .selection-note { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: #6b653d; font: 11px/1.5 var(--sans); margin-block-end: 25px; }
+    .selection-note button { text-decoration: underline; text-underline-offset: 3px; font-size: 11px; color: inherit; }
+    .old-version { background: #f7f4e9; padding: 9px 25px; display: flex; gap: 8px; align-items: center; font-size: 11px; flex: 0 0 auto; color: #72633d; }
+    .old-version button { color: #655129; text-decoration: underline; text-underline-offset: 3px; margin-inline-start: auto; white-space: nowrap; }
+    .editor-footer { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; min-block-size: 35px; border-block-start: 1px solid #edf0e9; padding: 8px 25px max(8px, env(safe-area-inset-bottom)); color: #70796f; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .editor-footer button { color: inherit; padding: 0; font-size: 10px; }
+    .editor-footer button:hover { color: var(--accent); }
+    .edit-body { display: block; inline-size: 100%; min-block-size: 460px; resize: vertical; padding: 10px; margin: -10px; inline-size: calc(100% + 20px); border: 1px solid #b4c4b6; border-radius: 2px; background: #fdfefb; caret-color: var(--accent); }
+    .primary { background: var(--accent); color: white; }
+    .primary:hover { background: #1f4936; color: white; }
+    .no-manuscript { color: var(--muted); font-size: 15px; line-height: 1.9; }
+    .no-manuscript button { margin-block-start: 12px; }
+    .evidence { background: #fafbf8; border-inline-start: 1px solid var(--line); }
+    .evidence .chrome { border-block-end: 1px solid var(--line); padding-inline: 21px 12px; }
+    .evidence .chrome h2 { margin: 0; font-size: 13px; font-weight: 600; }
+    .evidence-scroll { padding: 23px 23px 40px; flex: 1; }
+    .evidence-context { color: var(--muted); font-size: 11px; margin: 0 0 28px; line-height: 1.9; }
+    .evidence-section { margin-block-end: 30px; }
+    .evidence-section h3 { display: flex; gap: 7px; align-items: center; margin: 0 0 13px; font-size: 12px; font-weight: 600; }
+    .evidence-section h3 svg { inline-size: 15px; block-size: 15px; color: #68766a; }
+    .evidence-section blockquote { margin: 0 0 11px; font: 15px/1.9 var(--serif); color: #394c3f; }
+    .evidence-source { color: #667467; font-size: 11px; }
+    .evidence-section p { font-size: 12px; line-height: 1.9; margin: 0 0 9px; }
+    .evidence-section details { font-size: 11px; color: #657163; }
+    .evidence-section summary { cursor: pointer; padding-block: 6px; }
+    .evidence-section details p { padding-block-start: 7px; }
+    .evidence-footnote { border-block-start: 1px solid var(--line); padding-block-start: 15px; color: #626d60; font-size: 10px; line-height: 1.8; }
+    .workspace[data-evidence="true"] { grid-template-columns: var(--list-width) minmax(0, 1fr) 296px; }
+    .workspace[data-evidence="true"] .library { display: none; }
+    .workspace[data-focus="true"] { grid-template-columns: minmax(0, 1fr); }
+    .workspace[data-focus="true"] .library, .workspace[data-focus="true"] .sheets { display: none; }
+    .workspace[data-focus="true"][data-evidence="true"] { grid-template-columns: minmax(0, 1fr) 296px; }
+    .workspace[data-library="hidden"]:not([data-evidence="true"]):not([data-focus="true"]) { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+    .workspace[data-library="hidden"] .library { display: none; }
+    .compare-pane { border-inline-start: 1px solid var(--line); background: #fdfefb; }
+    .compare-pane .chrome { border-block-end: 1px solid var(--line); }
+    .compare-pane .chrome h2 { font-size: 12px; margin: 0; }
+    .compare-pane .manuscript { inline-size: min(100% - 70px, 36em); }
+    .workspace[data-compare="true"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .workspace[data-compare="true"] .library, .workspace[data-compare="true"] .sheets { display: none; }
+    .workspace[data-compare="true"] .manuscript { inline-size: min(100% - 80px, 36em); }
+    .notice { position: fixed; inset-block-end: 48px; inset-inline-start: 50%; transform: translateX(-50%); z-index: 8; max-inline-size: calc(100% - 32px); inline-size: max-content; padding: 10px 15px; background: #2d4736; color: #fff; border-radius: 6px; box-shadow: 0 4px 18px #20312120; font-size: 12px; }
+    @container editor (inline-size < 620px) {
+      .manuscript { inline-size: calc(100% - 64px); padding-block-start: 24px; }
+      .editor-chrome { padding-inline: 16px 12px; }
+      .breadcrumbs { gap: 5px; }
+      .breadcrumbs .book-name { display: none; }
+      .breadcrumbs > svg { display: none; }
+      .text-button { padding-inline: 6px; }
+      .draftbar { padding-inline: 26px 20px; gap: 5px; }
+    }
+    @media (max-width: 1099px) and (min-width: 700px) {
+      .workspace { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+      .library { display: none; }
+      .tablet-library { display: inline-flex; }
+      .workspace[data-library="open"] .library { display: flex; position: fixed; inset-block: 0; inset-inline-start: 0; inline-size: 208px; z-index: 7; box-shadow: 8px 0 28px #263b2526; }
+      .workspace[data-evidence="true"] { grid-template-columns: minmax(0, 1fr) 296px; }
+      .workspace[data-evidence="true"] .sheets { display: none; }
+      .list-heading { padding-block-start: 16px; }
+    }
+    @media (max-width: 699px) {
+      :root { font-size: 14px; }
+      .workspace, .workspace[data-focus="true"], .workspace[data-evidence="true"], .workspace[data-compare="true"], .workspace[data-library="hidden"]:not([data-evidence="true"]):not([data-focus="true"]) { display: flex; }
+      .workspace > .panel { display: none; inline-size: 100%; }
+      .workspace[data-pane="library"] > .library, .workspace[data-pane="list"] > .sheets, .workspace[data-pane="editor"] > .editor { display: flex; }
+      .workspace[data-evidence="true"] > .panel { display: none; }
+      .workspace[data-evidence="true"] > .evidence { display: flex; }
+      .chrome { min-block-size: 52px; }
+      .library { border: 0; }
+      .library .chrome { padding-inline: 23px 19px; }
+      .brand { font-size: 27px; }
+      .library-scroll { padding: 18px; }
+      .nav-row { min-block-size: 44px; padding-inline: 12px; font-size: 15px; }
+      .nav-label { font-size: 12px; }
+      .book > summary { min-block-size: 44px; font-size: 15px; }
+      .book .nav-row { font-size: 14px; min-block-size: 44px; }
+      .library-footer { font-size: 12px; padding: 18px 27px max(18px, env(safe-area-inset-bottom)); }
+      .count { font-size: 12px; }
+      .library-hide { display: none; }
+      .sheets { border: 0; }
+      .list-chrome { justify-content: flex-start; padding-inline: 10px 16px; gap: 3px; }
+      .list-chrome h1 { font-size: 13px; }
+      .list-chrome > .icon-button:last-child { margin-inline-start: auto; }
+      .list-mobile-back { display: inline-flex; }
+      .list-heading { padding: 13px 25px 17px; }
+      .list-heading h2 { font-size: 24px; }
+      .list-heading p { font-size: 12px; }
+      .search { margin-inline: 23px; }
+      .search input { min-block-size: 36px; font-size: 14px; }
+      .list-filter { padding-inline: 25px; font-size: 12px; }
+      .filter-button { min-block-size: 33px; }
+      .sheet { padding: 19px 25px; }
+      .sheet-title { font-size: 16px; }
+      .sheet-snippet { font-size: 13px; min-block-size: 46px; }
+      .sheet-meta { font-size: 11px; }
+      .mobile-back { display: inline-flex; min-inline-size: 40px; margin-inline-start: -8px; }
+      .editor-chrome { padding-inline: 10px; gap: 1px; }
+      .editor-chrome .breadcrumbs { max-inline-size: 90px; font-size: 11px; }
+      .editor-chrome .text-button { min-block-size: 44px; padding-inline: 8px; }
+      .editor-chrome .text-button .button-label { display: none; }
+      .icon-button { min-inline-size: 40px; min-block-size: 40px; }
+      .draftbar { min-block-size: 43px; padding-inline: 20px 16px; gap: 5px; }
+      .draftbar .text-button { min-block-size: 38px; font-size: 12px; }
+      select { min-block-size: 38px; font-size: 12px; }
+      #draft { max-inline-size: 106px; }
+      #revision { max-inline-size: 64px; }
+      .draftbar-separator { display: none; }
+      .manuscript { inline-size: calc(100% - 48px); padding-block: 20px 70px; }
+      .manuscript h1 { font-size: 25px; margin-block-end: 9px; }
+      .manuscript-meta { font-size: 11px; gap: 7px; margin-block-end: 27px; }
+      .prose, .edit-body { font-size: 18px; line-height: 1.85; }
+      .prose p { margin-block-end: 1.2em; }
+      .editor-footer { padding-inline: 23px; min-block-size: 36px; }
+      .old-version { padding-inline: 22px; font-size: 11px; }
+      .evidence { border: 0; }
+      .evidence .chrome { min-block-size: 56px; padding-inline: 24px 14px; }
+      .evidence .chrome h2 { font-size: 15px; }
+      .evidence-scroll { padding: 24px 27px 40px; }
+      .evidence-context { font-size: 12px; }
+      .evidence-section h3 { font-size: 13px; }
+      .evidence-section blockquote { font-size: 18px; }
+      .evidence-section p { font-size: 14px; }
+      .evidence-section details { font-size: 13px; }
+      .menu { inline-size: 216px; }
+      .menu button, .menu a { min-block-size: 44px; font-size: 13px; }
+      .compare-button { display: none; }
+    }
+    @media (max-width: 350px) {
+      .editor-chrome .breadcrumbs { max-inline-size: 70px; }
+      .draftbar { padding-inline: 16px 11px; gap: 2px; }
+      .draftbar .text-button { padding-inline: 5px; }
+      #draft { max-inline-size: 96px; }
+      .manuscript { inline-size: calc(100% - 40px); }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .evidence:not([hidden]) .evidence-scroll { animation: enter-evidence 160ms ease-out; }
+      @keyframes enter-evidence { from { transform: translateX(-9px); opacity: .65; } to { transform: translateX(0); opacity: 1; } }
+    }
+    @media (forced-colors: active) {
+      .nav-row[aria-current="page"], .sheet[aria-current="page"] { outline: 1px solid Highlight; outline-offset: -2px; }
+      .prose p.target { outline: 2px solid Highlight; }
+    }
+  </style>
+</head>
+<body>
+  <!-- All manuscript, diary and evidence bodies below are fictional fixtures.
+       This file makes no network requests and contains no private source records. -->
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M15 3H5v18h14V8Zm0 0v5h4M8 12h8m-8 4h6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5h7l2 3h9v12H3V7Z"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></symbol>
+    <symbol id="i-evidence" viewBox="0 0 24 24"><path d="M9 7H5v6h4v4H4m16-10h-4v6h4v4h-5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7l-4-4L5 15l-1 5Z"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><path d="M10 4H3v16h7m4-16h7v16h-7M12 2v20"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-font" viewBox="0 0 24 24"><path d="m3 19 6-15 6 15M5 14h8m4-2c5-2 5 0 5 3v4m-1-4c-6-1-6 5 0 3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m10 7 3-3a5 5 0 0 1 7 7l-3 3m-3 3-3 3a5 5 0 0 1-7-7l3-3m1 6 8-8"/></symbol>
+  </defs></svg>
+  <a class="skip" href="#manuscript-title">跳到正文</a>
+  <div id="workspace" class="workspace" data-pane="editor" data-focus="false" data-evidence="false" data-compare="false">
+    <nav class="panel library" aria-label="书库">
+      <header class="chrome"><div class="brand"><svg aria-hidden="true"><use href="#i-book"/></svg><span>Sth</span></div><button class="icon-button library-hide push" id="hide-library" title="收起书库" aria-label="收起书库"><svg aria-hidden="true"><use href="#i-sidebar"/></svg></button></header>
+      <div class="library-scroll">
+        <button class="nav-row" data-group="recent"><svg aria-hidden="true"><use href="#i-clock"/></svg>最近写过<span class="count" id="recent-count"></span></button>
+        <button class="nav-row" data-group="diaries"><svg aria-hidden="true"><use href="#i-note"/></svg>日记<span class="count">3</span></button>
+        <div class="nav-label">作品</div>
+        <details class="book" open>
+          <summary><svg aria-hidden="true"><use href="#i-book"/></svg>北港来信<svg class="caret" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <button class="nav-row" data-group="novel">全书文稿<span class="count">7</span></button>
+          <button class="nav-row" data-group="chapter1"><svg aria-hidden="true"><use href="#i-folder"/></svg>第一章 · 渡口<span class="count">2</span></button>
+          <button class="nav-row" data-group="chapter2" aria-current="page"><svg aria-hidden="true"><use href="#i-folder"/></svg>第二章 · 回声<span class="count">4</span></button>
+          <button class="nav-row" data-group="unfiled"><svg aria-hidden="true"><use href="#i-folder"/></svg>未编入章节<span class="count">1</span></button>
+        </details>
+        <details class="book"><summary><svg aria-hidden="true"><use href="#i-book"/></svg>夜航札记<svg class="caret" aria-hidden="true"><use href="#i-chevron"/></svg></summary><button class="nav-row" data-group="night">散页<span class="count">2</span></button></details>
+      </div>
+      <footer class="library-footer"><svg aria-hidden="true"><use href="#i-note"/></svg>离线样稿 · 示例正文</footer>
+    </nav>
+    <section class="panel sheets" aria-labelledby="list-title">
+      <header class="chrome list-chrome"><button class="icon-button list-mobile-back" id="back-library" aria-label="返回书库"><svg aria-hidden="true"><use href="#i-back"/></svg></button><button class="icon-button tablet-library" id="show-library" aria-label="打开书库" aria-expanded="false"><svg aria-hidden="true"><use href="#i-sidebar"/></svg></button><h1 id="list-book">北港来信</h1><button class="icon-button" id="new-sheet" aria-label="新建示例文稿" title="新建示例文稿"><svg aria-hidden="true"><use href="#i-plus"/></svg></button></header>
+      <div class="list-heading"><h2 id="list-title">第二章 · 回声</h2><p id="list-subtitle">主线 · 4 幕</p></div>
+      <label class="search"><svg aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索文稿" aria-label="搜索当前分组的文稿" autocomplete="off"></label>
+      <div class="list-filter"><span id="list-filter-label">按章节顺序</span><button class="filter-button" id="filter-adopted" aria-pressed="false">全部文稿<svg aria-hidden="true"><use href="#i-down"/></svg></button></div>
+      <div class="sheet-scroll"><ul id="sheet-list" class="sheet-list" aria-label="文稿列表"></ul><p id="empty-list" class="empty-list" hidden>没有匹配的文稿。试试其他词语。</p></div>
+      <footer class="list-footer" id="list-footer">4 幕 · 3 份成稿</footer>
+    </section>
+    <main class="panel editor" id="editor" aria-labelledby="manuscript-title">
+      <header class="chrome editor-chrome">
+        <button class="icon-button mobile-back" id="back-list" aria-label="返回文稿列表"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <div class="breadcrumbs"><span class="book-name" id="crumb-book">北港来信</span><svg aria-hidden="true"><use href="#i-chevron"/></svg><span id="crumb-chapter">第二章 · 回声</span></div>
+        <button class="text-button push" id="focus" aria-pressed="false" title="专注阅读（F）"><svg aria-hidden="true"><use href="#i-focus"/></svg><span class="button-label">专注</span></button>
+        <button class="text-button" id="evidence-toggle" aria-pressed="false" aria-controls="evidence" title="本次依据（E）"><svg aria-hidden="true"><use href="#i-evidence"/></svg><span>依据</span></button>
+        <details class="more" id="more-menu"><summary class="icon-button" aria-label="更多操作" title="更多操作"><svg aria-hidden="true"><use href="#i-more"/></svg></summary><div class="menu">
+          <button id="font-toggle"><svg aria-hidden="true"><use href="#i-font"/></svg><span>改用无衬线正文</span></button>
+          <button id="layout-toggle"><svg aria-hidden="true"><use href="#i-sidebar"/></svg><span>展开或收起书库</span></button>
+          <button id="selection-link"><svg aria-hidden="true"><use href="#i-link"/></svg>定位示例第三段</button>
+          <hr><button id="reset"><svg aria-hidden="true"><use href="#i-clock"/></svg>重置此浏览器的样稿</button>
+        </div></details>
+      </header>
+      <div class="draftbar" aria-label="稿件与修订版本">
+        <div class="select-wrap"><label for="draft" hidden>候选稿</label><select id="draft" aria-label="切换候选稿"></select><span class="draftbar-separator"></span><label for="revision" hidden>修订版本</label><select id="revision" aria-label="切换修订版本"></select></div>
+        <button class="text-button compare-button push" id="compare"><svg aria-hidden="true"><use href="#i-compare"/></svg>比稿</button>
+        <button class="text-button" id="edit"><svg aria-hidden="true"><use href="#i-edit"/></svg><span>编辑</span></button>
+        <button class="text-button" id="cancel-edit" hidden>取消</button><button class="text-button primary" id="save" hidden>保存</button>
+      </div>
+      <div class="old-version" id="old-version" hidden><span id="old-version-label"></span><button id="latest">读取最新版</button></div>
+      <div class="reading-scroll" id="reading-scroll">
+        <article class="manuscript" id="manuscript"><h1 id="manuscript-title" tabindex="-1">第三声以后</h1><div class="manuscript-meta" id="manuscript-meta"></div><div class="selection-note" id="selection-note" hidden>从选段链接打开<button id="clear-selection">阅读全文</button></div><div class="prose" id="manuscript-body"></div><label for="edit-body" hidden>编辑示例正文</label><textarea class="edit-body" id="edit-body" spellcheck="false" hidden></textarea></article>
+      </div>
+      <footer class="editor-footer"><span id="word-count"></span><button id="font-footer" title="切换宋体与无衬线正文">宋体 · 18</button><span id="save-state">示例正文 · 仅保存在此浏览器</span></footer>
+    </main>
+    <aside class="panel evidence" id="evidence" aria-labelledby="evidence-title" hidden>
+      <header class="chrome"><h2 id="evidence-title" tabindex="-1">本次依据</h2><button class="icon-button push" id="evidence-close" aria-label="关闭依据，返回原段"><svg aria-hidden="true"><use href="#i-close"/></svg></button></header>
+      <div class="evidence-scroll" id="evidence-content"></div>
+    </aside>
+    <section class="panel compare-pane" id="compare-pane" aria-label="对照候选稿" hidden>
+      <header class="chrome"><h2>对照稿件</h2><select id="compare-draft" aria-label="选择对照的候选稿"></select><button class="icon-button push" id="compare-close" aria-label="结束比稿"><svg aria-hidden="true"><use href="#i-close"/></svg></button></header>
+      <div class="reading-scroll"><article class="manuscript"><h1 id="compare-title"></h1><div class="manuscript-meta" id="compare-meta"></div><div class="prose" id="compare-body"></div></article></div>
+    </section>
+  </div>
+  <div class="notice" id="notice" role="status" hidden></div>
+  <script>
+    'use strict';
+    // Fictional, hand-authored fixtures. Private source bodies must never be added here.
+    const thirdSound = [
+      '雨停在傍晚六点。林遥收起门前的折伞，发现檐下多了一只蓝色铁盒。盒盖没有锁，只用一根褪色的棉线绕了两圈。',
+      '她认得那根线。小时候，母亲总用它捆住散开的书页，说东西只要还找得到原来的顺序，就不算真的丢了。',
+      '钟楼传来第一声时，她还站在门口。第二声落下去，街角卖花的人开始收摊。第三声以后，她终于伸手，把铁盒从雨水没有淋到的地方拿了起来。',
+      '盒底是一封没有写收信人的信。纸很薄，隔着背面，可以看见几笔被墨水反复描过的字。她把信移到灯下，没有立刻拆开。',
+      '楼上传来椅子挪动的声音。那间屋子空了很久，窗台上的花却一直有人浇水。',
+      '林遥回头望了一眼。对面的窗正亮起来，玻璃上浮着一小块温暖的方形。她忽然想起，自己上一次离开这里，也是这样的傍晚。',
+      '她把铁盒夹在臂弯里，空出右手，敲了三下门。'
+    ];
+    const diaryBody = [
+      '今天绕了一点远路，从河堤那边走回家。前几天还光秃秃的树枝上，已经有了很小的芽，不凑近看几乎发现不了。',
+      '在路口等红灯的时候，我想到早晨读到的那句话。写作有时候也是这样，先把一件很小的事情看清楚，再决定要不要往下说。',
+      '回家以后，我把桌上积了很久的纸整理好。没有急着给它们归类，只挑出三张，放在明天伸手就能拿到的地方。',
+      '想把今天记住的，大概就是这些。风小了一点，灯亮得比昨天晚。'
+    ];
+    const paragraphText = paragraphs => paragraphs.join('\n\n');
+    const makeDraft = (name, paragraphs, evidence = true) => ({ name, revisions: [paragraphText(paragraphs)], evidence });
+    const seedSheets = [
+      { id: 'third-sound', title: '第三声以后', group: 'chapter2', book: '北港来信', chapter: '第二章 · 回声', date: '11月27日', adopted: 0, drafts: [
+        makeDraft('稿一 · 留在门前', thirdSound),
+        { name: '稿二 · 从信开始', evidence: true, revisions: [paragraphText(['信里只写了一句话。', ...thirdSound.slice(1)]), paragraphText(['她先看见信封上的折痕，才认出那个很久没有出现过的名字。', '雨已经停了。门前的石阶上放着一只蓝色铁盒，林遥把它抱到灯下，一点点解开棉线。', ...thirdSound.slice(2)])] },
+        makeDraft('稿三 · 楼上的人', ['楼上的人听见了第三声钟响。', '他把椅子推回桌边，熄灭台灯。楼下的脚步声在门口停了很久，久到他以为来人已经离开。', ...thirdSound.slice(4)])
+      ] },
+      { id: 'unsent-letter', title: '未寄出的信', group: 'chapter2', book: '北港来信', chapter: '第二章 · 回声', date: '11月26日', adopted: 0, drafts: [makeDraft('稿一', ['桌上的信封已经封好，邮票却迟迟没有贴上。林遥把它翻过来，在背面补了一行地址。', '窗外有人喊她的名字。她应了一声，把那封信压在玻璃杯下面，转身下了楼。', '等她再回来的时候，杯底的水晕已经沿着纸边漫开。字迹还在，收信人的名字却淡了。'], false)] },
+      { id: 'last-light', title: '关于码头的最后一盏灯，以及那封始终没有寄出的信', group: 'chapter2', book: '北港来信', chapter: '第二章 · 回声', date: '11月25日', adopted: null, drafts: [makeDraft('稿一', ['风从水面吹过来，码头尽头只剩下一盏灯。老周拎着修理箱，在木板路上走得很慢。', '他每天都来，检查灯泡、擦掉玻璃上的雾，再把门锁好。没有人请他这样做，他也从未解释过。', '远处有船经过。灯下的影子向后拖了一段，又安静地回到脚边。'])] },
+      { id: 'unwritten', title: '尚未发生的告别', group: 'chapter2', book: '北港来信', chapter: '第二章 · 回声', date: '11月24日', adopted: null, synopsis: '清晨的长途车站。她决定把那只铁盒留下。', drafts: [] },
+      { id: 'ferry', title: '早班渡轮', group: 'chapter1', book: '北港来信', chapter: '第一章 · 渡口', date: '11月23日', adopted: 0, drafts: [makeDraft('稿一', ['第一班渡轮靠岸时，天还没有完全亮。林遥走下舷梯，鞋底碰到熟悉的石板路。', '她在这座城里长大，却用了整整一个早晨，才重新找到回家的方向。'])] },
+      { id: 'shop', title: '旧书店没有关门', group: 'chapter1', book: '北港来信', chapter: '第一章 · 渡口', date: '11月22日', adopted: 0, drafts: [makeDraft('稿一', ['店门上还挂着那块手写的木牌。林遥推开门，风铃响了，柜台后面的人却没有抬头。', '“那本书还替你留着。”他说。'])] },
+      { id: 'margin', title: '页边的铅笔字', group: 'unfiled', book: '北港来信', chapter: '未编入章节', date: '11月21日', adopted: null, drafts: [makeDraft('片段', ['他在页边写下一个日期，又用铅笔轻轻划掉。', '有些事情，留一个空位会比解释更准确。'], false)] },
+      { id: 'diary-rain', title: '雨停之前，把今天留住', group: 'diaries', book: '日记', chapter: '个人日记', date: '11月27日', adopted: null, diary: true, drafts: [makeDraft('日记', diaryBody, false)] },
+      { id: 'diary-reading', title: '读到一半的书', group: 'diaries', book: '日记', chapter: '个人日记', date: '11月26日', adopted: null, diary: true, drafts: [makeDraft('日记', ['今天读得很慢。书签还停在昨天的位置，倒是在笔记本上写了不少。', '有一段描写让我想起家附近的街道。我把它摘下来，又在旁边写下自己记得的样子。'], true)] },
+      { id: 'diary-window', title: '窗边的一小段时间', group: 'diaries', book: '日记', chapter: '个人日记', date: '11月25日', adopted: null, diary: true, drafts: [makeDraft('日记', ['下午空出来半小时。我没有打开任何东西，就在窗边坐了一会儿。', '楼下的孩子在数台阶，数到第七级总要重新开始。'], false)] },
+      { id: 'night-road', title: '夜路', group: 'night', book: '夜航札记', chapter: '散页', date: '11月24日', adopted: 0, drafts: [makeDraft('稿一', ['路灯把人行道照成一段一段的。她走进光里，又走出去，听见自己的脚步声始终跟在身后。'], false)] },
+      { id: 'night-train', title: '列车经过', group: 'night', book: '夜航札记', chapter: '散页', date: '11月23日', adopted: null, drafts: [makeDraft('稿一', ['列车从远处经过，窗户像一串缓慢移动的灯。每一扇窗后面，都有人正在回到某个地方。'], false)] }
+    ];
+    const groupLabels = { recent: ['最近写过', '全部作品与日记'], diaries: ['日记', '个人日记'], novel: ['全书文稿', '北港来信 · 主线'], chapter1: ['第一章 · 渡口', '主线'], chapter2: ['第二章 · 回声', '主线'], unfiled: ['未编入章节', '北港来信 · 主线'], night: ['散页', '夜航札记'] };
+    const storageKey = 'sth-manuscript-library-stage1-v1';
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const $ = id => document.getElementById(id);
+    const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    let sheets = clone(seedSheets);
+    let saved = { revisions: {}, drafts: {}, created: [] };
+    try {
+      const stored = JSON.parse(localStorage.getItem(storageKey) || 'null');
+      if (stored && typeof stored.revisions === 'object' && stored.revisions && typeof stored.drafts === 'object' && stored.drafts) saved = stored;
+    } catch { /* File URLs and private browsing may disable local storage. */ }
+    for (const sheet of Array.isArray(saved.created) ? saved.created : []) {
+      if (sheet && typeof sheet.id === 'string' && typeof sheet.title === 'string' && Object.hasOwn(groupLabels, sheet.group) && Array.isArray(sheet.drafts) && !sheets.some(existing => existing.id === sheet.id)) sheets.push(sheet);
+    }
+    for (const sheet of sheets) {
+      if (!sheet.drafts.length && Array.isArray(saved.revisions[`${sheet.id}/0`])) sheet.drafts.push({ name: '稿一', revisions: [], evidence: false });
+      sheet.drafts.forEach((draft, index) => {
+        const revisions = saved.revisions[`${sheet.id}/${index}`];
+        if (Array.isArray(revisions) && revisions.every(value => typeof value === 'string')) draft.revisions.push(...revisions);
+      });
+    }
+    const initial = new URLSearchParams(location.search);
+    let selected = sheets.find(sheet => sheet.id === initial.get('sheet')) || sheets[0];
+    let group = Object.hasOwn(groupLabels, initial.get('group')) ? initial.get('group') : selected.group;
+    let draftIndex = Math.max(0, Math.min(selected.drafts.length - 1, Number(initial.get('draft')) || 0));
+    let revision = Math.max(1, Math.min(selected.drafts[draftIndex]?.revisions.length || 1, Number(initial.get('revision')) || 1));
+    let editing = false;
+    let filtering = false;
+    let comparisonIndex = 1;
+    let evidenceFocus;
+    let noticeTimer;
+    const scrollPositions = new Map();
+    const narrow = () => matchMedia('(max-width: 699px)').matches;
+    const currentDraft = () => selected.drafts[draftIndex];
+    const currentBody = () => currentDraft()?.revisions[revision - 1] || '';
+    const draftKey = () => `${selected.id}/${draftIndex}`;
+    const setPane = pane => { $('workspace').dataset.pane = pane; };
+    function announce(text) {
+      clearTimeout(noticeTimer);
+      $('notice').textContent = text;
+      $('notice').hidden = false;
+      noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 2400);
+    }
+    function persist() {
+      try { localStorage.setItem(storageKey, JSON.stringify(saved)); return true; }
+      catch { announce('浏览器未允许本地保存，本次改动会保留到关闭页面。'); return false; }
+    }
+    function putDraftAside() {
+      if (!editing) return;
+      const value = $('edit-body').value;
+      if (value !== currentBody()) saved.drafts[draftKey()] = value;
+      else delete saved.drafts[draftKey()];
+      persist();
+      editing = false;
+    }
+    function rememberScroll() {
+      scrollPositions.set(`${draftKey()}/${revision}`, $('reading-scroll').scrollTop);
+    }
+    function syncAddress(push = false) {
+      const url = new URL(location.href);
+      url.searchParams.set('sheet', selected.id);
+      url.searchParams.set('draft', draftIndex);
+      url.searchParams.set('revision', revision);
+      url.searchParams.set('group', group);
+      url.searchParams.delete('passage');
+      url.searchParams.delete('start');
+      url.searchParams.delete('end');
+      try { history[push ? 'pushState' : 'replaceState']({ sheet: selected.id }, '', url); }
+      catch { /* Selection remains usable under restrictive file URL policies. */ }
+    }
+    function groupSheets() {
+      if (group === 'recent') return sheets.slice(0, 3).concat(sheets.filter(sheet => sheet.diary).slice(0, 2));
+      if (group === 'novel') return sheets.filter(sheet => sheet.book === '北港来信');
+      return sheets.filter(sheet => sheet.group === group);
+    }
+    function renderList() {
+      const [title, subtitle] = groupLabels[group];
+      $('list-title').textContent = title;
+      $('list-book').textContent = ['recent', 'diaries'].includes(group) ? '书库' : group === 'night' ? '夜航札记' : '北港来信';
+      const all = groupSheets();
+      const query = $('search').value.trim().toLocaleLowerCase();
+      const rows = all.filter(sheet => (!filtering || sheet.adopted !== null) && `${sheet.title}\n${sheet.drafts[0]?.revisions[0] || sheet.synopsis || ''}`.toLocaleLowerCase().includes(query));
+      $('list-subtitle').textContent = `${subtitle} · ${all.length} ${group === 'diaries' ? '篇' : '幕'}`;
+      $('recent-count').textContent = '5';
+      $('sheet-list').replaceChildren();
+      for (const sheet of rows) {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.className = 'sheet';
+        button.dataset.sheet = sheet.id;
+        if (sheet.id === selected.id) button.setAttribute('aria-current', 'page');
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'sheet-title';
+        titleSpan.textContent = sheet.title;
+        const snippet = document.createElement('span');
+        snippet.className = 'sheet-snippet';
+        snippet.textContent = sheet.drafts[0]?.revisions[0] || sheet.synopsis;
+        const meta = document.createElement('span');
+        meta.className = 'sheet-meta';
+        if (sheet.adopted !== null) {
+          const dot = document.createElement('span');
+          dot.className = 'adopted-dot';
+          dot.setAttribute('aria-label', '已采用');
+          meta.append(dot);
+        }
+        const date = document.createElement('span');
+        date.textContent = sheet.date;
+        const candidates = document.createElement('span');
+        candidates.className = 'candidate-count';
+        candidates.textContent = sheet.diary ? '日记' : sheet.drafts.length ? `${sheet.drafts.length} 稿` : '待写';
+        meta.append(date, candidates);
+        button.append(titleSpan, snippet, meta);
+        button.addEventListener('click', () => selectSheet(sheet));
+        li.append(button);
+        $('sheet-list').append(li);
+      }
+      $('empty-list').hidden = rows.length > 0;
+      $('list-footer').textContent = `${rows.length} ${group === 'diaries' ? '篇日记' : '幕'} · ${rows.filter(sheet => sheet.drafts.length).length} 份成稿`;
+      document.querySelectorAll('[data-group]').forEach(button => {
+        if (button.dataset.group === group) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+    }
+    function renderParagraphs(element, body) {
+      element.replaceChildren();
+      body.split(/\n\s*\n/).filter(Boolean).forEach((text, index) => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        paragraph.dataset.paragraph = index + 1;
+        element.append(paragraph);
+      });
+    }
+    function renderEditor() {
+      const draft = currentDraft();
+      document.title = `${selected.title} · Sth 样稿`;
+      $('crumb-book').textContent = selected.book;
+      $('crumb-chapter').textContent = selected.chapter;
+      $('manuscript-title').textContent = selected.title;
+      $('manuscript-meta').replaceChildren();
+      const isAdoptedRevision = selected.adopted === draftIndex && revision === 1;
+      for (const text of [selected.diary ? '个人日记' : isAdoptedRevision ? '已采用稿' : '候选稿', `第 ${revision} 版`, '示例正文']) {
+        const span = document.createElement('span');
+        span.textContent = text;
+        if (text === '已采用稿') span.className = 'state';
+        $('manuscript-meta').append(span);
+      }
+      $('draft').replaceChildren(...selected.drafts.map((item, index) => new Option(item.name, index)));
+      $('draft').value = draftIndex;
+      $('draft').disabled = !draft;
+      $('revision').replaceChildren(...(draft?.revisions || []).map((_, index) => new Option(`第 ${index + 1} 版`, index + 1)));
+      $('revision').value = revision;
+      $('revision').disabled = !draft;
+      $('old-version').hidden = !draft || revision === draft.revisions.length;
+      $('old-version-label').textContent = `历史版本 · 第 ${revision} 版`;
+      $('selection-note').hidden = true;
+      $('word-count').textContent = `${currentBody().replace(/\s/g, '').length} 字 · ${draft ? currentBody().split(/\n\s*\n/).filter(Boolean).length : 0} 段`;
+      $('save-state').textContent = '示例正文 · 仅保存在此浏览器';
+      $('compare').disabled = selected.drafts.length < 2;
+      $('edit').disabled = !draft;
+      $('manuscript-body').hidden = false;
+      $('edit-body').hidden = true;
+      $('edit').hidden = false;
+      $('save').hidden = $('cancel-edit').hidden = true;
+      $('draft').disabled = $('revision').disabled = !draft;
+      renderParagraphs($('manuscript-body'), currentBody());
+      if (!draft) {
+        const empty = document.createElement('div');
+        empty.className = 'no-manuscript';
+        const p = document.createElement('p');
+        p.textContent = selected.synopsis || '这一幕还没有正文。';
+        const button = document.createElement('button');
+        button.className = 'text-button primary';
+        button.textContent = '开始写这一幕';
+        button.addEventListener('click', () => {
+          selected.drafts.push(makeDraft('稿一', [''], false));
+          draftIndex = 0;
+          revision = 1;
+          renderEditor();
+          startEditing();
+        });
+        empty.append(p, button);
+        $('manuscript-body').append(empty);
+        $('manuscript-meta').textContent = '未采用 · 等待第一份稿件';
+      }
+      if (Object.hasOwn(saved.drafts, draftKey())) $('save-state').textContent = '有未保存的本地草稿 · 点编辑恢复';
+      renderEvidence();
+      if ($('workspace').dataset.compare === 'true') {
+        if (selected.drafts.length > 1) renderComparison();
+        else closeComparison();
+      }
+      requestAnimationFrame(() => { $('reading-scroll').scrollTop = scrollPositions.get(`${draftKey()}/${revision}`) || 0; });
+    }
+    function selectSheet(sheet, push = true) {
+      rememberScroll();
+      putDraftAside();
+      selected = sheet;
+      draftIndex = 0;
+      revision = sheet.drafts[0]?.revisions.length || 1;
+      setPane('editor');
+      $('workspace').dataset.library = 'closed';
+      renderList();
+      renderEditor();
+      syncAddress(push);
+      if (narrow()) $('manuscript-title').focus({ preventScroll: true });
+    }
+    function startEditing() {
+      if (!currentDraft()) return;
+      editing = true;
+      $('edit-body').value = saved.drafts[draftKey()] ?? currentBody();
+      $('manuscript-body').hidden = true;
+      $('edit-body').hidden = false;
+      $('edit').hidden = true;
+      $('save').hidden = $('cancel-edit').hidden = false;
+      $('save-state').textContent = '正在编辑本地示例';
+      $('edit-body').focus({ preventScroll: true });
+    }
+    function saveEdit() {
+      if (!editing || !currentDraft()) return;
+      const value = $('edit-body').value;
+      if (!value.trim()) { announce('正文还是空的，写下一句话再保存。'); return; }
+      if (value !== currentBody()) {
+        currentDraft().revisions.push(value);
+        const base = seedSheets.find(sheet => sheet.id === selected.id)?.drafts[draftIndex]?.revisions.length || 0;
+        saved.revisions[draftKey()] = currentDraft().revisions.slice(base);
+        revision = currentDraft().revisions.length;
+      }
+      delete saved.drafts[draftKey()];
+      if (!seedSheets.some(sheet => sheet.id === selected.id)) {
+        saved.created = (Array.isArray(saved.created) ? saved.created : []).filter(sheet => sheet.id !== selected.id);
+        saved.created.push(clone(selected));
+        delete saved.revisions[draftKey()];
+      }
+      const persisted = persist();
+      editing = false;
+      renderList();
+      renderEditor();
+      syncAddress();
+      if (persisted) announce(`第 ${revision} 版已保存到此浏览器`);
+    }
+    function evidenceSection(iconName, title, content) {
+      return `<section class="evidence-section"><h3>${icon(iconName)}${title}</h3>${content}</section>`;
+    }
+    function renderEvidence() {
+      const container = $('evidence-content');
+      container.replaceChildren();
+      const context = document.createElement('p');
+      context.className = 'evidence-context';
+      context.textContent = `${selected.title} · ${currentDraft()?.name || '待写'} · 第 ${revision} 版`;
+      container.append(context);
+      const details = document.createElement('div');
+      if (!currentDraft()?.evidence) {
+        details.innerHTML = '<div class="evidence-section"><h3>这份稿件没有记录依据</h3><p>可以继续读稿。关闭后会回到刚才的段落。</p></div>';
+      } else if (selected.diary) {
+        details.innerHTML = evidenceSection('book', '阅读摘记 · 第 1 版', '<blockquote>先看清一个细节，再决定从哪里开始讲述。</blockquote><p class="evidence-source">《慢慢写》 · 示例摘句</p>');
+      } else {
+        const quotes = [
+          ['物件笔记 · 第 1 版', '东西只要还找得到原来的顺序，就不算真的丢了。', '先保留日常动作，让铁盒带出回忆。'],
+          ['信件笔记 · 第 2 版', '有些信的意义，在于收信的人终于愿意打开它。', '从信封的折痕开始，把钟声放到第二段。'],
+          ['楼上视角 · 第 1 版', '等候的人记得每一种脚步声，却总不敢先开门。', '只写楼上的人能够听见与看见的事。']
+        ][draftIndex % 3];
+        details.innerHTML = evidenceSection('book', '原文资料', '<blockquote></blockquote><p class="evidence-source"></p><details><summary>展开示例原文</summary><p>她在整理旧物时记下这句话，后来把笔记夹在一本没有封面的书里。原句随这份候选稿固定到所示版本。</p></details>')
+          + evidenceSection('person', '人物设定', '<p><strong>林遥</strong> · 第 2 版</p><p>回到故乡的整理师。习惯先观察物件，再开口询问；对久别重逢保持克制。</p>')
+          + evidenceSection('check', '作者决定', '<p class="decision-text"></p><p class="evidence-source">已确认 · 主线 · 示例记录</p>')
+          + evidenceSection('note', '写作准备', '<details><summary>查看完整示例提示词</summary><p>用贴近人物的第三人称写一个傍晚的片段。保持日常语气，以物件和动作推进。结尾保留下一幕的入口。</p></details>');
+        details.querySelector('blockquote').textContent = quotes[1];
+        details.querySelector('.evidence-source').textContent = quotes[0];
+        details.querySelector('.decision-text').textContent = quotes[2];
+      }
+      const footnote = document.createElement('p');
+      footnote.className = 'evidence-footnote';
+      footnote.textContent = '正文、资料、人物和决定均为样稿示例。依据在本样稿中按候选稿展示。';
+      container.append(details, footnote);
+    }
+    function closeEvidence() {
+      $('workspace').dataset.evidence = 'false';
+      $('evidence').hidden = true;
+      $('evidence-toggle').setAttribute('aria-pressed', 'false');
+      evidenceFocus?.focus({ preventScroll: true });
+    }
+    function toggleEvidence(event) {
+      if ($('workspace').dataset.evidence === 'true') return closeEvidence();
+      closeComparison();
+      evidenceFocus = event?.currentTarget instanceof HTMLElement ? event.currentTarget : document.activeElement;
+      $('workspace').dataset.evidence = 'true';
+      $('evidence').hidden = false;
+      $('evidence-toggle').setAttribute('aria-pressed', 'true');
+      $('evidence-title').focus({ preventScroll: true });
+    }
+    function renderComparison() {
+      comparisonIndex = comparisonIndex === draftIndex || comparisonIndex >= selected.drafts.length ? (draftIndex + 1) % selected.drafts.length : comparisonIndex;
+      $('compare-draft').replaceChildren(...selected.drafts.map((draft, index) => new Option(draft.name, index)));
+      $('compare-draft').value = comparisonIndex;
+      const draft = selected.drafts[comparisonIndex];
+      $('compare-title').textContent = selected.title;
+      $('compare-meta').textContent = `${draft.name} · 第 ${draft.revisions.length} 版 · 示例正文`;
+      renderParagraphs($('compare-body'), draft.revisions.at(-1));
+    }
+    function closeComparison() {
+      $('workspace').dataset.compare = 'false';
+      $('compare-pane').hidden = true;
+      $('compare').setAttribute('aria-pressed', 'false');
+    }
+    function toggleFocus() {
+      const active = $('workspace').dataset.focus !== 'true';
+      $('workspace').dataset.focus = String(active);
+      $('focus').setAttribute('aria-pressed', String(active));
+      $('focus').title = active ? '退出专注（F / Esc）' : '专注阅读（F）';
+      $('focus').querySelector('.button-label').textContent = active ? '退出专注' : '专注';
+    }
+    function toggleFont() {
+      const sans = $('workspace').classList.toggle('sans');
+      $('font-toggle').querySelector('span').textContent = sans ? '改用宋体正文' : '改用无衬线正文';
+      $('font-footer').textContent = `${sans ? '无衬线' : '宋体'} · 18`;
+      $('more-menu').open = false;
+    }
+    function toggleLibrary() {
+      const workspace = $('workspace');
+      if (narrow()) { closeEvidence(); setPane('library'); return; }
+      if (matchMedia('(max-width: 1099px)').matches) {
+        workspace.dataset.library = workspace.dataset.library === 'open' ? 'closed' : 'open';
+        $('show-library').setAttribute('aria-expanded', String(workspace.dataset.library === 'open'));
+      } else {
+        if (workspace.dataset.focus === 'true') toggleFocus();
+        closeComparison();
+        closeEvidence();
+        workspace.dataset.library = workspace.dataset.library === 'hidden' ? 'visible' : 'hidden';
+      }
+      $('more-menu').open = false;
+    }
+    function locatePassage(number, writeAddress = false) {
+      const paragraph = $('manuscript-body').querySelector(`[data-paragraph="${number}"]`);
+      if (!paragraph) return;
+      $('manuscript-body').querySelectorAll('.target').forEach(p => p.classList.remove('target'));
+      paragraph.classList.add('target');
+      $('selection-note').hidden = false;
+      setPane('editor');
+      requestAnimationFrame(() => paragraph.scrollIntoView({ block: 'center' }));
+      if (writeAddress) {
+        const url = new URL(location.href);
+        url.searchParams.set('passage', number);
+        try { history.replaceState({}, '', url); } catch { /* Optional URL state. */ }
+      }
+    }
+    document.querySelectorAll('[data-group]').forEach(button => button.addEventListener('click', () => {
+      group = button.dataset.group;
+      $('search').value = '';
+      filtering = false;
+      $('filter-adopted').setAttribute('aria-pressed', 'false');
+      $('filter-adopted').firstChild.textContent = '全部文稿';
+      $('workspace').dataset.library = 'closed';
+      $('show-library').setAttribute('aria-expanded', 'false');
+      setPane('list');
+      renderList();
+      if (!narrow()) {
+        const first = groupSheets()[0];
+        if (first && !groupSheets().includes(selected)) selectSheet(first);
+      }
+    }));
+    $('search').addEventListener('input', renderList);
+    $('filter-adopted').addEventListener('click', () => {
+      filtering = !filtering;
+      $('filter-adopted').setAttribute('aria-pressed', String(filtering));
+      $('filter-adopted').firstChild.textContent = filtering ? '只看已采用' : '全部文稿';
+      renderList();
+    });
+    $('draft').addEventListener('change', event => {
+      rememberScroll();
+      putDraftAside();
+      draftIndex = Number(event.target.value);
+      revision = currentDraft().revisions.length;
+      renderEditor();
+      syncAddress(true);
+    });
+    $('revision').addEventListener('change', event => {
+      rememberScroll();
+      putDraftAside();
+      revision = Number(event.target.value);
+      renderEditor();
+      syncAddress(true);
+    });
+    $('latest').addEventListener('click', () => {
+      putDraftAside();
+      revision = currentDraft().revisions.length;
+      renderEditor();
+      syncAddress();
+    });
+    $('edit').addEventListener('click', startEditing);
+    $('save').addEventListener('click', saveEdit);
+    $('edit-body').addEventListener('input', () => {
+      saved.drafts[draftKey()] = $('edit-body').value;
+      const persisted = persist();
+      $('save-state').textContent = persisted ? '未保存 · 本地草稿已暂存' : '未保存 · 暂存在此页面';
+    });
+    $('cancel-edit').addEventListener('click', () => {
+      delete saved.drafts[draftKey()];
+      persist();
+      editing = false;
+      renderEditor();
+    });
+    $('focus').addEventListener('click', toggleFocus);
+    $('evidence-toggle').addEventListener('click', toggleEvidence);
+    $('evidence-close').addEventListener('click', closeEvidence);
+    $('font-toggle').addEventListener('click', toggleFont);
+    $('font-footer').addEventListener('click', toggleFont);
+    $('hide-library').addEventListener('click', toggleLibrary);
+    $('show-library').addEventListener('click', toggleLibrary);
+    $('layout-toggle').addEventListener('click', toggleLibrary);
+    $('back-library').addEventListener('click', () => { setPane('library'); });
+    $('back-list').addEventListener('click', () => { rememberScroll(); putDraftAside(); setPane('list'); });
+    $('selection-link').addEventListener('click', () => { $('more-menu').open = false; locatePassage(3, true); });
+    $('clear-selection').addEventListener('click', () => {
+      $('manuscript-body').querySelectorAll('.target').forEach(p => p.classList.remove('target'));
+      $('selection-note').hidden = true;
+      syncAddress();
+    });
+    $('compare').addEventListener('click', () => {
+      if ($('workspace').dataset.compare === 'true') return closeComparison();
+      closeEvidence();
+      $('workspace').dataset.compare = 'true';
+      $('compare-pane').hidden = false;
+      $('compare').setAttribute('aria-pressed', 'true');
+      renderComparison();
+    });
+    $('compare-draft').addEventListener('change', event => {
+      comparisonIndex = Number(event.target.value);
+      renderComparison();
+    });
+    $('compare-close').addEventListener('click', closeComparison);
+    $('new-sheet').addEventListener('click', () => {
+      const sheet = { id: `new-${Date.now()}`, title: group === 'diaries' ? '今天的日记' : '未命名文稿', group: ['recent', 'novel'].includes(group) ? 'unfiled' : group, book: group === 'diaries' ? '日记' : group === 'night' ? '夜航札记' : '北港来信', chapter: groupLabels[group][0], date: '刚刚', adopted: null, diary: group === 'diaries', drafts: [makeDraft('稿一', [''], false)] };
+      sheets.push(sheet);
+      if (['recent', 'novel'].includes(group)) group = 'unfiled';
+      selectSheet(sheet);
+      startEditing();
+      announce('已新建临时示例文稿');
+    });
+    $('reset').addEventListener('click', () => {
+      try { localStorage.removeItem(storageKey); } catch { /* Optional storage. */ }
+      saved = { revisions: {}, drafts: {}, created: [] };
+      sheets = clone(seedSheets);
+      selected = sheets[0];
+      group = 'chapter2';
+      draftIndex = 0;
+      revision = 1;
+      editing = false;
+      closeEvidence();
+      closeComparison();
+      $('more-menu').open = false;
+      renderList();
+      renderEditor();
+      syncAddress();
+      announce('已恢复第一版示例');
+    });
+    document.addEventListener('pointerdown', event => {
+      if (!$('more-menu').contains(event.target)) $('more-menu').open = false;
+      if ($('workspace').dataset.library === 'open' && !event.target.closest('.library, #show-library')) {
+        $('workspace').dataset.library = 'closed';
+        $('show-library').setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', event => {
+      const input = event.target.closest('input, textarea, select, [contenteditable="true"]');
+      if ((event.ctrlKey || event.metaKey) && event.key === 's' && editing) { event.preventDefault(); saveEdit(); }
+      if (event.key === 'Escape') {
+        if ($('more-menu').open) $('more-menu').open = false;
+        else if ($('workspace').dataset.evidence === 'true') closeEvidence();
+        else if ($('workspace').dataset.compare === 'true') closeComparison();
+        else if ($('workspace').dataset.focus === 'true') toggleFocus();
+        else if ($('workspace').dataset.library === 'open') $('workspace').dataset.library = 'closed';
+        return;
+      }
+      if (input || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.toLowerCase() === 'f') toggleFocus();
+      if (event.key.toLowerCase() === 'e') toggleEvidence();
+      if (event.key === '/') { event.preventDefault(); setPane('list'); $('search').focus(); }
+    });
+    addEventListener('popstate', () => {
+      putDraftAside();
+      const params = new URLSearchParams(location.search);
+      selected = sheets.find(sheet => sheet.id === params.get('sheet')) || sheets[0];
+      group = Object.hasOwn(groupLabels, params.get('group')) ? params.get('group') : selected.group;
+      draftIndex = Math.max(0, Math.min(selected.drafts.length - 1, Number(params.get('draft')) || 0));
+      revision = Math.max(1, Math.min(currentDraft()?.revisions.length || 1, Number(params.get('revision')) || 1));
+      setPane('editor');
+      renderList();
+      renderEditor();
+      if (params.has('passage')) requestAnimationFrame(() => locatePassage(Number(params.get('passage'))));
+    });
+    addEventListener('pagehide', putDraftAside);
+    renderList();
+    renderEditor();
+    if (narrow()) setPane(initial.has('sheet') || initial.has('passage') ? 'editor' : 'library');
+    if (initial.get('focus') === '1') toggleFocus();
+    if (initial.get('evidence') === '1') toggleEvidence();
+    if (initial.get('font') === 'sans') toggleFont();
+    if (initial.has('passage')) requestAnimationFrame(() => locatePassage(Number(initial.get('passage'))));
+    if (initial.has('start') && initial.has('end')) {
+      const start = Number(initial.get('start'));
+      const end = Number(initial.get('end'));
+      if (Number.isSafeInteger(start) && Number.isSafeInteger(end) && start >= 0 && end > start && end <= currentBody().length) {
+        const before = currentBody().slice(0, start);
+        requestAnimationFrame(() => locatePassage(before.split(/\n\s*\n/).length));
+      }
+    }
+  </script>
+</body>
+</html>

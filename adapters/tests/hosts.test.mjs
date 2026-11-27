@@ -140,15 +140,84 @@ test('independent Codex and Antigravity pairings select one source and preserve 
       } });
       assert.equal(invalid.isError, true);
       assert.match(JSON.parse(invalid.content[0].text).message, /top-level.*stepId/);
-      assert.deepEqual(await invoke(client, 'source.read', 'same-step', { sourceId: source.sourceId }), source);
+      assert.deepEqual(await invoke(client, 'source.read', 'same-step', { sourceId: source.sourceId }),
+        { ...source, portalUrl: f.origin + source.href });
     }
     const changed = await invoke(clientAgy, 'source.revise', 'revise-shared', { sourceId: source.sourceId, expectedRevision: 1, body: 'Antigravity 保存的共享内容。' });
     assert.equal(changed.revision, 2);
     assert.deepEqual(await invoke(clientCodex, 'source.read', 'read-current', { sourceId: source.sourceId }), changed);
-    assert.deepEqual(await f.invoke('source.read', 'web-read-host-source', { sourceId: source.sourceId }), changed);
+    const { portalUrl, ...changedSource } = changed;
+    assert.equal(portalUrl, f.origin + changed.href);
+    assert.deepEqual(await f.invoke('source.read', 'web-read-host-source', { sourceId: source.sourceId }), changedSource);
+    const scene = await f.invoke('scene.create', 'ordinary-scene', { title: '普通写作场景' });
+    const textSource = await f.invoke('source.create', 'unicode-source', {
+      kind: 'excerpt', title: '重复句的精确选段', body: '🌙序。同一句。过渡。同一句。结尾。',
+    });
+    const start = textSource.body.lastIndexOf('同一句');
+    const range = { start, end: start + '同一句'.length };
+    const notes = [];
+    for (const [host, client] of [['Antigravity', clientAgy], ['Codex', clientCodex]]) {
+      const call = (name, args) => client.callTool({ name, arguments: args });
+      async function wire(operationId, stepId, input) {
+        const response = await call('sth_personal_invoke', { operationId, stepId, input });
+        assert.ok(!response.isError, response.content[0].text);
+        assert.deepEqual(JSON.parse(response.content[0].text), response.structuredContent);
+        assert.equal(response.structuredContent.operationId, operationId);
+        assert.equal(response.structuredContent.stepId, `sth.mcp.v1:${stepId}`);
+        assert.equal(response.structuredContent.replayed, false);
+        const saved = response.structuredContent.result;
+        assert.equal(response.content[1].text, `[${saved.title}](${saved.portalUrl})`);
+        return response.structuredContent;
+      }
+      const diary = await wire('diary.create', 'ordinary-diary', {
+        title: `${host} 普通日记`, body: '当前对话完成的正文。', diaryDate: '2024-02-29',
+      });
+      notes.push(diary.result.noteId);
+      assert.equal(diary.result.portalUrl, `${f.origin}/diaries/${diary.result.noteId}?revision=1`);
+      assert.equal(diary.result.projectId, undefined);
+      const draft = await wire('draft.create', 'ordinary-draft', {
+        sceneId: scene.sceneId, sceneRevision: scene.revision, title: `${host} 候选稿`, body: '普通写作直接保存的候选正文。',
+      });
+      assert.equal(draft.result.portalUrl, `${f.origin}/drafts/${draft.result.draftId}?revision=1`);
+      const selected = await wire('source.read', 'read-selection', {
+        sourceId: textSource.sourceId, revision: 1, range, contextChars: 0,
+      });
+      assert.equal(selected.result.body, '同一句');
+      assert.equal(selected.result.portalUrl, `${f.origin}${textSource.href}&start=${range.start}&end=${range.end}`);
+      assert.deepEqual(selected.result.context.range, range);
+      const current = await f.invoke('diary.revise', `web-revise-${host}`, {
+        noteId: diary.result.noteId, title: diary.result.title, diaryDate: diary.result.diaryDate,
+        body: '网页上的新版正文。', expectedRevision: 1,
+      });
+      await f.invoke('draft.revise', `web-revise-draft-${host}`, {
+        draftId: draft.result.draftId, expectedRevision: 1, body: '网页修改过的候选正文。',
+      });
+      for (const original of [diary, draft, selected]) {
+        const response = await call('sth_personal_receipt', {
+          operationId: original.operationId, stepId: original.stepId.slice('sth.mcp.v1:'.length),
+        });
+        assert.deepEqual(response.structuredContent, { ...original, replayed: true });
+        assert.ok(response.content[1].text.includes(original.result.portalUrl));
+      }
+      const read = await wire('diary.read', 'read-latest-diary', { noteId: current.noteId });
+      assert.equal(read.result.portalUrl, `${f.origin}/diaries/${current.noteId}?revision=2`);
+      const old = await wire('draft.read', 'read-old-draft', { draftId: draft.result.draftId, revision: 1 });
+      assert.equal(old.result.body, draft.result.body);
+      assert.equal(old.result.portalUrl, draft.result.portalUrl);
+    }
+    assert.notEqual(notes[0], notes[1]);
     await f.revoke(agy.connectionId);
     const revoked = await clientAgy.callTool({ name: 'sth_personal_discover', arguments: {} });
     assert.equal(JSON.parse(revoked.content[0].text).error, 'connection_unauthorized');
+    const revokedReceipt = await clientAgy.callTool({ name: 'sth_personal_receipt', arguments: {
+      operationId: 'diary.create', stepId: 'ordinary-diary',
+    } });
+    assert.equal(JSON.parse(revokedReceipt.content[0].text).error, 'connection_unauthorized');
+    const retainedReceipt = await clientCodex.callTool({ name: 'sth_personal_receipt', arguments: {
+      operationId: 'diary.create', stepId: 'ordinary-diary',
+    } });
+    assert.equal(retainedReceipt.structuredContent.result.noteId, notes[1]);
+    assert.notEqual(retainedReceipt.structuredContent.result.noteId, notes[0]);
     assert.ok(!(await clientCodex.callTool({ name: 'sth_personal_discover', arguments: {} })).isError);
   });
   assert.deepEqual((await f.connections()).map(connection => connection.clientName).sort(), ['Sth Antigravity', 'Sth Codex']);

@@ -82,7 +82,8 @@ for (const [host, executable] of [['antigravity', process.env.STH_TEST_AGY], ['c
       const result = await client.callTool({ name: 'sth_personal_invoke', arguments: {
         operationId: 'source.read', stepId: 'native-read', input: { sourceId: source.sourceId },
       } });
-      assert.deepEqual(result.structuredContent.result, source);
+      assert.deepEqual(result.structuredContent.result, { ...source, portalUrl: f.origin + source.href });
+      assert.equal(result.content[1].text, `[${source.title}](${f.origin}${source.href})`);
     } catch (error) {
       throw new Error(`${error.message} ${stderr}`);
     } finally {

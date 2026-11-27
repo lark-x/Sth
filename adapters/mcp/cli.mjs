@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { openBinding, pair } from './credentials.mjs';
 import { request } from './http.mjs';
+import { linkText, portalOrigin, resultLink } from './result-links.mjs';
 import { stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -28,7 +29,7 @@ const tools = [
     inputSchema: { ...schema({ view: { type: 'string', enum: ['index', 'full'] }, prefix: { type: 'string' }, operationId: lookupProperties.operationId }), required: [] } },
   {
     name: names.invoke,
-    description: 'Invoke a discovered operation with exactly three top-level fields operationId, stepId, and input. Example {"operationId":"source.read","stepId":"read-source-1","input":{"sourceId":"the-source-id"}}. Discover the operation schema before invoking it. Use distinct stepId values for different operations and reuse the same stepId and input on an identical retry. Use a complete ISO date for date fields. For a generation prompt, discover generations.prompt.page and follow its cursors for the complete messages or provenance.',
+    description: 'Invoke a discovered operation with exactly three top-level fields operationId, stepId, and input. Example {"operationId":"source.read","stepId":"read-source-1","input":{"sourceId":"the-source-id"}}. Discover the operation schema before invoking it. Use distinct stepId values for different operations and reuse the same stepId and input on an identical retry. Use a complete ISO date for date fields. Show the returned portalUrl or rendered link for a saved manuscript and its exact revision and available selection. For a generation prompt, discover generations.prompt.page and follow its cursors for the complete messages or provenance.',
     inputSchema: schema({ ...lookupProperties, input: { description: 'The operation input value matching its discovered inputSchema.' } }),
   },
   {
@@ -48,14 +49,16 @@ function lookup(args, withInput) {
   return { operationId, stepId: prefix + stepId, ...(withInput ? { input: args.input } : {}) };
 }
 
-function toolResult(value, token, failed = false) {
+function toolResult(value, token, failed = false, link) {
   const text = JSON.stringify(value).replaceAll(token, '[redacted]');
   const content = [{ type: 'text', text }];
+  if (link) content.push({ type: 'text', text: linkText(link) });
   return failed ? { isError: true, content } : { content, structuredContent: JSON.parse(text) };
 }
 
 async function serve(path, { workspace, sourceId } = {}) {
   const { origin, token } = await openBinding(path);
+  const portal = portalOrigin() || origin;
   if (workspace) {
     if (!isAbsolute(workspace) || !(await stat(workspace)).isDirectory()) throw new Error('Supply an absolute local workspace directory.');
     process.chdir(workspace);
@@ -96,7 +99,20 @@ async function serve(path, { workspace, sourceId } = {}) {
         : value.operationId === body.operationId && value.stepId === body.stepId && typeof value.replayed === 'boolean'
           && (endpoint !== 'receipt' || value.replayed) && Object.hasOwn(value, 'result');
       if (!valid) throw new Error('Invalid operation envelope.');
-      return toolResult(value, token);
+      let link;
+      if (endpoint !== 'catalog') {
+        // Link presentation must not turn a saved operation into a failed invocation.
+        try {
+          const catalog = await request(origin, 'catalog', { operationId: body.operationId }, token);
+          const descriptor = catalog.status === 200 && catalog.value.operations?.find(item => item.id === body.operationId);
+          const target = resultLink(value.result, descriptor?.interaction?.resultLink, catalog.value.resourcePaths, token);
+          if (target && !(portal + target.path).includes(token)) {
+            link = { label: target.label, url: portal + target.path };
+            value.result.portalUrl = link.url;
+          }
+        } catch { /* Keep the successful operation envelope when link metadata is unavailable. */ }
+      }
+      return toolResult(value, token, false, link);
     } catch {
       return toolResult({ error: 'sth_unavailable', message: 'Sth is unavailable or returned an invalid response.', retryable: true }, token, true);
     }

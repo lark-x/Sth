@@ -37,7 +37,8 @@
     "pretest": "npm run build",
     "test": "node --test tests/*.test.ts",
     "pretest:browser": "npm run build",
-    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs frontend/tests/*.test.mjs"
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs frontend/tests/*.test.mjs",
+    "test:manuscript": "npm run build && node --test --test-concurrency=1 frontend/manuscript/*.test.mjs frontend/writing/*.test.mjs frontend/diary/*.test.mjs"
   },
   "dependencies": {
     "@sinclair/typebox": "0.34.52",

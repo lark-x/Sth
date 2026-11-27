@@ -12,6 +12,8 @@ import {
 import { readPromptPage } from './prompt-page.ts';
 import { prepareComposition } from './prompt.ts';
 import { pinReferences } from './references.ts';
+import { manuscriptTarget } from './evidence-contracts.ts';
+import { manuscriptEvidenceOperations, saveManuscriptTarget, validateManuscriptTarget } from './evidence.ts';
 import {
   completeGeneration, enqueueDelegation, insertGeneration, listDefinitions, listGenerations, readDefinition, readGeneration,
   readGenerationPrompt, readGenerationSummary, readPlan, readResult, summarizeDefinition, writeDefinition,
@@ -37,6 +39,7 @@ function readRequirements(db: DatabaseSync, requirementId: string, revision?: nu
 }
 
 export const generationOperations = [
+  ...manuscriptEvidenceOperations,
   defineOperation({
     id: 'templates.list', effect: 'read',
     description: 'Find reusable structure templates by title. Built-ins also accept Chinese names such as 日记, 短篇故事, 短篇小说, 剧本 and 分镜. Exact titles take precedence. Get a template to read its ordered fields.',
@@ -157,9 +160,10 @@ export const generationOperations = [
       requirementRevision: readRevision, references: Type.Optional(Type.Array(referenceInput, { maxItems: 32 })),
       story: Type.Optional(generationStoryRef),
       authorContext: Type.Optional(generationAuthorContextRef),
+      manuscript: Type.Optional(manuscriptTarget),
     }, strict), outputSchema: generation, interaction: resultInteraction,
     run(input, { db }) {
-      const { templateId, templateRevision, requirementId, requirementRevision, references = [], story, authorContext, ...parts } = input;
+      const { templateId, templateRevision, requirementId, requirementRevision, references = [], story, authorContext, manuscript, ...parts } = input;
       assertText(parts.title, parts.brief, ...references.map(reference => reference.excerpt));
       if (parts.projectId !== undefined) requireProject(db, parts.projectId);
       if (requirementId === undefined && requirementRevision !== undefined) {
@@ -170,7 +174,10 @@ export const generationOperations = [
         ...parts, ...(projectId === undefined ? {} : { projectId }), title: parts.title.trim(), template: readTemplate(db, templateId, templateRevision),
         ...(requirementId === undefined ? {} : { requirements: readRequirements(db, requirementId, requirementRevision) }),
       }, pinReferences(db, references, story, projectId, authorContext));
-      return readGeneration(db, insertGeneration(db, context));
+      if (manuscript) validateManuscriptTarget(db, manuscript, context);
+      const generationId = insertGeneration(db, context);
+      if (manuscript) saveManuscriptTarget(db, generationId, manuscript);
+      return readGeneration(db, generationId);
     },
   }),
   defineOperation({

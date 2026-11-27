@@ -46,7 +46,7 @@ test('diaries retain the character version they were written with across both ki
     ['diary.create', 'write'], ['diary.read', 'read'], ['diary.list', 'read'], ['diary.revise', 'write'],
   ]);
   assert.deepEqual(operations.find(operation => operation.id === 'diary.create')?.interaction, {
-    localDateField: 'diaryDate', resultLink: { hrefField: 'href', labelField: 'title' },
+    localDateField: 'diaryDate', resultLink: { hrefField: 'href', labelField: 'title', revisionField: 'revision' },
   });
   const project = run<Project>('project.create', { title: ' Harbor ' });
   const { projectId } = project;
