@@ -14,15 +14,17 @@
 | 任务 | 模型 | 允许写入范围 | 依赖与接口影响 | 状态与验收 |
 | --- | --- | --- | --- | --- |
 | A0 架构基线 | ChatflowsAI GPT-6.2 Sol xhigh | `scripts/architecture-baseline.mjs`、`docs/ARCHITECTURE.md`、`docs/architecture-baseline.json` | 全量首次扫描；不改业务契约 | `e0cb151` 三项独立复审关闭，已集成并重新生成主树快照，静态一致性检查通过 |
-| P1 可点击样稿 | Xingchi GPT-6.1 Sol xhigh | `docs/prototypes/ulysses-workspace*` | 已确认的灰白视觉；仅模拟数据，无正式业务写入 | `8f2f82a`；四宽度双引擎 8/8，主代理已查看重点截图，独立审查中 |
-| N1 返回原稿原段 | ChatflowsAI GPT-6.2 Sol xhigh | `frontend/App.vue`、新增 `frontend/navigation-state.ts` 与 `frontend/tests/navigation-state.test.mjs` | 先复现，基线记录完成再改正式代码；保持 URL 与 history 中既有状态 | 进行中；先记录旧版与选段返回失败，再验证浏览器 Back 和显式返回路径 |
+| P1 可点击样稿 | Xingchi GPT-6.1 Sol xhigh | `docs/prototypes/ulysses-workspace*` | 已确认的灰白视觉；仅模拟数据，无正式业务写入 | `8f2f82a` 与修复 `bb9c68f`；三项独立发现已补红测并修正，原 Reviewer 复验中 |
+| N1 返回原稿原段 | ChatflowsAI GPT-6.2 Sol xhigh | `frontend/App.vue`、新增 `frontend/navigation-state.ts` 与 `frontend/tests/navigation-state.test.mjs` | 保持 URL 与 history 中既有状态；H1 仅取得 App 导航呈现所有权 | 已集成及独立复审通过；A2/E1 集成后另测跨多个辅助页与新标签链接 |
 | M0 布局与性能基线 | 当前主模型 | `scripts/measure-authoring.mjs`、`scripts/manuscript-fixture.mjs` 的快照度量方法、本执行记录与忽略目录下证据 | 复用现有隔离 fixture；不新增产品依赖 | 采集和负例完成，独立复审通过；修正错误页、列表完整性、采样窗口和产物来源 |
 | C1 章内新建直接落笔 | ChatflowsAI GPT-6.2 Sol xhigh | `web/assets/workspace.js` 场景创建流程、`web/assets/scene-placement.js`、新增章内创建测试及旧测试对应行为段 | 复用场景创建与章节编排接口；遇冲突恢复同一场景 | 实施中；测试旧行为证据、创建/编排响应丢失、重试、并发章序和独立场景 |
-| T1 统一视觉基础 | Xingchi GPT-6.1 Sol xhigh | `web/assets/notebook.css`、`book.svg`、`web/index.html`、`frontend/styles.css`、文稿 frame/列表 CSS；既有列表测试的准确颜色期望 | 与 P1 共同视觉规则、现存根变量作为权威；不改业务状态 | 实施中；首页/读稿/角色/资料的颜色、字体、窄屏和操作可达性 |
-| L1 真实文稿摘要与范围 | ChatflowsAI GPT-6.2 Sol xhigh | `library-data.ts`、`LibraryPanels.vue`、新增摘要测试；既有列表测试的业务段 | API 保持；与 T1 分开 CSS/业务所有权 | 实施中；已采用/候选版本准确、全文搜索不漏、全库范围一致、记录请求成本 |
+| T1 统一视觉基础 | Xingchi GPT-6.1 Sol xhigh | `web/assets/notebook.css`、`book.svg`、`web/index.html`、`frontend/styles.css`、文稿 frame/列表 CSS；既有列表测试的准确颜色期望 | 与 P1 共同视觉规则、现存根变量作为权威；不改业务状态 | 已集成、独立审查通过；与 N1 联合验证通过 |
+| L1 真实文稿摘要与范围 | ChatflowsAI GPT-6.2 Sol xhigh | `library-data.ts`、`LibraryPanels.vue`、新增摘要测试；既有列表测试的业务段 | API 保持；与 T1 分开 CSS/业务所有权 | `81f4867` 独立审查发现四项状态问题，原所有者修正中，暂缓集成 |
 | A2 角色与资料呈现 | Xingchi GPT-6.1 Sol xhigh | 角色与资料的 Index/Page/CSS、共享 `manuscript/return-link.ts`、新增引用页测试 | 依赖 T1 共享变量；接入 `returnTo` 原稿链接，不改公共业务契约 | 实施中；四宽度真实内容、固定旧版、筛选与历史按需展开、返回地址校验 |
 | R1 读写工具栏与正文 | ChatflowsAI GPT-6.2 Sol xhigh | `ManuscriptTools.vue`、Draft/Scene/ComparePage、`writing.css` 及相关精确交互测试 | T1 字体与布局合同；保留依据事件和全部版本/采用语义 | 实施中；常显稿件身份、按需版本、四宽度首屏、读写同排版、比稿与恢复 |
-| S2 次要页面一致性 | Xingchi GPT-6.1 Sol xhigh | creative-entry CSS、任务与连接组件的呈现、新增布局验证 | 先继承 T1 再以实际截图决定最小修复；无证据不改 | 实施中；作品概览、任务/媒体/设置、旧章节和提示词承接页 |
+| E1 依据内容优先 | ChatflowsAI GPT-6.2 Sol xhigh | `ManuscriptEvidence.vue`、evidence 内容/关联/model 与对应测试 | 保持固定面板、事件、焦点及版本契约；真实 href 带原稿回链 | 最终 `fa64322` 已交回，独立审查中 |
+| H1 首页与手机导航 | Xingchi GPT-6.1 Sol xhigh | App 导航呈现、HomePage、DiaryPage 与样式/对应测试 | 不修改 N1 路由与回位逻辑；只复用已有准确日记正文，不加首页逐稿请求 | `ca25a9e` 独立审查通过，集成为 `53b0e8a`，与 S2 合并布局回归 8/8 |
+| S2 次要页面一致性 | Xingchi GPT-6.1 Sol xhigh | creative-entry CSS、任务与连接组件的呈现、新增布局验证 | 先继承 T1 再以实际截图决定最小修复；无证据不改 | `b68f623` 独立审查通过，集成为 `4e2e881` |
 
 每个任务完成后由新上下文 Reviewer 检查实际差异及证据，主代理完成集成验证后才标记完成。
 
@@ -71,6 +73,13 @@
 - P1 `8f2f82a`：普通 320/390px 样稿正文盒约 223px，默认中文实测为 Noto Sans SC；样稿的模拟保存不能计为正式产品完成。
 - P1 独立审查发现保持依据打开切版未更新、样例编辑污染旧修订、角色页返回缺少目标阅读状态，已退回作者修正；视觉方向认可不等于样稿交互全部通过。
 - C1 独立审查发现回执 404 后离页仍补发归章，以及移章后的回链与并发选章恢复两项问题，暂缓集成，交原所有者修复与补测。
+- L1 独立审查认可按需读取的首屏收益，但发现搜索预览不跟随、内联保存后摘要未刷新、最近列表采用身份误标，以及章节读取失败后误报零结果，已退回修正。24 幕样本桌面首屏总请求 36→21、手机 28→13；冷首屏后全文搜索整趟各多 21 次请求。该取舍明确记录，不能只报告首屏改善。
+- A2 独立审查发现子条目在点击时才补回链，复制链接或新标签会丢失上下文；已授权原所有者把校验后的参数传入实际子组件 href。主代理将在整合构建复验旧版、选段、刷新和多次辅助页跳转。
+- S2 主代理已查看 390px 作品 overview 和 320px 任务失败详情，文字与操作未横向溢出；全局手机导航仍等待 H1 集成后重拍。本批没有为仅属个人审美的问题增加结构调整。
+- P1 修复 `bb9c68f` 经原独立 Reviewer 重走两引擎三条失败路径，原两项 P1 与一项 P2 全部关闭；16/16（含原八组及八个回归场景）通过，已集成样稿。
+- S2 `b68f623` 独立审查与定向八项业务回归通过，已集成为 `4e2e881`。标题焦点框属于既有可见焦点规则，无遮挡或位移，未为此增加改动。
+- R1 `d8e8754` 与 H1 `ca25a9e` 已交独立审查。主代理查看了正式读稿 1280/768/320px、手机首页及导航截图：正文首行约 282→183px，首页 60px 顶栏且首条近期文稿可见。这里记录实际观察，最终整合构建仍需重拍。
+- 当前模型与 Astra 再次讨论跨辅助页返回：保持原稿 history entry 的位置与 pane，在同一经过校验的回链范围内记录实际新增的历史深度；新标签只按真实 URL 回原版与选段。先在 A2/E1 整合构建复现再改 App，不增加路由框架、存储或业务接口。
 
 ## 治理变更记录要求
 
