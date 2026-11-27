@@ -14,6 +14,80 @@ const layouts = [
   [webkit, 'phone', { width: 390, height: 844 }],
 ];
 
+test('multi-hop reference history and copied links keep the original reader', { timeout: 120_000 }, async t => {
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  t.after(workspace.close);
+  const fixture = await createManuscriptFixture(workspace.invoke);
+  for (const [engine, layout, viewport] of layouts) {
+    const browser = await engine.launch();
+    try {
+      await t.test(`${engine.name()}-${layout}`, async subtest => {
+        const page = await openPage(subtest, browser, workspace.origin, viewport, layout === 'phone');
+        const readerHref = fixture.links.oldPassage + '#passage-body';
+        await page.goto(readerHref);
+        await page.waitForFunction(selector => document.activeElement?.matches(selector), mark);
+        await settle(page);
+        if (layout === 'phone') {
+          await page.getByRole('button', { name: '返回文稿列表', exact: true }).click();
+          await page.locator('.library-sheet[aria-current="page"]').click();
+          await page.locator(mark).waitFor();
+          await settle(page);
+          assert.equal(new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash, readerHref);
+        }
+        await page.evaluate(() => {
+          history.replaceState({ ...history.state, manuscriptPane: 'editor', navigationFixture: 'multi-hop entry' }, '');
+          document.querySelector('#passage-body mark').focus({ preventScroll: true });
+          window.scrollBy({ top: -96, behavior: 'instant' });
+        });
+        const before = await inspect(page);
+        await openEvidenceLink(page, fixture.links.character);
+        await page.getByRole('heading', { name: fixture.character.name, exact: true, level: 1 }).waitFor();
+        await page.locator('.characters-disclosure > summary').click();
+        await page.locator('.characters-history').getByRole('link', { name: '第 2 版', exact: true }).click();
+        await page.getByText(fixture.characterV2.persona, { exact: true }).waitFor();
+        const copiedReference = page.url();
+        assert.equal(new URL(copiedReference).searchParams.get('returnTo'), readerHref);
+        await page.goBack();
+        await page.getByText(fixture.character.persona, { exact: true }).waitFor();
+        await page.goForward();
+        await page.getByText(fixture.characterV2.persona, { exact: true }).waitFor();
+        if (engine === chromium && layout === 'phone') {
+          await page.reload();
+          await page.getByText(fixture.characterV2.persona, { exact: true }).waitFor();
+        }
+        const returnCount = await backLink(page).count();
+        await page.locator('.characters-back').click();
+        await page.locator(mark).waitFor();
+        await waitForReadingReturn(page, before);
+        const after = await inspect(page);
+        assert.equal(after.href, before.href, 'the return skips all reference hops');
+        assert.deepEqual(after.scroll, before.scroll, 'multi-hop return restores the exact viewport');
+        assert.equal(after.markTop, before.markTop);
+        assert.equal(after.focus, before.focus);
+        assert.equal(after.fixtureState, before.fixtureState, 'return reuses the original history entry');
+        assert.equal(returnCount, 1, 'only the reference toolbar owns the return link');
+        // A copied auxiliary URL has no saved reader history. Its real link must
+        // still open the exact revision and selected paragraph in a fresh tab.
+        const copied = await page.context().newPage();
+        try {
+          await copied.goto(copiedReference);
+          await copied.getByText(fixture.characterV2.persona, { exact: true }).waitFor();
+          await backLink(copied).click();
+          await copied.locator(mark).waitFor();
+          await settle(copied);
+          const returned = await inspect(copied);
+          assert.equal(returned.href, readerHref);
+          assert.equal(returned.revision, '1');
+          assert.equal(returned.mark, fixture.target.excerpt);
+          assert.equal(returned.fixtureState, null, 'a new tab does not invent original history');
+          assert.ok(returned.markTop >= 0 && returned.markTop < viewport.height);
+          assert.equal(await copied.locator(passage).textContent(), fixture.bodies.old);
+        } finally { await copied.close(); }
+      });
+    } finally { await browser.close(); }
+  }
+});
+
 function inspect(page) {
   return page.evaluate(({ passage, mark }) => ({
     href: location.pathname + location.search + location.hash,
@@ -51,12 +125,16 @@ async function waitForReadingReturn(page, before) {
 }
 
 async function openEvidenceLink(page, href) {
+  const manuscript = new URL(page.url());
   const toolbar = page.getByRole('navigation', { name: '读写工具' });
   await toolbar.getByRole('button', { name: '来源与依据', exact: true }).click();
   const panel = page.locator('.evidence-panel');
   await panel.locator('.evidence-scene-links summary').click();
-  const link = panel.locator(`.evidence-scene-links a[href="${href}"]`);
-  assert.equal(await link.getAttribute('href'), href, 'the existing revision-pinned evidence link');
+  const expected = new URL(href, page.url());
+  expected.searchParams.set('returnTo', manuscript.pathname + manuscript.search + manuscript.hash);
+  const link = panel.locator(`.evidence-scene-links a[href="${expected.pathname + expected.search + expected.hash}"]`);
+  assert.equal(new URL(await link.getAttribute('href'), page.url()).href, expected.href,
+    'the real revision-pinned evidence link preserves the complete manuscript return URL');
   await link.click();
 }
 
@@ -143,7 +221,11 @@ test('return to the same manuscript revision, passage and viewport from evidence
           await capture(page, directory, label, 'after');
           records.push({ label, viewport, direct, before, auxiliary, returnLink, after });
 
-          assert.equal(auxiliary.href, fixture.links[resource]);
+          const auxiliaryUrl = new URL(auxiliary.href, workspace.origin);
+          assert.equal(auxiliaryUrl.searchParams.getAll('returnTo').length, 1);
+          assert.equal(auxiliaryUrl.searchParams.get('returnTo'), before.href);
+          auxiliaryUrl.searchParams.delete('returnTo');
+          assert.equal(auxiliaryUrl.pathname + auxiliaryUrl.search + auxiliaryUrl.hash, fixture.links[resource]);
           assert.equal(new URL(returnLink, workspace.origin).href, workspace.origin + before.href);
           assert.equal(auxiliary.locked, false, 'the modal lock is removed on leaving the manuscript');
           assert.equal(auxiliary.inert, 0);
@@ -193,6 +275,7 @@ test('return to the same manuscript revision, passage and viewport from evidence
         await openEvidenceLink(page, fixture.links.character);
         const heading = page.getByRole('heading', { name: fixture.character.name, level: 1, exact: true });
         await heading.waitFor();
+        const referenceHref = new URL(page.url()).pathname + new URL(page.url()).search;
 
         const requested = Promise.withResolvers();
         const release = Promise.withResolvers();
@@ -215,7 +298,7 @@ test('return to the same manuscript revision, passage and viewport from evidence
           await handled.promise;
           await settle(page);
           const after = await inspect(page);
-          assert.equal(after.href, fixture.links.character);
+          assert.equal(after.href, referenceHref);
           assert.deepEqual(after, before);
           assert.equal(await page.locator(passage).count(), 0);
           assert.equal(await backLink(page).count(), 1);

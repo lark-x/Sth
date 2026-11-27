@@ -5,6 +5,7 @@ import RouteDocument from './RouteDocument.vue';
 import { characterRoute } from './characters/routes.ts';
 import ManuscriptFrame from './manuscript/ManuscriptFrame.vue';
 import { manuscriptRoute } from './manuscript/routes.ts';
+import { manuscriptReturn } from './manuscript/return-link.ts';
 import { readingPosition, restoreReadingPosition } from './navigation-state.ts';
 import type { ReadingPosition } from './navigation-state.ts';
 import { currentNavigation } from './routes.ts';
@@ -20,13 +21,14 @@ const libraryNavigation = ref<HTMLDialogElement>();
 const navigationOpen = ref(false);
 const phoneNavigation = window.matchMedia('(width < 640px)');
 let navigationPosition: { top: number; left: number } | undefined;
-const returnToManuscript = ref<string | undefined>(history.state?.sthManuscriptReturn);
+const returnToManuscript = ref<string | undefined>(referenceReturn(url.value, history.state));
 let announcementTimer: ReturnType<typeof setTimeout> | undefined;
 let focusNextMount = false;
 let evidencePosition: ReadingPosition | undefined;
 let cancelReadingRestore: (() => void) | undefined;
 let routeChange = 0;
 let returning = false;
+let returnTimer: ReturnType<typeof setTimeout> | undefined;
 const destinations = [
   { href: '/diaries', name: '日记', icon: 'diary' },
   { href: '/create', name: '创作', icon: 'pen' },
@@ -39,6 +41,26 @@ const isHome = computed(() => url.value.pathname === '/' && !url.value.searchPar
 const workbench = computed(() => manuscriptRoute(url.value));
 const navigationTitle = computed(() => isHome.value ? '首页' : active.value === '/settings' ? '设置'
   : destinations.find(item => item.href === active.value)?.name ?? 'Sth');
+const ownsReferenceReturn = computed(() => Boolean(manuscriptReturn(url.value)));
+
+function referencePage(target: URL) { return Boolean(characterRoute(target) || sourceRoute(target)); }
+function referenceReturn(target: URL, state?: Record<string, unknown> | null): string | undefined {
+  if (!referencePage(target)) return;
+  const direct = manuscriptReturn(target);
+  if (direct) return new URL(direct, target.origin).href;
+  // Old in-app reference links have no URL parameter. Validate their saved
+  // fallback with the same rule, but never infer a history depth from it.
+  if (target.searchParams.has('returnTo') || typeof state?.sthManuscriptReturn !== 'string') return;
+  const legacy = new URL(target);
+  legacy.searchParams.set('returnTo', state.sthManuscriptReturn);
+  const validated = manuscriptReturn(legacy);
+  return validated ? new URL(validated, target.origin).href : undefined;
+}
+function returnDepth(target: URL, state: Record<string, unknown> | null) {
+  const depth = state?.sthManuscriptReturnDepth;
+  return Number.isSafeInteger(depth) && Number(depth) > 0 &&
+    state?.sthManuscriptReturn === referenceReturn(target, state) ? Number(depth) : undefined;
+}
 
 function openNavigation(event: MouseEvent) {
   // Safari does not focus buttons on pointer activation. Give the native dialog
@@ -96,7 +118,8 @@ async function updateRoute(position?: ReadingPosition) {
   cancelReadingRestore = undefined;
   evidencePosition = undefined;
   returning = false;
-  returnToManuscript.value = history.state?.sthManuscriptReturn;
+  clearTimeout(returnTimer);
+  returnToManuscript.value = referenceReturn(new URL(location.href), history.state);
   focusNextMount = !position;
   routeError.value = false;
   url.value = new URL(location.href);
@@ -127,25 +150,39 @@ function navigate(href: string, replace = false) {
   const destination = new URL(href, location.href);
   if (destination.origin !== location.origin || !['http:', 'https:'].includes(destination.protocol)) return;
   if (destination.href === location.href) return;
-  if (!replace && destination.href === returnToManuscript.value) {
-    if (!returning) history.back();
+  const depth = returnDepth(url.value, history.state);
+  if (!replace && depth && destination.href === returnToManuscript.value) {
+    if (!returning) {
+      history.go(-depth);
+      // A canceled traversal must not permanently disable the return control.
+      // Do not start a second navigation when this guard expires.
+      returnTimer = setTimeout(() => { returning = false; }, 1500);
+    }
     returning = true;
     return;
   }
+  const nextReturn = referenceReturn(destination);
+  const continuing = depth && nextReturn === returnToManuscript.value;
   if (replace) {
     let state = history.state;
-    if (state?.sthManuscriptPosition || state?.sthManuscriptReturn) {
+    if (state?.sthManuscriptPosition || state?.sthManuscriptReturn || state?.sthManuscriptReturnDepth) {
       state = { ...state };
       delete state.sthManuscriptPosition;
-      delete state.sthManuscriptReturn;
+      if (!continuing) {
+        delete state.sthManuscriptReturn;
+        delete state.sthManuscriptReturnDepth;
+      }
     }
     history.replaceState(state, '', destination);
   } else {
-    const auxiliary = characterRoute(destination)?.page === 'detail' || sourceRoute(destination)?.page === 'detail';
-    const position = auxiliary && writingRoute(url.value)?.page === 'read'
+    const auxiliary = referencePage(destination);
+    const matchesReader = nextReturn === url.value.href || !destination.searchParams.has('returnTo');
+    const position = auxiliary && matchesReader && writingRoute(url.value)?.page === 'read'
       ? evidencePosition ?? readingPosition() : undefined;
     if (position) history.replaceState({ ...history.state, sthManuscriptPosition: position }, '');
-    history.pushState(position ? { sthManuscriptReturn: position.href } : null, '', destination);
+    const state = position ? { sthManuscriptReturn: position.href, sthManuscriptReturnDepth: 1 }
+      : continuing ? { sthManuscriptReturn: nextReturn, sthManuscriptReturnDepth: depth + 1 } : null;
+    history.pushState(state, '', destination);
   }
   void updateRoute();
 }
@@ -193,6 +230,7 @@ window.addEventListener('popstate', onPopstate);
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', onPopstate);
   clearTimeout(announcementTimer);
+  clearTimeout(returnTimer);
   routeChange++;
   cancelReadingRestore?.();
 });
@@ -249,7 +287,7 @@ onErrorCaptured(() => {
         </nav>
       </dialog>
       <main id="main" tabindex="-1" :class="{ 'sth-home-main': isHome }">
-        <a v-if="returnToManuscript" :href="returnToManuscript" class="button quiet"><AppIcon name="back" />返回原稿</a>
+        <a v-if="returnToManuscript && (!ownsReferenceReturn || routeError)" :href="returnToManuscript" class="button quiet"><AppIcon name="back" />返回原稿</a>
         <div v-if="routeError" class="sth-route-error">
           <h1 tabindex="-1">页面暂时无法打开</h1>
           <p role="alert">页面加载失败，请重试。</p>
