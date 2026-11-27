@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Sth · 写作工作区样稿</title>
+  <link rel="stylesheet" href="ulysses-workspace-style.css">
+  <script defer src="ulysses-workspace-app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <div id="app" class="workspace" data-page="home">
+    <aside class="library" aria-label="书库">
+      <header class="library-header">
+        <button class="brand" data-action="home" aria-label="Sth 首页">Sth<span>写作工作区</span></button>
+        <button class="icon-button mobile-only" data-action="library-close" aria-label="关闭书库" data-icon="close"></button>
+      </header>
+      <nav id="library-nav" aria-label="内容导航"></nav>
+      <footer class="library-footer">
+        <button class="nav-row" data-action="about"><span data-icon="info"></span>样稿说明</button>
+        <span class="sample-label">交互样例 · 数据为样例</span>
+      </footer>
+    </aside>
+    <section class="sheets" aria-label="文稿列表">
+      <header class="list-header">
+        <div class="list-heading"><button class="icon-button tablet-down" data-action="library" aria-label="打开书库" data-icon="sidebar"></button><h1 id="list-title">全部文稿</h1><span id="list-count" class="muted"></span></div>
+        <div class="list-tools"><button class="text-button" data-action="search" aria-expanded="false" aria-controls="search-row"><span data-icon="search"></span><span id="search-label">搜索文稿</span></button><button class="icon-button" data-action="sort" aria-label="切换文稿排序" data-icon="sort"></button></div>
+        <label class="search-row" id="search-row" hidden><span id="search-input-label" class="sr-only">搜索标题与正文</span><input id="sheet-search" type="search" placeholder="标题或正文"></label>
+      </header>
+      <div id="sheet-list" class="sheet-list"></div>
+      <footer class="list-footer"><span id="sort-label">按章节顺序</span><button class="icon-button" data-action="new-scene" aria-label="新建样例文稿" data-icon="compose"></button></footer>
+    </section>
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+  <div id="version-menu" class="menu" popover aria-label="稿件与修订"></div>
+  <div id="more-menu" class="menu more-menu" popover aria-label="更多阅读操作">
+    <button data-action="target"><span data-icon="target"></span>回到目标句</button>
+    <button data-action="compare"><span data-icon="columns"></span>同段比稿</button>
+    <button data-action="conflict-demo"><span data-icon="history"></span>演示保存冲突</button>
+    <button data-action="about"><span data-icon="info"></span>样稿说明</button>
+  </div>
+  <dialog id="evidence" class="evidence" aria-labelledby="evidence-title">
+    <header class="evidence-header"><div><h2 id="evidence-title">本次依据</h2><p id="evidence-subtitle"></p></div><button class="icon-button" data-action="evidence-close" aria-label="关闭依据并返回正文" data-icon="close"></button></header>
+    <div id="evidence-content" class="evidence-content"></div>
+  </dialog>
+  <dialog id="about" class="about-dialog" aria-labelledby="about-title">
+    <header><h2 id="about-title">关于这份样稿</h2><button class="icon-button" data-action="about-close" aria-label="关闭样稿说明" data-icon="close"></button></header>
+    <p>这是 Sth 写作工作区的可点击设计样稿。作品、人物、日记和引文均为样例。</p>
+    <p>《第三声以后》的文字、章节、三份候选稿与修订关系来自项目既有的中文验收样例。首页日期与“刚刚”等时间文字用于界面试排。</p>
+    <p>速记、编辑、采用与冲突恢复只改变当前页面中的样例。刷新页面会还原，没有写入正式工作区。</p>
+    <p>可从首页继续读稿，或打开书库依次进入章节、角色与资料。正文标题旁可切换稿件和修订，“依据”可核对当前这版使用的原文。</p>
+    <button class="primary-button" data-action="about-close">开始试用</button>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

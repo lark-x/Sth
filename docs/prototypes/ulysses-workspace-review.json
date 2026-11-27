@@ -1,0 +1,56 @@
+{
+  "task": "P1 高保真可点击设计样稿",
+  "workspace": "F:/Project/Sth-worktrees/prototype",
+  "branch": "work/ulysses-prototype",
+  "baselineHead": "fd60fc2801561045c1736aa37515a42a045f5dc4",
+  "entry": "docs/prototypes/ulysses-workspace.html",
+  "entryStates": {
+    "home": "ulysses-workspace.html#home",
+    "ordinaryReading": "ulysses-workspace.html#workspace",
+    "targetPassage": "ulysses-workspace.html#read",
+    "characterLibrary": "ulysses-workspace.html#character",
+    "sourceLibrary": "ulysses-workspace.html#source"
+  },
+  "data": "《第三声以后》的正文、三稿目标句、修订、章节、采用关系、原文及角色来自 scripts/manuscript-fixture.mjs。交互暂存于本页内存，刷新还原。",
+  "visualDirection": "Ulysses 灰白三栏，系统无衬线字体，18px 正文，32.4px 行高，13–14px 主导航。平板双栏，手机书库、列表、正文逐屏。",
+  "fontReview": {
+    "method": "Chromium CDP CSS.getPlatformFontsForNode，记录位于最终 manifest.fonts",
+    "defaultActualCJK": "Noto Sans SC，PostScript Noto-Sans-SC，isCustomFont=false",
+    "defaultBoldCJK": "Noto Sans SC，PostScript Noto-Sans-SC-Bold，isCustomFont=false",
+    "serifActualCJK": "SimSun，PostScript SimSun，isCustomFont=false",
+    "comparison": "四个尺寸的 chromium-*-read-start.png 与 chromium-*-read-serif.png 为同稿、同版、相同字号和行高的对照。宋体只由验收脚本注入比较。",
+    "recommendation": "默认使用系统无衬线体。本机 Noto Sans SC 的字面与笔画在 320/390px 更清楚，正文和工具栏更连续，也符合 Ulysses 的简洁阅读方向。其他设备按 PingFang SC、Microsoft YaHei UI 等系统字体回退。"
+  },
+  "fixedIssues": [
+    "正文前重复的历史提示条已移除。修订、采用及另有新修订在 toolbar 常显，完整场景名仍显示。",
+    "390/320px 普通稿首段段落盒顶部均为 222.78125px。目标句入口单独验证，正文前后文同时可见。",
+    "导航时主动清除前一页的暂存反馈，最终读稿与角色核心截图没有首页残留 toast。当前暂存成功截图保留其真实反馈。",
+    "角色页只保留 toolbar 的返回原稿入口，320px 按钮宽度溢出已修正。",
+    "依据中进入人物原条目默认显示固定修订 1，不含修订 2 的修船补记。角色库进入则显示当前修订 2。",
+    "角色及资料列表分别使用搜索角色/按名称排序、搜索资料/按标题排序。",
+    "目录原文摘要最多两行，完整幕名、采用修订及三份讲法数量保留。",
+    "移动端开启依据前捕获选区，关闭后恢复选区、焦点及精确滚动。桌面和手机之间调整宽度时正确切换 dialog 语义。",
+    "固定读稿入口明确选择林澈修订 1。切换候选只浏览，章节采用只在作者点选采用动作后改变。"
+  ],
+  "verification": {
+    "command": "node docs/prototypes/ulysses-workspace-verify.mjs",
+    "browsers": ["Chromium", "WebKit"],
+    "viewports": ["1280x800", "768x1024", "390x844", "320x640"],
+    "finalResult": "8/8 组通过，176 张截图，最终运行 pageerror=0，外网请求=0，所有截图区域无横向溢出。",
+    "coverage": ["首页首屏速记与首条最近编辑", "普通读稿与目标句", "三稿与修订", "不同稿件的依据及缺失状态", "人物和来源的固定旧版", "Esc/关闭/焦点/选区/滚动恢复", "640/639px 依据布局切换", "手机逐屏导航", "角色及资料返回原稿和原范围", "作者明确采用", "编辑及冲突恢复样例", "刷新还原样例", "两行原文摘要", "实际 CJK 字体"],
+    "manifest": "frontend/.artifacts/prototype-20261128/manifest.json",
+    "detector": "Impeccable detect 对 HTML/CSS/JS 的一次检查输出 []，之后新增变更为对象文案、摘要行数、固定入口和验收记录。",
+    "visualReview": "实现者亲自查看四个尺寸的首页、普通读稿、角色、目标句，以及宋体对照、版本菜单、非空/空依据、旧版人物、WebKit 窄屏滚动、比稿、编辑冲突与恢复截图。",
+    "reviewBoundary": "本文件记录实现者复核。主代理已明确认可 320 普通稿、390 首页、1280 普通稿及 390 旧版人物依据四图，正式实施由主代理继续独立评审。"
+  },
+  "diagnosticHistory": [
+    "首轮发现依据关闭时事件时序及选区恢复问题，以及 320px 角色 toolbar 溢出，修复后重跑通过。",
+    "WebKit 390px 一次在同文档导航尚未完成时读取布局得到 null，保留 intermediate manifest 并等待页面可见后重跑通过。",
+    "Chromium 同一 fragment 的 goto 没有重新加载页面，鲜活页状态与预期的新深链入口不同。验收 helper 对新访问明确 reload，同时保留真实 hash 导航断言，完整重跑通过。",
+    "本任务没有遇到浏览器进程原生退出。初次及中间 manifest 在截图目录中保留，正式交付以 manifest.json 为准。"
+  ],
+  "limits": [
+    "所有保存、采用、编辑和冲突恢复均为本页交互样例。正式 Vue/API/数据库行为未在此任务实施。",
+    "系统字体的可用性取决于设备。当前 CDP 证据来自本机 Chromium，WebKit 图已检查，真实 iOS/WKWebView 设备仍待后续阶段。"
+  ]
+}
