@@ -57,7 +57,17 @@ hermes sth workspace create another-story
 hermes sth workspace use my-writing
 ```
 
-工作区数据位于 profile 的 `sth-workspaces`，独立于插件程序目录。升级前先停止自有工作区服务，将新包解压到新的目录，执行 `hermes plugins install <新包 file:// 标识> --force --enable`，再运行 `workspace start`。默认使用新插件内的运行时。保留自己的工作区数据目录。
+工作区数据位于 profile 的 `sth-workspaces`，独立于插件程序目录。把已核对摘要的新包解压到新目录，进入其中带 `plugin.yaml` 的文件夹。使用原来的 Hermes profile 停止该插件正在运行的自有工作区，换包后按原名称启动。以一个名为 `my-writing` 的工作区为例：
+
+```powershell
+hermes sth workspace stop --workspace my-writing
+hermes plugins install ([System.Uri](Get-Location).Path).AbsoluteUri --force --enable
+hermes plugins doctor sth-personal-operations --ci
+hermes sth workspace start --workspace my-writing
+hermes sth status
+```
+
+启动后打开原 `origin` 查看作品。使用默认配置时，服务从更新后的插件目录运行，沿用原数据目录、工作区 ID 和终端连接。
 
 ## 连接已有 Sth
 
@@ -145,6 +155,8 @@ $env:PYTHONIOENCODING = 'utf-8'
 真实模型配置只读取指定来源 profile 的选中模型及该供应商配置，复制到隔离 profile。支持 `--model <模型 ID>` 在同一供应商下显式选择模型。结束后停止隔离服务和 gateway，移除复制的配置与备份，保留私有报告目录。省略 `--real-model` 可以只执行确定性集成检查。
 
 另行覆盖重放、原回执、服务重启后的资料与连接、外接已有服务、跨平台/profile/session/委派拒绝、撤销与断开连接。分发文件的 SHA-256 和生产依赖结构也会检查。
+
+要验证两个发布包之间的升级，给同一验收命令增加 `--upgrade-from <旧版完整ZIP>`，并用 `--distribution <新版完整ZIP>` 指定接收者取得的新包。旧包先保存资料并记录回执，换包后逐字节核对已安装插件、运行时和实际返回的首页，再核验历史回执与新写入。
 
 ```powershell
 py -3 -B -m unittest discover -s adapters/tests -p hermes_distribution.py

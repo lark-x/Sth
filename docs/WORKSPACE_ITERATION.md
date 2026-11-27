@@ -46,6 +46,7 @@
 
 ## 本轮验证记录
 
+- Windows x64 插件升级也已按接收者流程验收。旧 ZIP 创建工作区并写入资料，维护者从 GitHub 发布草稿重新下载 `ae25ac0` ZIP，在同一隔离 profile 停服换包。升级前后工作区 ID、终端连接、地址和资料版本一致，原回执可重放，新资料可保存。实际 HTTP 首页与新版 ZIP 字节一致。随后两个真实 Hermes 会话完成日记写入和新会话查回，共 11 项检查通过。[可复验的升级命令](HERMES_SETUP.md#第二次启动和升级)
 - 私有默认分支 `main` 对应 `ec1f1e4`。从远程干净克隆执行类型检查，84 项核心用例、16 项桌面与窄屏浏览器用例、4 项适配器用例通过。该轮跳过需显式启用的 ComfyUI 实机用例。
 - 在独立服务运行 `scripts/accept-research.py host-continuity`，Hermes 的 `codex/gpt-6.2-sol` 通过 MCP 写下个人日记 `ac700d65-f928-40c2-91a4-4c09ab8d6ab6`。390px Chromium 通过可见编辑入口保存第二版，刷新后再次打开。全新 Codex CLI 会话使用自己的配对连接，分别显式读取第 1 版和省略版本读取最新版。两条服务端回执的 ID、正文和修订号均与真实回复一致。两个临时连接均已撤销。
 - 复现以上路径需要 Node 24.15+、根目录及 `adapters` 的依赖、已构建前端、Playwright Chromium、已登录的 Codex CLI，以及已配置模型的 Hermes Python。用 Hermes 的 Python 运行 `scripts/accept-research.py host-continuity`，可用 `--hermes-home`、`--provider`、`--model` 选择现有配置。运行记录写入仓库外的私有临时目录。该结果覆盖桌面上的手机宽度网页与 Hermes MCP 连接。原生 Hermes 插件安装、第三宿主和真机体验分别验收。

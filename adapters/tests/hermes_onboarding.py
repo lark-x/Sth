@@ -3,10 +3,13 @@
 Run with Hermes's Python and PYTHONPATH pointing at its installed source.
 --real-model also runs two actual model sessions using only the selected model
 provider's configuration, read from --source-home. No live records are opened.
+--upgrade-from OLDER.zip with --distribution FINAL.zip first checks the documented
+stop/install-from-a-new-directory/start upgrade in the same isolated profile.
 """
 
 import argparse
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -79,7 +82,7 @@ def native_probe(fixture):
             if fixture["stage"] == "first":
                 value = {"kind": "setting", "title": "Terminal fixture", "body": "A source saved from the native terminal."}
                 saved = operation("source.create", "save", value)
-                assert saved["replayed"] is False
+                assert saved["replayed"] is fixture.get("replay", False)
                 assert operation("source.create", "save", value) == {**saved, "replayed": True}
             else:
                 saved = fixture["saved"]
@@ -107,7 +110,7 @@ def native_probe(fixture):
             if fixture["stage"] == "first":
                 assert saved["result"]["href"] in finished
             assert tool(operations.DISCOVER, {})["error"] == "personal_turn_required"
-            return {"saved": saved, "isolationChecks": 10}
+            return {"saved": saved, "connectionId": binding["connectionId"], "isolationChecks": 10}
         finally:
             clear_session_vars(tokens)
 
@@ -149,7 +152,10 @@ def run_acceptance(args):
     assert shutil.which("node", path=env["PATH"]) is None
     hermes = [executable]
     secrets = []
-    report = {"directory": str(directory), "profile": str(home), "checks": []}
+    report = {"directory": str(directory), "profile": str(home), "checks": [], "passed": False}
+    installed = home / "plugins" / "sth-personal-operations"
+    registry = home / "sth-workspaces" / "registry.sqlite"
+    distributions = []
 
     def run(command, *, text="", timeout=90, expected=0, log=None):
         completed = subprocess.run(command, cwd=directory, env=env, input=text.encode(), stdout=subprocess.PIPE,
@@ -166,9 +172,57 @@ def run_acceptance(args):
         return run([*hermes, *arguments], **options)
 
     def probe(stage, **fields):
+        session = fields.pop("session", "native-" + stage)
         text = run([probe_python, "-B", "-X", "utf8", str(Path(__file__).resolve()), "--probe"],
-                   text=encode({"stage": stage, "origin": report["origin"], "session": "native-" + stage, **fields}))
+                   text=encode({"stage": stage, "origin": report["origin"], "session": session, **fields}),
+                   log="probe-" + session + ("-replay" if fields.get("replay") else ""))
         return json.loads(text.split("NATIVE_QA ")[-1])
+
+    def receive(archive, label):
+        archive = archive.resolve()
+        if archive.suffix.lower() == ".zip":
+            target = directory / label
+            with zipfile.ZipFile(archive) as bundle:
+                assert all(not Path(name).is_absolute() and not Path(name).drive and ".." not in Path(name).parts
+                           for name in bundle.namelist()), "ZIP paths must stay inside the extraction directory."
+                bundle.extractall(target)
+            sources = list(target.glob("*/plugin.yaml"))
+            assert len(sources) == 1, "Expected one plugin directory in the distribution ZIP."
+            archive = sources[0].parent
+        return {"installIdentifier": archive.as_uri(), "directory": str(archive)}
+
+    def installed_evidence(distribution):
+        received = Path(distribution["directory"])
+        manifest_bytes = (received / "distribution.json").read_bytes()
+        assert (installed / "distribution.json").read_bytes() == manifest_bytes
+        for name in module.FILES:
+            assert (installed / name).read_bytes() == (received / name).read_bytes(), f"Installed plugin file differs: {name}"
+        manifest = json.loads(manifest_bytes)
+        expected_files = [{**item, "path": item["path"].removeprefix("runtime/")}
+                          for item in manifest["files"] if item["path"].startswith("runtime/")]
+        assert expected_files and module.audit_payload(installed / "runtime") == expected_files
+        assert not (installed / "runtime" / "node_modules" / "vite").exists()
+        index = (received / "runtime" / "frontend" / "dist" / "index.html").read_bytes()
+        assert (installed / "runtime" / "frontend" / "dist" / "index.html").read_bytes() == index
+        return {"source": str(received), "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                "runtimeManifestSha256": hashlib.sha256(json.dumps(expected_files, sort_keys=True).encode()).hexdigest(),
+                "frontendIndexSha256": hashlib.sha256(index).hexdigest(), "pluginFilesVerified": list(module.FILES)}
+
+    def workspace_runtime():
+        with sqlite3.connect(f"{registry.as_uri()}?mode=ro", uri=True) as db:
+            return json.loads(db.execute("SELECT runtime FROM workspaces WHERE name='fixture'").fetchone()[0])
+
+    def homepage_evidence(distribution):
+        expected = (Path(distribution["directory"]) / "runtime" / "frontend" / "dist" / "index.html").read_bytes()
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(report["origin"] + "/", timeout=15) as response:
+            actual = response.read()
+            assert response.status == 200 and actual == expected, "HTTP / must serve the received package's index.html bytes."
+        return hashlib.sha256(actual).hexdigest()
+
+    def stop_workspace(log):
+        stopped = json.loads(cli("sth", "workspace", "stop", "--workspace", "fixture", timeout=45, log=log))
+        assert stopped["state"] == "stopped" and not stopped["healthy"]
 
     workspace_started = False
     try:
@@ -176,45 +230,37 @@ def run_acceptance(args):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         if args.distribution:
-            archive = args.distribution.resolve()
-            if archive.suffix == ".zip":
-                with zipfile.ZipFile(archive) as bundle:
-                    assert all(not Path(name).is_absolute() and ".." not in Path(name).parts for name in bundle.namelist())
-                    bundle.extractall(directory / "received-package")
-                sources = list((directory / "received-package").glob("*/plugin.yaml"))
-                assert len(sources) == 1
-                distribution = {"installIdentifier": sources[0].parent.as_uri()}
-            else:
-                distribution = {"installIdentifier": archive.as_uri()}
+            distribution = receive(args.distribution, "received-package")
         else:
             distribution = module.package(directory / "plugin-source")
+        distributions.append(distribution)
+        initial = receive(args.upgrade_from, "received-older-package") if args.upgrade_from else distribution
+        if args.upgrade_from:
+            distributions.append(initial)
+            report["upgrade"] = {"fromArchive": str(args.upgrade_from.resolve()),
+                                 "toArchive": str(args.distribution.resolve()), "passed": False}
         # A fresh test data root has no Hermes dependency selection. Prepare
         # that root with official PM using the installed, ABI-matched Python.
         # The three user steps below all use the ordinary installed launcher.
         run([probe_python, "-m", "hermes_cli.main", "pm", "repair"], timeout=300, log="isolated-hermes-runtime")
-        cli("plugins", "install", distribution["installIdentifier"], "--enable", "--force", timeout=150, log="install")
+        cli("plugins", "install", initial["installIdentifier"], "--enable", "--force", timeout=150, log="install")
         help_text = cli("sth", "--help", log="help")
         assert "workspace" in help_text and "connect" in help_text
         cli("plugins", "doctor", "sth-personal-operations", "--ci", log="doctor")
         report["checks"].append("official_plugin_install_and_doctor")
         status = json.loads(cli("sth", "status", expected=1))
         assert status["connected"] is False
-        installed = home / "plugins" / "sth-personal-operations"
         assert installed.is_dir()
-        manifest = json.loads((installed / "distribution.json").read_text(encoding="utf-8"))
-        actual = module.audit_payload(installed / "runtime")
-        expected_files = [{**item, "path": item["path"].removeprefix("runtime/")} for item in manifest["files"] if item["path"].startswith("runtime/")]
-        assert actual == expected_files
-        assert not (installed / "runtime" / "node_modules" / "vite").exists()
+        initial_evidence = installed_evidence(initial)
         report["checks"].append("received_complete_runtime_and_production_dependencies_without_private_state")
-        created = json.loads(cli("sth", "workspace", "create", "fixture", log="create"))
+        # Creation can start a daemon before pairing/output fails.
         workspace_started = True
+        created = json.loads(cli("sth", "workspace", "create", "fixture", log="create"))
         assert created["connected"] and created["owned"] and created["healthy"] and created["kind"] == "local"
         report["origin"] = created["origin"]
         report["workspaceId"] = created["id"]
         assert str(home) in created["dataDir"]
-        with sqlite3.connect(f"{(home / 'sth-workspaces' / 'registry.sqlite').as_uri()}?mode=ro", uri=True) as db:
-            runtime = json.loads(db.execute("SELECT runtime FROM workspaces WHERE id=?", (created["id"],)).fetchone()[0])
+        runtime = workspace_runtime()
         assert Path(runtime["installationPath"]).resolve() == (installed / "runtime").resolve()
         report["runtimePath"] = runtime["installationPath"]
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -230,6 +276,47 @@ def run_acceptance(args):
                             assert asset_response.status == 200 and asset_response.read()
         assert request(created["origin"], "/api/web/invoke", {"operationId": "diary.list", "stepId": "empty-first-diary", "input": {}})["result"]["items"] == []
         report["checks"].append("create_with_bundled_node_and_runtime_and_built_vue_web_without_repository")
+        if args.upgrade_from:
+            upgrade = report["upgrade"]
+            seed = probe("first", session="native-upgrade")
+            assert seed["connectionId"] == created["connectionId"]
+            upgrade["before"] = {**initial_evidence, "httpIndexSha256": homepage_evidence(initial),
+                                 "workspaceId": created["id"], "dataDir": created["dataDir"],
+                                 "connectionId": seed["connectionId"], "receipt": seed["saved"],
+                                 "schemaVersion": request(report["origin"], "/api/health")["schemaVersion"],
+                                 "runtimeGeneration": runtime["generation"], "runtimePath": runtime["installationPath"]}
+            stop_workspace("upgrade-stop")
+            # The documented replacement uses the new source's file URI.
+            cli("plugins", "install", distribution["installIdentifier"], "--force", "--enable", timeout=150, log="upgrade-install")
+            after = upgrade["after"] = installed_evidence(distribution)
+            assert after["manifestSha256"] != initial_evidence["manifestSha256"], "Upgrade ZIPs must have different manifests."
+            cli("plugins", "doctor", "sth-personal-operations", "--ci", log="upgrade-doctor")
+            resumed = json.loads(cli("sth", "workspace", "start", "--workspace", "fixture", log="upgrade-start"))
+            assert resumed["connected"] and resumed["healthy"] and resumed["owned"]
+            assert all(resumed[key] == created[key] for key in ("id", "origin", "dataDir", "connectionId", "workspaceUri"))
+            current_runtime = workspace_runtime()
+            assert Path(current_runtime["installationPath"]).resolve() == (installed / "runtime").resolve()
+            assert current_runtime["generation"] != runtime["generation"]
+            after.update(httpIndexSha256=homepage_evidence(distribution), runtimeGeneration=current_runtime["generation"],
+                         runtimePath=current_runtime["installationPath"], workspaceId=resumed["id"], dataDir=resumed["dataDir"],
+                         connectionId=resumed["connectionId"], schemaVersion=request(report["origin"], "/api/health")["schemaVersion"])
+            assert after["schemaVersion"] >= upgrade["before"]["schemaVersion"]
+            replayed = probe("first", session="native-upgrade", replay=True)
+            assert replayed["saved"] == {**seed["saved"], "replayed": True}
+            assert replayed["connectionId"] == seed["connectionId"]
+            assert probe("restart", session="native-upgrade-read-original", saved=seed["saved"])["saved"] == seed["saved"]
+            continued = probe("first", session="native-upgrade-write")
+            assert continued["connectionId"] == seed["connectionId"]
+            assert continued["saved"]["result"]["sourceId"] != seed["saved"]["result"]["sourceId"]
+            assert probe("restart", session="native-upgrade-read-continued", saved=continued["saved"])["saved"] == continued["saved"]
+            for label, receipt in (("original", seed["saved"]), ("continued", continued["saved"])):
+                result = request(report["origin"], "/api/web/invoke", {"operationId": "source.read", "stepId": "upgrade-" + label,
+                                 "input": {"sourceId": receipt["result"]["sourceId"], "revision": receipt["result"]["revision"]}})
+                assert result["result"] == receipt["result"]
+                after[label + "Source"] = result["result"]
+            after["replayedReceipt"] = replayed["saved"]
+            upgrade["passed"] = True
+            report["checks"].append("official_zip_upgrade_preserves_versions_connection_and_receipt_with_new_runtime_and_http_bytes")
         if args.real_model:
             configured = yaml.safe_load((args.source_home / "config.yaml").read_text(encoding="utf-8"))
             selected = copy.deepcopy(configured["model"])
@@ -308,22 +395,53 @@ def run_acceptance(args):
         report["checks"].append("revocation_and_profile_local_disconnect")
         report["passed"] = True
     finally:
+        failing = sys.exc_info()[0] is not None
+        cleanup_errors = []
         if args.real_model:
             for target, label in ((home, "profile"), (directory, "root")):
                 env["HERMES_HOME"] = str(target)
                 try:
                     cli("gateway", "stop", timeout=45, log="gateway-stop-" + label)
-                except (AssertionError, subprocess.SubprocessError):
+                except (AssertionError, OSError, subprocess.SubprocessError):
                     report["gatewayStopFailed"] = True
+                    cleanup_errors.append("gateway-stop-" + label)
             env["HERMES_HOME"] = str(home)
-        if workspace_started:
-            cli("sth", "workspace", "stop", "--workspace", "fixture", timeout=45, log="stop")
+        if workspace_started and registry.is_file():
+            try:
+                with sqlite3.connect(f"{registry.as_uri()}?mode=ro", uri=True) as db:
+                    registered = db.execute("SELECT 1 FROM workspaces WHERE name='fixture'").fetchone()
+                if registered:
+                    stop_workspace("stop")
+            except (AssertionError, OSError, ValueError, sqlite3.Error, subprocess.SubprocessError):
+                # A failed replacement may leave the installed CLI unavailable.
+                # Stop via an untouched received runtime using the same registry.
+                for index, candidate in enumerate(distributions):
+                    runtime_root = Path(candidate["directory"]) / "runtime"
+                    node = runtime_root / "bin" / ("node.exe" if os.name == "nt" else "node")
+                    try:
+                        stopped = json.loads(run([str(node), str(runtime_root / "scripts" / "workspace.mjs"), "stop",
+                                                  "--home", str(registry.parent), "--workspace", "fixture", "--json"],
+                                                 timeout=45, log=f"stop-fallback-{index}"))
+                        assert stopped["state"] == "stopped" and not stopped["healthy"]
+                        report["workspaceStopFallback"] = True
+                        break
+                    except (AssertionError, OSError, ValueError, subprocess.SubprocessError):
+                        continue
+                else:
+                    cleanup_errors.append("workspace-stop")
         # Preserve isolated evidence but remove the copied provider credentials.
         for pattern in ("config.yaml*", ".env", ".env.bak*", "auth.json*", "credential_pool.json*"):
             for path in home.rglob(pattern):
                 if path.is_file():
-                    path.unlink()
+                    try:
+                        path.unlink()
+                    except OSError:
+                        cleanup_errors.append("credential-removal")
+        if cleanup_errors:
+            report.update(passed=False, cleanupErrors=cleanup_errors)
         (directory / "report.json").write_text(encode(report), encoding="utf-8")
+        if cleanup_errors and not failing:
+            raise RuntimeError(f"Isolated cleanup failed; see {directory / 'report.json'}")
     print(encode(report))
 
 
@@ -331,7 +449,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--probe", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--hermes-source", type=Path, default=Path(os.environ.get("STH_TEST_HERMES_SOURCE", ".")))
-    parser.add_argument("--distribution", type=Path, help="完整插件 ZIP 或独立 Git 分发目录，省略时重新导出。")
+    parser.add_argument("--distribution", type=Path, help="最终完整插件 ZIP 或独立 Git 分发目录，省略时重新导出；升级验收必须指定最终 ZIP。")
+    parser.add_argument("--upgrade-from", type=Path, metavar="OLDER_ZIP",
+                        help="可选旧版完整 ZIP；先安装旧包并写入，再按文档停服、从另一目录安装 --distribution 最终 ZIP、原 profile 启动并核验。")
     parser.add_argument("--real-model", action="store_true")
     parser.add_argument("--source-home", type=Path)
     parser.add_argument("--model")
@@ -339,6 +459,12 @@ if __name__ == "__main__":
     if args.probe:
         print("NATIVE_QA " + encode(native_probe(json.load(sys.stdin))))
     else:
+        if args.upgrade_from:
+            if not args.distribution:
+                parser.error("--upgrade-from requires --distribution FINAL.zip")
+            for option, archive in (("--upgrade-from", args.upgrade_from), ("--distribution", args.distribution)):
+                if archive.suffix.lower() != ".zip" or not archive.is_file():
+                    parser.error(f"{option} must name an existing complete plugin ZIP")
         if args.real_model and not args.source_home:
             parser.error("--real-model requires --source-home containing the selected model configuration")
         run_acceptance(args)
