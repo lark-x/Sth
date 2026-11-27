@@ -58,7 +58,7 @@ function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').fo
 const state = {
   page: 'home', scope: 'all', scene: 'main', draft: 'lin', revision: 1, target: false,
   adopted: { draft: 'lin', revision: 1 }, editing: false, conflict: false, comparison: false,
-  compareSide: 'left', search: '', reverse: false, scroll: 0, notes: [], edits: new Map(),
+  compareSide: 'left', search: '', reverse: false, scroll: 0, notes: [], edits: new Map(), buffers: new Map(),
 };
 let toastTimer;
 let evidenceReturn;
@@ -137,7 +137,7 @@ function savePosition() {
   if (state.page === 'read') {
     state.scroll = $('.reading-scroll')?.scrollTop || 0;
     const edit = $('#edit-area');
-    if (edit) state.edits.set(editKey(), edit.value);
+    if (edit) state.buffers.set(editKey(), edit.value);
   }
 }
 function setHash(value) {
@@ -210,11 +210,18 @@ function renderReader() {
     content = `<div class="doc-path"><button data-action="scope" data-value="${current.chapter === 'diaries' ? 'diaries' : 'book'}">${current.chapter === 'diaries' ? '日记' : '第三声以后'}</button><span>/</span><button data-action="scope" data-value="${current.chapter}">${escapeHtml(chapter.split(' · ')[0])}</button></div>
       ${state.scene === 'if' ? '<div class="version-notice"><span>IF · 第三声钟响时，她留在北岸。</span><button data-action="continue">回到主线</button></div>' : ''}
       <h1>${escapeHtml(current.title)}</h1>
-      ${state.editing ? `<p class="edit-caption">${old ? '编辑历史稿会新建一份样例修订。' : '正在编辑当前样例。'}内容暂存于本页，刷新后还原。</p>${state.conflict ? '<div class="conflict" role="alert"><p>保存冲突样例。另一处已经产生新修订，你写下的内容仍保留在下方。</p><button class="secondary-button" data-action="resolve-conflict">保留草稿并新建样例修订</button></div>' : ''}<textarea id="edit-area" class="edit-area" aria-label="正文样例编辑">${escapeHtml(bodyParts().join('\n\n'))}</textarea>` : `<article class="prose" aria-label="文稿正文">${proseHtml(bodyParts())}</article>`}
+      ${state.editing ? `<p class="edit-caption">${old ? '编辑历史稿会新建一份样例修订。' : '正在编辑当前样例。'}内容暂存于本页，刷新后还原。</p>${state.conflict ? '<div class="conflict" role="alert"><p>保存冲突样例。另一处已经产生新修订，你写下的内容仍保留在下方。</p><button class="secondary-button" data-action="resolve-conflict">保留草稿并新建样例修订</button></div>' : ''}<textarea id="edit-area" class="edit-area" aria-label="正文样例编辑">${escapeHtml(state.buffers.get(editKey()) ?? bodyParts().join('\n\n'))}</textarea>` : `<article class="prose" aria-label="文稿正文">${proseHtml(bodyParts())}</article>`}
       <footer class="reading-footer"><span>${bodyParts().join('').length} 字 · ${shortDraftTitle()} · 修订 ${state.revision}</span><button data-action="about">交互样例</button></footer>`;
   }
   $('#main').innerHTML = `${toolbar()}<div class="reading-scroll"><div class="manuscript ${state.target ? 'target-reading' : ''}">${content}</div></div>`;
-  if (state.editing) $('#edit-area').addEventListener('input', event => { state.edits.set(editKey(), event.target.value); });
+  if (state.editing) $('#edit-area').addEventListener('input', event => { state.buffers.set(editKey(), event.target.value); });
+  if ($('#evidence').open) {
+    evidenceMain();
+    $('#evidence').scrollTop = 0;
+    const trigger = $('#evidence-button');
+    trigger.setAttribute('aria-expanded', 'true');
+    evidenceReturn = { trigger, scroll: state.scroll, range: null };
+  }
 }
 function scopeTo(value) {
   savePosition();
@@ -223,7 +230,7 @@ function scopeTo(value) {
   state.search = '';
   $('#sheet-search').value = '';
   if (value === 'characters' || value === 'sources') {
-    detailReturn = { scene: state.scene, draft: state.draft, revision: state.revision, scroll: state.scroll, scope: previousScope };
+    detailReturn = { scene: state.scene, draft: state.draft, revision: state.revision, target: state.target, scroll: state.scroll, scope: previousScope };
     state.page = matchMedia('(width < 640px)').matches ? 'sheets' : value === 'characters' ? 'character' : 'source';
   } else {
     const first = itemsInScope()[0];
@@ -239,7 +246,7 @@ function scopeTo(value) {
 function openScene(id, target = false) {
   savePosition();
   if (['character', 'source'].includes(id)) {
-    if (!detailReturn) detailReturn = { scene: state.scene, draft: state.draft, revision: state.revision, scroll: state.scroll, scope: 'book' };
+    if (!detailReturn) detailReturn = { scene: state.scene, draft: state.draft, revision: state.revision, target: state.target, scroll: state.scroll, scope: 'book' };
     state.page = id;
   } else {
     const previous = state.scene;
@@ -274,11 +281,14 @@ function renderDetail() {
     ${character ? `<div class="prose"><p>${persona}</p></div><h2>值夜习惯</h2><div class="prose"><p>听见第三声钟响时，先望向北岸。</p></div><h2>后来补记</h2><div class="prose"><p>她在对岸学会修船。</p></div><div class="detail-divider"></div><p class="detail-subtitle">“林澈的讲法 · 修订 1”使用角色修订 1。后来补记尚未用于这份旧稿。</p>` : `<div class="prose">${sourceLines.map(line => `<p class="source-line">${escapeHtml(line)}</p>`).join('')}</div><h2>修订 2 的后附校订</h2><div class="prose"><p>末班渡船改为第二声钟响后离港。这条校订尚未用于旧稿。</p></div>`}
     </div></div>`;
 }
-function versionMenu() {
-  const current = state.scene === 'main';
+function draftRevisions() {
   const revisions = new Set(state.draft === 'lin' ? [2, 1] : [1]);
   state.edits.forEach((_, key) => { const [id, draft, revision] = key.split('/'); if (id === state.scene && draft === state.draft) revisions.add(Number(revision)); });
-  const revisionOptions = [...revisions].sort((left, right) => right - left);
+  return [...revisions].sort((left, right) => right - left);
+}
+function versionMenu() {
+  const current = state.scene === 'main';
+  const revisionOptions = draftRevisions();
   $('#version-menu').innerHTML = current ? `<h2>这幕的三份讲法</h2>${[['lin', fullTitle], ['captain', '船长的讲法'], ['shore', '岸上人的讲法']].map(([key, title]) => `<button data-action="draft" data-value="${key}" ${state.draft === key ? 'aria-current="true"' : ''}>${icon(state.draft === key ? 'check' : 'file')}<span>${title}<small>${key === state.adopted.draft ? `章节采用修订 ${state.adopted.revision}` : '候选稿'}${key === 'lin' ? ' · 共 2 次修订' : ' · 修订 1'}</small></span></button>`).join('')}<div class="menu-divider"></div><h2>${shortDraftTitle()}的修订</h2>${revisionOptions.map(revision => `<button data-action="revision" data-value="${revision}" ${state.revision === revision ? 'aria-current="true"' : ''}>${icon(revision === state.revision ? 'check' : 'history')}<span>修订 ${revision}<small>${revision >= 3 ? '此页暂存的样例修订' : revision === 1 && state.adopted.draft === state.draft && state.adopted.revision === 1 ? '本章采用 · 固定版本' : revision === 2 ? '最新候选 · 改写登船动作' : '固定版本'}</small></span></button>`).join('')}<div class="menu-divider"></div><button data-action="adopt" ${isAdopted() ? 'disabled' : ''}>${icon('check')}<span>${isAdopted() ? '此版已被本章采用' : '在样例中采用当前版本'}</span></button>` : `<h2>${escapeHtml(draftTitle())}</h2><button data-action="dismiss-menu">${icon('check')}<span>修订 ${state.scene === 'diary' ? 2 : 1}<small>${escapeHtml(scene().meta)}</small></span></button>`;
 }
 function showMenu(menuId, trigger) {
@@ -398,10 +408,11 @@ document.addEventListener('click', event => {
     target() { closeMenus(); state.comparison = false; if (!$('#target-paragraph')) render(); jumpToTarget(); },
     edit() { savePosition(); state.editing = true; state.comparison = false; render(); $('#edit-area').focus({ preventScroll: true }); },
     'save-edit'() {
-      state.edits.set(editKey(), $('#edit-area').value);
+      state.buffers.set(editKey(), $('#edit-area').value);
       if (state.conflict) { render(); $('.reading-scroll').scrollTop = 0; return; }
       const text = $('#edit-area').value;
-      state.revision = Math.max(state.revision + 1, 3);
+      state.buffers.delete(editKey());
+      state.revision = Math.max(2, state.revision, ...draftRevisions()) + 1;
       state.edits.set(editKey(), text);
       state.editing = false;
       render();

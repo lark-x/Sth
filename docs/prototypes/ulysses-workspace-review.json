@@ -49,6 +49,48 @@
     "Chromium 同一 fragment 的 goto 没有重新加载页面，鲜活页状态与预期的新深链入口不同。验收 helper 对新访问明确 reload，同时保留真实 hash 导航断言，完整重跑通过。",
     "本任务没有遇到浏览器进程原生退出。初次及中间 manifest 在截图目录中保留，正式交付以 manifest.json 为准。"
   ],
+  "followupReview": {
+    "baseCommit": "8f2f82a5924f61f0b0c4ade18aa80cc3dddbb841",
+    "scope": "主代理独立评审回派的 P1a、P1b、P2 三项状态缺陷。实际修改 app.js、verify.mjs 和本记录。",
+    "findingsAndFixes": [
+      {
+        "id": "P1a",
+        "before": "桌面保持依据打开并切至修订 2，toolbar 与正文已是修订 2，依据标题仍显示修订 1 和旧的确认记录。新 toolbar 按钮的 aria-expanded 也回到 false。",
+        "after": "读稿重绘时刷新已打开的依据内容，依据改为所选修订对应的内容或缺失状态。同步新按钮的展开状态与关闭后的返回焦点。",
+        "assertions": "面板不关闭，修订 1→2→1 与船长稿件切换后核对标题、正文、依据内容、aria-expanded，关闭后返回当前按钮。"
+      },
+      {
+        "id": "P1b",
+        "before": "修订 1 编辑目标句为独立审查标记并暂存修订 3 后，返回修订 1 仍出现标记。输入与保存均先把文本写入原修订的 edits key。",
+        "after": "未提交的编辑保存在独立 buffers，正文读取已保存的固定修订。暂存时分配当前稿件尚未使用的新修订号，消费对应 buffer，保留旧修订正文与章节采用。",
+        "assertions": "编辑中切换修订保留未提交文字，暂存修订 3 后修订 1 正文及采用保持原值，修订 2 正文不含标记，再从修订 1 暂存得到修订 4 且修订 3 内容可完整读回。"
+      },
+      {
+        "id": "P2",
+        "before": "从目标段进入角色后返回，detailReturn 缺少 target，目标阅读的底部空间被移除，恢复 scroll 被浏览器截短。Chromium 1280 为 465→205，目标段 top 183.84375→443.84375，768 为 589→198。",
+        "after": "返回记录同时保存 target 与既有场景、稿件、修订、范围、scroll。先重建完整阅读布局，再还原滚动与焦点。",
+        "assertions": "Chromium 与 WebKit 在 1280、768 对角色和资料两个往返分别核对正文、修订、target 布局、scroll、目标段 top、scrollHeight 和焦点。Chromium 1280 为 465→465，top 183.84375→183.84375，768 为 589→589。"
+      }
+    ],
+    "red": {
+      "command": "node docs/prototypes/ulysses-workspace-verify.mjs --regressions-only --run=p1-review-red",
+      "result": "修改 app.js 之前新增精准回归，两个引擎共 8 项均在预期断言失败，18 张前后路径截图。",
+      "manifest": "frontend/.artifacts/prototype-20261128/p1-review-red/manifest.json"
+    },
+    "green": {
+      "command": "node docs/prototypes/ulysses-workspace-verify.mjs --regressions-only --run=p1-review-green",
+      "result": "精准回归 8/8 通过。",
+      "manifest": "frontend/.artifacts/prototype-20261128/p1-review-green/manifest.json"
+    },
+    "final": {
+      "command": "node docs/prototypes/ulysses-workspace-verify.mjs --run=p1-review-final",
+      "result": "既定四宽度 Chromium/WebKit 8/8 加精准回归 8/8，共 16/16 通过，208 张截图，页面错误 0，外网请求 0。语法检查与 git diff --check 通过。",
+      "manifest": "frontend/.artifacts/prototype-20261128/p1-review-final/manifest.json",
+      "visualReview": "实现者已亲看修前和修后依据切版、旧修订正文、1280/768 返回位置，以及本轮 390 Chromium 和 320 WebKit 普通读稿截图。",
+      "history": "本轮使用只创建一次的新运行子目录，已有截图、原 manifest 与失败历史均保留。",
+      "reviewBoundary": "等待原 Reviewer 独立复核本轮三个修正。"
+    }
+  },
   "limits": [
     "所有保存、采用、编辑和冲突恢复均为本页交互样例。正式 Vue/API/数据库行为未在此任务实施。",
     "系统字体的可用性取决于设备。当前 CDP 证据来自本机 Chromium，WebKit 图已检查，真实 iOS/WKWebView 设备仍待后续阶段。"
