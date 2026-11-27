@@ -335,6 +335,7 @@ for (const [name, viewport] of [['desktop', desktop], ['mobile', mobile]]) {
   test(`${name}: actual Vue shell offers both normal Hermes flows and preserves connection navigation`, { timeout }, async t => {
     const { page, origin, backend } = await fixture(t, { viewport, shell: true });
     await page.goto('/');
+    if (viewport.width < 640) await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
     await page.getByRole('navigation', { name: '应用设置', exact: true }).getByRole('link', { name: '设置', exact: true }).click();
     await page.getByRole('heading', { level: 1, name: '连接设置', exact: true }).waitFor();
     assert.equal(await page.locator('#app .sth-app').count(), 1);

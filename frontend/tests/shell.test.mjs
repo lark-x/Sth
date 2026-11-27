@@ -183,7 +183,7 @@ test('shell dispatches exact migration routes and keeps unknown subroutes on the
   for (const path of ['/create', '/projects']) {
     await page.goto(path);
     await page.locator('.manuscript-frame').waitFor();
-    assert.equal(await page.getByRole('link', { name: '作品', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.getByRole('link', { name: '全部文稿', exact: true }).getAttribute('aria-current'), 'page');
     await assertFitsViewport(page);
   }
   for (const path of ['/workspace']) {

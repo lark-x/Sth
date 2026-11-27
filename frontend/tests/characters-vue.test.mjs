@@ -111,7 +111,10 @@ async function fixture(t) {
         server.middlewares.use(async (req, res, next) => {
           if (req.method !== 'GET' || !/^\/(?:characters|diaries|sources|scenes|drafts|workspace|__characters_outside)(?:\/|\?|$)/.test(req.url)) return next();
           try {
-            const script = new URL(req.url, 'http://localhost').searchParams.has('__characters_shell') ? '/frontend/main.ts' : entry;
+            const requestedShell = new URL(req.url, 'http://localhost').searchParams.has('__characters_shell');
+            if (requestedShell) res.setHeader('Set-Cookie', 'sth-characters-shell=1; Path=/; SameSite=Strict');
+            const shell = requestedShell || /(?:^|;\s*)sth-characters-shell=1(?:;|$)/.test(req.headers.cookie ?? '');
+            const script = shell ? '/frontend/main.ts' : entry;
             const html = await server.transformIndexHtml(req.url, `<!doctype html><html lang="zh-CN"><head>
               <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
               <link rel="stylesheet" href="/web/assets/notebook.css"><title>角色测试</title></head>
@@ -184,8 +187,10 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
   for (const [size, viewport] of [['desktop', desktop], ['phone', phone]]) {
     await t.test(`${size} uses the delivered matcher through the current real shell`, async t => {
       const page = await open(t, origin, '/characters?__characters_shell=1', viewport);
+      if (size === 'phone') await click(page, '打开资料库导航');
       const navigation = page.getByRole('navigation', { name: '主导航' });
       assert.equal(await link(navigation, '角色').getAttribute('aria-current'), 'page');
+      if (size === 'phone') await click(page, '关闭');
       assert.equal(await page.locator('.legacy-route').count(), 0);
       await link(page, '新建角色').click();
       await editorReady(page);
@@ -206,6 +211,8 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
       assert.equal((await invoke('character.read', { characterId: idAt(page) })).revision, 2);
       await page.reload();
       await page.getByText('从正常导航保存的新设定。', { exact: true }).waitFor();
+      assert.equal(await page.locator('#app .sth-mobile-toolbar').count(), 1, 'reload retains the actual delivered shell');
+      if (size === 'phone') await click(page, '打开资料库导航');
       await link(navigation, '角色').click();
       await ready(page);
       await page.getByRole('heading', { name: `${size} shell 角色`, exact: true }).waitFor();
