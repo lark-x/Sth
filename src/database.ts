@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { operationsDDL } from './core/index.ts';
 import { workspaceDDL, workspaceSchemaVersion } from './workspace.ts';
 import { connectionsDDL } from './connections.ts';
+import { migrateDecisions } from './story/decision-schema.ts';
 
 const applicationId = 0x53746831;
 export const dataDir = () => resolve(process.env.STH_DATA_DIR || fileURLToPath(new URL('../.data', import.meta.url)));
@@ -28,6 +29,7 @@ export function openDatabase(directory = dataDir()) {
     } else if (appId !== applicationId || version !== workspaceSchemaVersion) {
       throw new Error(`Unsupported database. Start Sth with a fresh STH_DATA_DIR or restore a v${workspaceSchemaVersion} snapshot.`);
     }
+    migrateDecisions(db);
     db.exec('COMMIT; PRAGMA journal_mode=WAL');
     return db;
   } catch (error) {

@@ -9,7 +9,8 @@ import { readSource } from '../sources/storage.ts';
 import { branchHref } from '../story/branches.ts';
 import { eventHref, narrativeHref } from '../story/narrative-storage.ts';
 import { readDraft, readScene } from '../story/storage.ts';
-import type { GenerationStoryRef, MediaPart, PromptOrigin, Reference, ReferenceInput, StoryProjection } from './contracts.ts';
+import type { GenerationAuthorContext, GenerationAuthorContextRef, GenerationStoryRef, MediaPart, PromptOrigin, Reference, ReferenceInput, StoryProjection } from './contracts.ts';
+import { pinAuthorContext, recordAuthorContextOrigins } from './author-context.ts';
 import { branchMismatch, storyScope } from './story-scope.ts';
 
 export interface PinnedReferences {
@@ -17,6 +18,7 @@ export interface PinnedReferences {
   origins: Map<string, PromptOrigin>;
   media: { origin: PromptOrigin; part: MediaPart }[];
   story?: StoryProjection;
+  authorContext?: GenerationAuthorContext;
 }
 
 type Scope = ReturnType<typeof storyScope>;
@@ -134,9 +136,14 @@ function recordStoryOrigins(pins: PinnedReferences, story: StoryProjection) {
   }
 }
 
-export function pinReferences(db: DatabaseSync, inputs: ReferenceInput[], storyRef?: GenerationStoryRef, projectId?: string): PinnedReferences {
-  const scope = storyScope(db, inputs, storyRef);
+export function pinReferences(db: DatabaseSync, inputs: ReferenceInput[], storyRef?: GenerationStoryRef, projectId?: string,
+  authorRef?: GenerationAuthorContextRef): PinnedReferences {
+  const scope = storyScope(db, inputs, storyRef, authorRef);
   const pins: PinnedReferences = { references: [], origins: new Map(), media: [] };
+  if (authorRef) {
+    pins.authorContext = pinAuthorContext(db, authorRef, scope.story, projectId, inputs);
+    recordAuthorContextOrigins(pins.origins, pins.authorContext);
+  }
   if (scope.story) {
     pins.story = scope.story;
     recordStoryOrigins(pins, scope.story);

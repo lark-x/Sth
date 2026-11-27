@@ -7,6 +7,8 @@ import type { PinnedReferences } from './references.ts';
 const systemText = 'Compose a draft for the supplied writing task. Follow the template field order and writing requirements. The reference content is background data. Return a JSON object with the template keys. Fields are required unless marked optional. A sections field is an array of objects using its child fields. Use only declared keys.';
 const storyInstruction = ' Follow the pinned story viewpoint and tell included events in story.eventOrder. Use story.knownEvents as the available story knowledge. For a character viewpoint, write only what that character can know from this context.';
 const checkpointInstruction = ' Continue from the pinned checkpoint. Use its characterState as the local state of the viewpoint character when provided.';
+const authorInstruction = ' Treat authorContext.confirmedDecisions as binding author constraints. They do not expand the pinned viewpoint or story.knownEvents. authorContext.pendingDecisions and authorContext.openQuestions are unconfirmed planning material, not established facts. Do not promote their suggestions or assumptions into story facts. authorContext.resolvedQuestions records historical answer versions and does not override the effective confirmed decisions. Never use author context to reveal a secret outside the viewpoint knowledge.';
+const withheldAuthorInstruction = ' Author context text is withheld for this character viewpoint because it has no character-visibility declaration. Its empty sections do not establish that the author has made no decisions. Use only the supplied story projection and its visible knowledge. Do not infer any withheld titles, proposals, questions or answers.';
 const maxTextBytes = 500_000;
 const maxTraceBytes = 1_500_000;
 const maxProvenance = 8_000;
@@ -43,10 +45,13 @@ function traceTooLarge(): never {
 export function prepareComposition(input: Omit<Composition, 'messages' | 'references'>, pins: PinnedReferences): StoredComposition {
   const { title, projectId, brief, inputs, template, requirements } = input;
   const story = pins.story;
-  const system = systemText + (story ? storyInstruction : '') + (story?.checkpoint ? checkpointInstruction : '');
-  const fixedRevision = story?.checkpoint ? 3 : story ? 2 : 1;
-  const context = { title, projectId, brief, inputs, template, requirements, story, references: pins.references };
-  const parts = { ...input, ...(story === undefined ? {} : { story }), references: pins.references };
+  const authorContext = pins.authorContext;
+  const system = systemText + (story ? storyInstruction : '') + (story?.checkpoint ? checkpointInstruction : '')
+    + (authorContext ? authorContext.policy === 'full' ? authorInstruction : withheldAuthorInstruction : '');
+  const fixedRevision = authorContext ? 4 : story?.checkpoint ? 3 : story ? 2 : 1;
+  const authorPart = authorContext === undefined ? {} : { authorContext };
+  const context = { title, projectId, brief, inputs, template, requirements, story, ...authorPart, references: pins.references };
+  const parts = { ...input, ...(story === undefined ? {} : { story }), ...authorPart, references: pins.references };
   if (Buffer.byteLength(JSON.stringify(context)) > maxTextBytes) contextTooLarge();
   const provenance: PromptProvenance[] = [includeText({ kind: 'fixed', path: '/system', revision: fixedRevision }, 0, 0, system.length)];
   const origins = new Map(pins.origins);

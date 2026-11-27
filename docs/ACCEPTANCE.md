@@ -1,6 +1,23 @@
-# Sth 本机交付验收 · 2026-11-24
+# Sth 本机交付验收
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
+
+## 2026-11-27 · 三宿主创作工作区
+
+9322 当前运行 `sth-local:authoring-ae25ac0`，对应代码 `ae25ac0c578af0a2cd6c218f438f80b4eed2ec0f`。日记编辑可在同一标签页刷新后恢复未交稿的内容与待确认的保存请求。作品的「创作决定」提供「按此版准备写作」，可从作者选定的历史版本选择模板、写下要求并查看组稿出处。[打开北港的创作决定](http://127.0.0.1:9322/author-context?projectId=14d8d4f9-6cf7-449d-bec0-c2ff6e69029f&revision=0)
+
+- 干净检出的候选版本通过 141 项浏览器测试，单独通过移动 WebKit 编辑、保存和历史导航。核心套件常规 126 项通过，另在隔离库启用第 127 项，使用实际 ComfyUI 生成 768×512 图片并从数据库备份恢复相同字节。
+- 升级前快照 `release-ae25ac0-20261127-152918/pre-upgrade.sqlite` 的 SHA-256 为 `e4ef3275115ece8572861dbbdd8a2fb5f3688d1e87096c62a1345a43b334ed1a`。SQLite 完整性和外键检查通过。新容器继续使用原卷和全部 16 项服务配置。
+- 在运行实例的桌面 Chromium 和移动 WebKit 上重开首页、带版本的温妮莎日记与北港场景、场景插画、连接设置和北港创作决定。核对 113 项可发现操作、固定上下文的写作入口与原插画字节。新会话独立读取两版日记和真实宿主测试见[迭代记录](WORKSPACE_ITERATION.md)。
+- 在隔离工作区 `decision-72f9836677`，网页作者先后确认第 2、4 版决定。两次独立 Hermes 会话按指定版本查证，改判后的会话同时重建两个版本及其当时引用的原文。MCP 回执、服务端回执和模型回读内容均通过核对。另一场对最终 Windows x64 安装包的空 profile 验收也通过全部 10 项检查。
+
+### 同日首版发布
+
+`feat/vue-authoring-and-hosts` 的代码提交 `2f596583438ea8f553f4478a33e2333d640356eb` 已发布至 9322。运行镜像为 `sth-local:authoring-2f59658`，健康检查通过。数据卷沿用 `sth-authoring_workspace`，发布前后 16 项原服务环境设置一致。发布前一致性快照的 SHA-256 为 `9e5e847675bc41abbd6ff17d8873ca2d170ebec213a171c47c3c8beef4b19d40`，旧镜像为 `sth-local:research-citations-20261124`。
+
+- 干净克隆的 123 项浏览器测试全部通过。核心套件 126 项通过，按配置跳过的 1 项 ComfyUI 实机用例单独启用后也通过，生成的 768×512 PNG 在 SQLite 快照中逐字节恢复。移动 WebKit 日记编辑、重开和历史导航另行通过。
+- 上线后在 Chromium 桌面和 WebKit 手机参数下重新打开首页、指定版本的温妮莎日记与北港场景、媒体详情、连接设置。运行实例暴露 113 项操作。归档图片从正式实例下载后的 SHA-256 为 `de58cf3e81adbe783a0bd57ffff3b63c46efb4520ce1af884d133c8928222c42`。
+- 原生 Hermes 完整插件安装、新会话读回、Hermes 写入与手机网页修订后 Codex 读回两版、Antigravity 实际模型修订和独立会话读回，分别在隔离数据上验收。真实 iPhone Safari、WKWebView 以及真机 QQ/微信收发仍需按具体设备检查。[详细迭代记录](WORKSPACE_ITERATION.md) · [iOS 接入与设备验收](IOS_EMBEDDING.md)
 
 ## 资料研究与多视角叙事
 

@@ -35,7 +35,7 @@ const settings = page => page.getByRole('navigation', { name: '应用设置' }).
 
 async function openProjects(page) {
   await nav(page, '创作').click();
-  await page.getByRole('navigation', { name: '创作工作区' }).getByRole('link', { name: '作品', exact: true }).click();
+  await page.getByRole('navigation', { name: '创作入口' }).getByRole('link', { name: '作品', exact: true }).click();
 }
 
 function row(page, title) {
@@ -96,6 +96,7 @@ async function expectDiaryPage(page, diary) {
 async function createPersonalDiary(page) {
   await page.getByRole('link', { name: '写日记', exact: true }).click();
   await heading(page, '写日记').waitFor();
+  await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
   assert.equal(await projectField(page).inputValue(), '');
   assert.equal(await page.getByRole('combobox', { name: '叙述者', exact: true }).inputValue(), '');
   await fillDiary(page, firstDiary);
@@ -114,11 +115,11 @@ async function createScopedDiary(page, api, viewport) {
   const persona = '负责夜间巡逻，习惯把观察写进手记。';
 
   await openProjects(page);
-  await page.getByText('还没有项目', { exact: true }).waitFor();
-  await page.getByRole('link', { name: '新建项目', exact: true }).click();
-  await page.getByRole('textbox', { name: '项目名称', exact: true }).fill(title);
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
-  await row(page, title).waitFor();
+  await page.getByRole('heading', { name: '开始你的第一部作品', exact: true }).waitFor();
+  await page.getByRole('link', { name: '新建作品', exact: true }).first().click();
+  await page.getByRole('textbox', { name: '作品名称（必填）', exact: true }).fill(title);
+  await page.getByRole('button', { name: '创建作品', exact: true }).click();
+  await page.getByRole('article', { name: title, exact: true }).waitFor();
   const { items: projects } = await api.invoke('project.list', {});
   assert.equal(projects.length, 1);
   const [{ projectId }] = projects;
@@ -138,6 +139,7 @@ async function createScopedDiary(page, api, viewport) {
 
   await page.getByRole('link', { name: '写角色日记', exact: true }).click();
   await heading(page, '写日记').waitFor();
+  await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
   assert.equal(await projectField(page).inputValue(), projectId);
   assert.equal(await page.getByRole('combobox', { name: '叙述者', exact: true }).inputValue(), characterId);
   await assertFitsViewport(page);
@@ -156,7 +158,7 @@ async function createScopedDiary(page, api, viewport) {
   await screenshot(page, viewport, 'character-diary');
 
   await openProjects(page);
-  await page.locator('.project-row').filter({ hasText: title }).getByRole('link', { name: '日记', exact: true }).click();
+  await page.getByRole('article', { name: title, exact: true }).getByRole('navigation', { name: '作品内容' }).getByRole('link', { name: '日记', exact: true }).click();
   await row(page, characterDiary.title).waitFor();
   assert.equal(await projectField(page).inputValue(), projectId);
   assert.equal(await row(page, revisedDiary.title).count(), 0, 'project view excludes the personal diary');

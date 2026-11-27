@@ -87,6 +87,7 @@ test('workspace phase 1: create and search sources, revise, and follow exact dia
   await goto(page, '/diaries/new', '写日记');
   await fill(page, '标题', '最后一班船');
   await fill(page, '正文', '我在钟响前登船。');
+  await page.locator('summary').filter({ hasText: /^资料引用/ }).click();
   await click(page, '添加资料引用');
   await choose(page, '资料', '北港渡船 · 第 1 版');
   const citationPreview = page.getByRole('link', { name: '查看所选版本原文', exact: true });
@@ -433,6 +434,7 @@ test('research: disambiguate a repeated excerpt and keep historical evidence thr
   assert.deepEqual(card.entries[0].blocks[0].range, { start: draftStart, end: draftText.length });
   assert.equal(card.entries[0].blocks[1].id, judgmentId);
   await clickLink(page, '候选稿 · 第 1 版');
+  await heading(page, '两次喊话').waitFor();
   assert.equal(await page.locator('#passage-body mark').textContent(), '等一下。');
   await assertFitsViewport(page);
   await screenshot(page, 'narrow', 'exact-passage');
@@ -558,6 +560,7 @@ test('tasks: consume ordered cross-kind activity and keep pagination across relo
   const expected = await invoke('tasks.list', { limit: 20, offset: 0 });
   await goto(page, '/jobs', '任务');
   const links = page.locator('.task-row h2 a');
+  await links.first().waitFor();
   assert.deepEqual(await links.evaluateAll(items => items.map(item => item.getAttribute('href'))), expected.items.map(item => item.href));
   await clickLink(page, '下一页');
   await page.waitForURL(`**/jobs?offset=${expected.nextOffset}`);
@@ -568,6 +571,7 @@ test('tasks: consume ordered cross-kind activity and keep pagination across relo
   await clickLink(page, '提示词组成');
   await heading(page, '提示词组成').waitFor();
   await goto(page, '/tasks', '任务');
+  await links.first().waitFor();
   await assertFitsViewport(page);
   await screenshot(page, 'narrow', 'task-activity');
 });
