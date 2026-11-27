@@ -463,6 +463,9 @@ def run(origin, directory, sources, args):
     raw = lambda path, data=None, headers=None, expected=200: http(origin + path, data, headers, local=True, expected=expected)
     web = lambda path, data=None: raw(path, data, owner)
     health = raw('/api/health')
+    if args.mode == 'host-continuity':
+        run_continuity(origin, directory, raw, web, health, args)
+        return
     operations = {item['id'] for item in web('/api/web/catalog?view=index')['operations']}
     readback = args.mode == 'prompt-readback'
     required = {PROMPT_PAGE, 'generations.get', 'generations.result.get'} if readback else WRITES | READS
@@ -478,9 +481,28 @@ def run(origin, directory, sources, args):
         run_writing(origin, directory, raw, web, report, sources, args)
 
 
+def run_continuity(origin, directory, raw, web, health, args):
+    run_id = f'diary-{uuid4().hex[:10]}'
+    report = {'runId': run_id, 'schemaVersion': health['schemaVersion']}
+    with paired_acceptance(origin, directory, raw, web, report) as (binding, auth):
+        config = hermes_config(args.hermes_home, args.provider, args.model, binding)
+        prompt = (f'在我的 Sth 里新写一篇今天的个人日记，标题用《码头散步 {run_id}》，'
+                  '正文用一句话写下你想象的一个具体声音。直接保存，并告诉我链接。')
+        session = hermes_turn(directory, config, args.model, args.provider, 'diary', prompt)
+        entries = [r for r in session['receipts'] if r['operationId'] == 'diary.create']
+        assert len(entries) == 1, 'Expected one persisted personal diary'
+        replay_receipts(raw, auth, entries)
+        diary = entries[0]['result']
+        assert diary['revision'] == 1 and diary['body'] and not diary.get('projectId')
+        report.update(hermes=session_summary(session), diaryId=diary['noteId'], hermesWriteStep=entries[0]['stepId'])
+        subprocess.run([shutil.which('node'), str(ROOT / 'scripts/accept-mobile-codex.mjs'),
+                        origin, str(directory), diary['noteId']], cwd=ROOT, check=True, timeout=310)
+        report['mobileAndCodex'] = json.loads((directory / 'continuity.json').read_text(encoding='utf-8'))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['preflight', 'isolated', 'preview', 'prompt-readback'])
+    parser.add_argument('mode', choices=['preflight', 'isolated', 'preview', 'prompt-readback', 'host-continuity'])
     parser.add_argument('--hermes-home', type=Path, default=Path(os.environ.get('HERMES_HOME') or '~/.hermes').expanduser())
     parser.add_argument('--model', default=MODEL)
     parser.add_argument('--provider', default='magpie')
@@ -499,7 +521,7 @@ def main():
         return
     if args.reference_report:
         parser.error('--reference-report requires prompt-readback')
-    sources = fetch_sources()
+    sources = None if args.mode == 'host-continuity' else fetch_sources()
     if args.mode == 'preflight':
         run('http://127.0.0.1:9322', None, sources, args)
         return
