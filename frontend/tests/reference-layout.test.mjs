@@ -177,6 +177,207 @@ test('native reference hrefs retain manuscript return context when copied or ope
   }
 });
 
+test('source child native hrefs and read-error entries preserve the verified manuscript return', { timeout: 90_000 }, async t => {
+  const output = resolve(artifacts, '..', 'child-hrefs-errors');
+  await mkdir(output, { recursive: true });
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  const report = { status: 'running', build: workspace.capturedBuild, cases: [], checks: [], pageErrors: [] };
+  let browser;
+  try {
+    const body = '🚢 第一处：末班十点。\n第二处：末班十点。';
+    const excerpt = '末班十点';
+    const range = { start: body.lastIndexOf(excerpt), end: body.lastIndexOf(excerpt) + excerpt.length };
+    const source = await workspace.invoke('source.create', { title: '子页面链接原文', kind: 'excerpt', body });
+    const pin = { sourceId: source.sourceId, revision: 1, excerpt, range };
+    const character = await workspace.invoke('character.create', { name: '资料影响中的角色', persona: '保留这条旧通知。', entries: [
+      { label: '第二处通知', blocks: [{ type: 'reference', kind: 'source', id: source.sourceId, revision: 1, excerpt, range }] },
+    ] });
+    for (let index = 0; index < 21; index++) await workspace.invoke('diary.create', { title: `分页引用 ${index}`, body: '等在栈桥。', diaryDate: '2026-11-28', sourcePins: [pin] });
+    const scene = await workspace.invoke('scene.create', { title: '子页面返回的原稿场景', sources: [pin] });
+    const originalBody = '她在北岸听见第三声钟响，仍旧等在栈桥。';
+    const draft = await workspace.invoke('draft.create', { sceneId: scene.sceneId, sceneRevision: 1, title: '子页面需返回的旧稿', body: originalBody });
+    await workspace.invoke('draft.revise', { draftId: draft.draftId, expectedRevision: 1, body: '新版已经登船。' });
+    const original = `/drafts/${draft.draftId}?revision=1&start=3&end=12#passage-body`;
+    const sourcePath = `/sources/${source.sourceId}`;
+    const selected = `${sourcePath}?revision=1&start=${range.start}&end=${range.end}`;
+    const impact = `${selected}&action=impact`;
+    const contextual = path => {
+      const url = new URL(path, workspace.origin);
+      url.searchParams.set('returnTo', original);
+      return url.pathname + url.search + url.hash;
+    };
+    report.fixture = { sourcePath, original, range, characterId: character.characterId };
+    browser = await chromium.launch();
+    const context = await browser.newContext({ baseURL: workspace.origin, viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
+    context.on('page', page => {
+      page.setDefaultTimeout(8_000);
+      page.on('pageerror', error => report.pageErrors.push(error.message));
+    });
+    const page = await context.newPage();
+    const impactReady = target => target.locator('[aria-label="资料影响"][aria-busy="false"]').waitFor();
+    async function copied(anchor, expected, domain = 'source') {
+      const href = await anchor.getAttribute('href');
+      assert.equal(href, contextual(expected), 'the rendered native href preserves the destination and verified context');
+      assert.deepEqual(new URL(href, workspace.origin).searchParams.getAll('returnTo'), [original]);
+      const opened = await context.newPage();
+      try {
+        await opened.goto(href);
+        await settled(opened, domain);
+        assert.equal(opened.url(), new URL(href, workspace.origin).href);
+        assert.deepEqual(new URL(opened.url()).searchParams.getAll('returnTo'), [original]);
+        assert.equal(await link(opened, '返回原稿').getAttribute('href'), original);
+        report.cases.push({ href, copiedTo: opened.url() });
+      } finally { await opened.close(); }
+    }
+    async function copiedReturn(anchor) {
+      assert.equal(await anchor.count(), 1, 'the page exposes exactly one native manuscript return link');
+      const href = await anchor.getAttribute('href');
+      assert.equal(href, original);
+      const opened = await context.newPage();
+      try {
+        await opened.goto(href);
+        await opened.locator('#passage-body').waitFor();
+        const url = new URL(opened.url());
+        assert.equal(url.pathname + url.search + url.hash, original);
+        assert.equal(await opened.locator('#passage-body').textContent(), originalBody);
+      } finally { await opened.close(); }
+    }
+    async function check(name, run) {
+      const result = { name, passed: false };
+      report.checks.push(result);
+      await t.test(name, async () => { await run(); result.passed = true; });
+    }
+    for (const [name, path, destination] of [
+      ['new source editor return', '/sources/new', '/sources'],
+      ['revision editor return', `${sourcePath}?action=revise`, sourcePath],
+    ]) await check(name, async () => {
+      await page.goto(contextual(path));
+      await settled(page, 'source');
+      await copied(link(page, '返回'), destination);
+    });
+    await check('completed save recovered after unmount has a contextual native result link', async () => {
+      await page.goto(contextual('/sources/new'));
+      await settled(page, 'source');
+      let received;
+      let release;
+      const seen = new Promise(resolve => { received = resolve; });
+      const gate = new Promise(resolve => { release = resolve; });
+      await page.route('**/api/web/invoke', async route => {
+        if (route.request().postDataJSON().operationId !== 'source.create') return route.continue();
+        const response = await route.fetch();
+        received();
+        await gate;
+        await route.fulfill({ response });
+      });
+      try {
+        await page.getByLabel('标题', { exact: true }).fill('已保存结果的真实链接');
+        await page.getByLabel('正文', { exact: true }).fill('保存结果只引用这份新资料。');
+        await page.getByRole('button', { name: '新建资料', exact: true }).click();
+        await seen;
+        await link(page, '返回').click();
+        await settled(page, 'source');
+        const response = page.waitForResponse(response => response.url().endsWith('/api/web/invoke') && response.request().postDataJSON().operationId === 'source.create');
+        release();
+        await response;
+        await page.waitForFunction(() => JSON.parse(sessionStorage.getItem('sth:sources:draft:v1:new:') ?? 'null')?.saved);
+        const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('sth:sources:draft:v1:new:')).saved);
+        await page.goto(contextual('/sources/new'));
+        await settled(page, 'source');
+        await copied(link(page, '查看已保存资料'), saved);
+      } finally { release(); await page.unroute('**/api/web/invoke'); }
+    });
+    await check('impact next and previous native hrefs retain submitted filters, revision and range', async () => {
+      const filtered = `${impact}&kind=diary&currentOnly=1`;
+      await page.goto(contextual(filtered));
+      await impactReady(page);
+      assert.equal(await page.locator('[aria-label="资料影响"] h2 a').count(), 20);
+      await page.getByLabel('资源类型', { exact: true }).selectOption('character');
+      await copied(link(page, '下一页'), `${filtered}&offset=20`);
+      await page.goto(contextual(`${filtered}&offset=20`));
+      await impactReady(page);
+      assert.equal(await page.locator('[aria-label="资料影响"] h2 a').count(), 1);
+      await copied(link(page, '上一页'), `${filtered}&offset=0`);
+    });
+    await check('impact resource anchors carry context only to auxiliary pages', async () => {
+      await page.goto(contextual(impact));
+      await impactReady(page);
+      await copied(link(page, character.name), `/characters/${character.characterId}?revision=1`, 'character');
+      await page.goto(contextual(`${impact}&kind=draft`));
+      await impactReady(page);
+      assert.deepEqual(await link(page, '场景 · 第 1 版').evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute('href'))),
+        Array(2).fill(`/scenes/${scene.sceneId}?revision=1`));
+    });
+    await check('impact native via rendering applies the verified contextual function', async () => {
+      // Isolate the supported character-via rendering branch; this is a link contract fixture, not a persisted relation.
+      await page.route('**/api/web/invoke', async route => {
+        if (route.request().postDataJSON().operationId !== 'source.impact') return route.continue();
+        const response = await route.fetch();
+        const data = await response.json();
+        data.result.items[0].via = [{ kind: 'character', id: character.characterId, revision: 1 }];
+        await route.fulfill({ response, json: data });
+      });
+      try {
+        await page.goto(contextual(`${impact}&kind=character`));
+        await impactReady(page);
+        await copied(link(page, '角色 · 第 1 版'), `/characters/${character.characterId}?revision=1`, 'character');
+      } finally { await page.unroute('**/api/web/invoke'); }
+    });
+    for (const [domain, path, operation, listLabel, list] of [
+      ['source', selected, 'source.read', '返回资料', '/sources'],
+      ['character', `/characters/${character.characterId}?revision=1`, 'character.read', '返回角色', '/characters'],
+    ]) {
+      await check(`${domain} read errors expose a native manuscript return`, async () => {
+        for (const status of [403, 404, 503]) {
+          await page.route('**/api/web/invoke', route => route.request().postDataJSON().operationId === operation
+            ? route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unavailable' } }) }) : route.continue());
+          try {
+            await page.goto(contextual(path));
+            await page.getByRole('heading', { name: '页面暂时无法打开', exact: true }).waitFor();
+            await copiedReturn(link(page, '返回原稿'));
+            assert.equal(await link(page, listLabel).count(), 0);
+            if (status === 503) await page.screenshot({ path: resolve(output, `${domain}-read-error.png`), animations: 'disabled' });
+            report.cases.push({ domain, status, returnHref: original });
+          } finally { await page.unroute('**/api/web/invoke'); }
+        }
+      });
+      await check(`${domain} read errors retain the original list fallback for absent or invalid context`, async () => {
+        await page.route('**/api/web/invoke', route => route.request().postDataJSON().operationId === operation
+          ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unavailable' } }) }) : route.continue());
+        try {
+          for (const suffix of ['', `&returnTo=${encodeURIComponent('https://outside.test/drafts/id')}`, `&returnTo=${encodeURIComponent(original)}&returnTo=${encodeURIComponent(original)}`]) {
+            await page.goto(path + suffix);
+            await page.getByRole('heading', { name: '页面暂时无法打开', exact: true }).waitFor();
+            assert.equal(await link(page, '返回原稿').count(), 0);
+            assert.equal(await link(page, listLabel).getAttribute('href'), list);
+          }
+        } finally { await page.unroute('**/api/web/invoke'); }
+      });
+      await check(`${domain} list errors keep the existing toolbar return visible`, async () => {
+        await page.route('**/api/web/invoke', route => route.request().postDataJSON().operationId === operation.replace('.read', '.list')
+          ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unavailable' } }) }) : route.continue());
+        try {
+          await page.goto(contextual(list));
+          await settled(page, domain);
+          await page.getByRole('alert').first().waitFor();
+          assert.equal(await link(page, '返回原稿').isVisible(), true);
+          await copiedReturn(link(page, '返回原稿'));
+        } finally { await page.unroute('**/api/web/invoke'); }
+      });
+    }
+    assert.deepEqual(await workspace.inspectServedBundle(), report.build.bundle);
+    assert.deepEqual(report.pageErrors, []);
+    report.status = report.checks.length === 12 && report.checks.every(check => check.passed) ? 'passed' : 'failed';
+  } catch (error) {
+    report.status = 'failed';
+    report.error = error.stack;
+    throw error;
+  } finally {
+    await browser?.close();
+    await workspace.close();
+    await writeFile(resolve(output, 'manifest.json'), `${JSON.stringify(report, null, 2)}\n`);
+  }
+});
+
 async function expand(page, name) {
   const summary = page.locator('summary').filter({ hasText: new RegExp(`^${name}$`) });
   if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();

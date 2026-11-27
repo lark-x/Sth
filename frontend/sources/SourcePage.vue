@@ -235,7 +235,7 @@ onBeforeUnmount(() => controller.abort());
       <p role="alert">{{ error }}</p>
       <div class="sources-actions">
         <button class="sources-button" type="button" @click="load">重试</button
-        ><a :href="contextual('/sources')">返回资料</a>
+        ><a :href="returnTo || '/sources'">{{ returnTo ? '返回原稿' : '返回资料' }}</a>
       </div></template
     >
     <template v-else>
@@ -272,6 +272,7 @@ onBeforeUnmount(() => controller.abort());
         :source="source"
         :projects="projects"
         :url="url"
+        :contextual-href="contextual"
         @navigate="navigate"
       />
       <SourceAdoption
@@ -285,6 +286,7 @@ onBeforeUnmount(() => controller.abort());
         v-else-if="source && route.page === 'impact'"
         :source="source"
         :url="url"
+        :contextual-href="contextual"
         @navigate="navigate"
       />
       <template v-else-if="source">

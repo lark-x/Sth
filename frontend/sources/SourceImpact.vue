@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { errorText, href, integer, localHref, rangeFrom, read, resourceHref, resourceNames } from './api';
 import type { Impact, Source } from './api';
 
-const props = defineProps<{ source: Source; url: URL }>();
+const props = defineProps<{ source: Source; url: URL; contextualHref: (href: string) => string }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
 const controller = new AbortController();
 const loading = ref(true);
@@ -97,7 +97,7 @@ onBeforeUnmount(() => controller.abort());
       <ul v-if="items.length" class="sources-list">
         <li v-for="item in items" :key="`${item.kind}-${item.id}-${item.revision}-${item.sourceRevision}`">
           <h2>
-            <a :href="localHref(item.href)">{{ item.title }}</a>
+            <a :href="contextualHref(localHref(item.href))">{{ item.title }}</a>
           </h2>
           <p class="sources-muted">
             {{ resourceNames[item.kind]
@@ -109,7 +109,7 @@ onBeforeUnmount(() => controller.abort());
             经由
             <template v-for="(via, index) in item.via" :key="index"
               ><span v-if="index"> → </span
-              ><a :href="resourceHref(via.kind, via.id, via.revision)"
+              ><a :href="contextualHref(resourceHref(via.kind, via.id, via.revision))"
                 >{{ resourceNames[via.kind] }} · 第 {{ via.revision }} 版</a
               ></template
             >
@@ -118,8 +118,8 @@ onBeforeUnmount(() => controller.abort());
       </ul>
       <p v-else class="sources-empty">没有匹配的引用</p>
       <nav class="sources-actions" aria-label="资料影响分页">
-        <a v-if="offset" :href="paginationHref(Math.max(0, offset - 20))">上一页</a
-        ><a v-if="nextOffset !== undefined" :href="paginationHref(nextOffset)">下一页</a>
+        <a v-if="offset" :href="contextualHref(paginationHref(Math.max(0, offset - 20)))">上一页</a
+        ><a v-if="nextOffset !== undefined" :href="contextualHref(paginationHref(nextOffset))">下一页</a>
       </nav>
     </template>
   </section>

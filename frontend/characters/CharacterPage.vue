@@ -94,7 +94,7 @@ onScopeDispose(() => controller?.abort());
   <section :aria-busy="busy" aria-label="角色详情" @click="retainReturn">
     <p v-if="busy" role="status" class="characters-state">正在读取角色…</p>
     <div v-else-if="error" class="characters-state"><h1 tabindex="-1">页面暂时无法打开</h1>
-      <p role="alert">{{ error }}</p><div class="characters-actions"><button type="button" class="characters-button" @click="load">重试</button><a :href="contextual('/characters')">返回角色</a></div>
+      <p role="alert">{{ error }}</p><div class="characters-actions"><button type="button" class="characters-button" @click="load">重试</button><a :href="returnTo || '/characters'">{{ returnTo ? '返回原稿' : '返回角色' }}</a></div>
     </div>
     <template v-else>
       <header class="characters-heading characters-toolbar">

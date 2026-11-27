@@ -6,7 +6,7 @@ import { copy, dirty, forgetDraft, getDraft, persistDraft, valuesFor } from './d
 import type { SourceValues } from './drafts';
 import { useDraftWrite } from './useDraftWrite';
 
-const props = defineProps<{ source?: Source; projects: Project[]; url: URL }>();
+const props = defineProps<{ source?: Source; projects: Project[]; url: URL; contextualHref: (href: string) => string }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
 const key = props.source
   ? `revise:${props.source.sourceId}`
@@ -99,7 +99,7 @@ onBeforeUnmount(() => controller.abort());
 
 <template>
   <div v-if="draft.saved" role="status">
-    资料已保存。<a :href="draft.saved" @click="forgetDraft(key)">查看已保存资料</a>
+    资料已保存。<a :href="contextualHref(draft.saved)" @click="forgetDraft(key)">查看已保存资料</a>
   </div>
   <form
     v-else
@@ -195,7 +195,7 @@ onBeforeUnmount(() => controller.abort());
       <button class="sources-button sources-primary" type="submit" :disabled="draft.busy || draft.conflict">
         {{ draft.busy ? '正在保存…' : draft.call ? '重试同一次提交' : source ? '保存修订' : '新建资料' }}
       </button>
-      <a :href="source ? href(source.sourceId) : '/sources'">返回</a
+      <a :href="contextualHref(source ? href(source.sourceId) : '/sources')">返回</a
       ><button v-if="changed && !locked" class="sources-button" type="button" @click="discard">
         清除草稿
       </button>
