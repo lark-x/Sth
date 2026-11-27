@@ -2,9 +2,17 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { catalog, errorText, href, kinds, listAll, query, read } from './api';
 import type { Project, SourceKind, Summary } from './api';
+import { manuscriptReturn } from '../manuscript/return-link';
 
 const props = defineProps<{ url: URL }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
+const returnTo = manuscriptReturn(props.url);
+function contextual(path: string) {
+  if (!returnTo) return path;
+  const destination = new URL(path, props.url);
+  destination.searchParams.set('returnTo', returnTo);
+  return destination.pathname + destination.search;
+}
 const controller = new AbortController();
 const loading = ref(true);
 const error = ref('');
@@ -64,7 +72,7 @@ async function load() {
   }
 }
 function search() {
-  emit('navigate', query('/sources', { projectId: projectId.value, kind: kind.value, q: q.value.trim() }));
+  emit('navigate', contextual(query('/sources', { projectId: projectId.value, kind: kind.value, q: q.value.trim() })));
 }
 onMounted(() => {
   document.title = '资料 · Sth';
@@ -76,17 +84,20 @@ onBeforeUnmount(() => controller.abort());
 <template>
   <section class="sources-route" :aria-busy="loading" aria-label="资料">
     <header class="sources-heading">
+      <a v-if="returnTo" class="sources-back" :href="returnTo">返回原稿</a>
       <h1 tabindex="-1">资料</h1>
       <a
-        class="sources-button sources-primary"
-        :href="query('/sources/new', { projectId: url.searchParams.get('projectId') })"
+        class="sources-button"
+        :href="contextual(query('/sources/new', { projectId: url.searchParams.get('projectId') }))"
         >新建资料</a
       >
     </header>
-    <nav class="sources-tabs" aria-label="资料工作区">
-      <a href="/sources" aria-current="page">已归档资料</a><a href="/research">外部检索</a
+    <div class="sources-list-bar"><span class="sources-muted">{{ searchTerm ? `搜索「${searchTerm}」` : '已归档资料' }}<template v-if="url.searchParams.get('kind')"> · {{ kinds[url.searchParams.get('kind') as SourceKind] }}</template></span>
+    <details class="sources-disclosure sources-workspace"><summary>资料工作区</summary><nav class="sources-tabs" aria-label="资料工作区">
+      <a :href="contextual('/sources')" aria-current="page">已归档资料</a><a href="/research">外部检索</a
       ><a href="/judgments">判断</a>
-    </nav>
+    </nav></details></div>
+    <details class="sources-disclosure sources-filter-disclosure"><summary>筛选<span v-if="url.searchParams.get('projectId')"> · {{ projects.find(item => item.projectId === url.searchParams.get('projectId'))?.title ?? '当前项目' }}</span></summary>
     <form class="sources-filter" role="search" action="/sources" @submit.prevent="search">
       <div class="sources-field">
         <label for="sources-project">项目</label
@@ -116,6 +127,7 @@ onBeforeUnmount(() => controller.abort());
       </div>
       <button class="sources-button" type="submit">搜索</button>
     </form>
+    </details>
     <p v-if="contextError" role="alert">
       项目列表读取失败。{{ contextError }} <button type="button" @click="load">重试</button>
     </p>
@@ -133,8 +145,8 @@ onBeforeUnmount(() => controller.abort());
               <a
                 :href="
                   searchTerm
-                    ? href(item.sourceId, item.revision, undefined, { q: searchTerm })
-                    : href(item.sourceId)
+                    ? contextual(href(item.sourceId, item.revision, undefined, { q: searchTerm }))
+                    : contextual(href(item.sourceId))
                 "
                 >{{ item.title }}</a
               >

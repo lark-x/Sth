@@ -16,6 +16,11 @@ const h1 = (page, name) => page.getByRole('heading', { level: 1, name, exact: tr
 const field = (page, name) => page.getByLabel(new RegExp(`^${RegExp.escape(name)}(?: \\*)?$`));
 const link = (page, name) => page.getByRole('link', { name, exact: true });
 const click = (page, name) => page.getByRole('button', { name, exact: true }).click();
+async function expand(page, label) {
+  const summary = page.locator('summary').filter({ hasText: new RegExp(`^${label}$`) });
+  await summary.waitFor();
+  if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
+}
 const path = id => `/sources/${encodeURIComponent(id)}`;
 async function expectHeading(page, name) {
   await h1(page, name).waitFor().catch(async error => {
@@ -175,8 +180,10 @@ test('Vue sources independent routes, retained drafts and exact public API refer
       assert.equal(initial.body, first.body);
       assert.equal(initial.origin, first.origin);
       assert.deepEqual(initial.projectIds, []);
+      await expand(page, '版本历史');
       await link(page, '第 1 版').click();
       await ready(page);
+      await expand(page, '更多');
       assert.equal(await link(page, '修订资料').count(), 1, 'latest pinned version can still be revised');
       await link(page, '修订资料').click();
       await h1(page, '修订资料').waitFor();
@@ -186,19 +193,23 @@ test('Vue sources independent routes, retained drafts and exact public API refer
       await saved(page, first.title);
       assert.equal((await invoke('source.read', { sourceId })).revision, 2);
       assert.equal((await invoke('source.read', { sourceId })).origin, undefined);
+      await expand(page, '版本历史');
       await link(page, '第 1 版').click();
       await ready(page);
       assert.equal(await page.locator('#passage-body').textContent(), first.body);
+      await expand(page, '更多');
       assert.equal(await link(page, '修订资料').count(), 0);
       await page.reload();
       await ready(page);
       assert.equal(await page.locator('#passage-body').textContent(), first.body);
+      await expand(page, '更多');
       await link(page, '查看当前版本').click();
       await ready(page);
       assert.equal(await page.locator('#passage-body').textContent(), '末班九点。');
       await capture(page, `${name}-detail`);
       await assertFitsViewport(page);
       await navigate(page, '/sources');
+      await expand(page, '筛选');
       await field(page, '关键词').fill('末班九点');
       await field(page, '关键词').press('Enter');
       await ready(page);
@@ -227,6 +238,7 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     await click(page, '新建资料');
     const sourceId = await saved(page, '关联项目的资料');
     assert.deepEqual((await invoke('source.read', { sourceId })).projectIds, [project.projectId]);
+    await expand(page, '更多');
     await link(page, '修订资料').click();
     await h1(page, '修订资料').waitFor();
     await page.getByRole('checkbox', { name: '资料项目' }).uncheck();
@@ -313,6 +325,7 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     await ready(page);
     assert.equal(await page.locator('#passage-body mark').textContent(), excerpt);
     assert.deepEqual((await invoke('diary.read', { noteId })).sourcePins[0].range, range);
+    await expand(page, '引用这条资料的内容');
     await link(page, '判断 · 夜航时刻 · 第 1 版').waitFor();
     await link(page, '日记 · 北港日记 · 第 1 版').waitFor();
     await assertFitsViewport(page);
@@ -355,6 +368,7 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     assert.deepEqual(reference.range, { start, end: start + 2 });
     assert.equal(reference.excerpt, '相同');
     await navigate(page, path(source.sourceId));
+    await expand(page, '引用这条资料的内容');
     await link(page, '守船人 · 第 3 版 · 第二处证据').waitFor();
     assert.equal(await link(page, '守船人 · 第 3 版 · 第二处证据').getAttribute('href'), `/characters/${character.characterId}?revision=3`);
   });
@@ -477,9 +491,11 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     await h1(page, current.title).waitFor();
     assert.equal(await h1(page, slow.title).count(), 0);
     assert.equal(await page.locator('.sources-history a').count(), 22);
+    await expand(page, '版本历史');
     await link(page, '第 1 版').click();
     await ready(page);
     assert.equal(await page.locator('#passage-body').textContent(), '初版正文。');
+    await expand(page, '更多');
     assert.equal(await link(page, '修订资料').count(), 0);
   });
 
@@ -510,10 +526,12 @@ test('Vue sources independent routes, retained drafts and exact public API refer
       await navigate(page, exact.pathname + exact.search);
     }
     await navigate(page, '/sources');
+    await expand(page, '资料工作区');
     await link(page, '外部检索').click();
     await expectHeading(page, '外部检索');
     assert.equal(await page.locator('.legacy-route').count(), 1);
     await navigate(page, '/sources');
+    await expand(page, '资料工作区');
     await link(page, '判断').click();
     await h1(page, '判断').waitFor();
     assert.equal(await page.locator('.legacy-route').count(), 1);
@@ -526,6 +544,7 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     const pin = { sourceId: source.sourceId, revision: 1, excerpt: '泊船。', range: { start: 0, end: 3 } };
     for (let index = 0; index < 21; index++) await invoke('diary.create', { title: `影响记录 ${index}`, body: '已泊船。', diaryDate: '2026-11-24', sourcePins: [pin] });
     const page = await open(t, origin, path(source.sourceId));
+    await expand(page, '更多');
     await link(page, '查看影响').click();
     await h1(page, '资料影响').waitFor();
     await field(page, '资源类型').selectOption('diary');

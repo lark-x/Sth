@@ -20,9 +20,28 @@ import {
 } from './api';
 import type { Backlink, Character, CharacterBacklink, Operation, Project, Source, Summary } from './api';
 import type { SourceRoute } from './routes';
+import { manuscriptReturn } from '../manuscript/return-link';
 
 const props = defineProps<{ url: URL; route: SourceRoute }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
+const returnTo = computed(() => manuscriptReturn(props.url));
+function contextual(path: string) {
+  if (!returnTo.value) return path;
+  const destination = new URL(path, props.url);
+  if (destination.origin !== props.url.origin || !/^\/sources(?:\/|$)/.test(destination.pathname)) return path;
+  destination.searchParams.set('returnTo', returnTo.value);
+  return destination.pathname + destination.search + destination.hash;
+}
+function navigate(path: string) { emit('navigate', contextual(path)); }
+function retainReturn(event: MouseEvent) {
+  if (event.defaultPrevented || event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+  if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
+  const destination = contextual(anchor.getAttribute('href')!);
+  if (destination === anchor.getAttribute('href')) return;
+  event.preventDefault();
+  navigate(destination);
+}
 const loading = ref(true);
 const error = ref('');
 const contextErrors = ref<string[]>([]);
@@ -62,6 +81,10 @@ const detailHref = computed(() =>
 const canRevise = computed(
   () => operations.value.has('source.revise') && (!pinned || pinned === latestRevision.value),
 );
+const versionIdentity = computed(() => {
+  if (pinned && !latestRevision.value) return '固定版本';
+  return source.value && latestRevision.value && source.value.revision < latestRevision.value ? '历史版本' : '当前版本';
+});
 
 async function load() {
   controller.abort();
@@ -77,6 +100,7 @@ async function load() {
   backlinks.value = [];
   evidence.value = [];
   matches.value = [];
+  latestRevision.value = undefined;
   async function context<T>(label: string, promise: Promise<T>, assign: (value: T) => void) {
     try {
       const result = await promise;
@@ -204,7 +228,7 @@ onBeforeUnmount(() => controller.abort());
 </script>
 
 <template>
-  <section class="sources-route" :aria-busy="loading" aria-label="资料">
+  <section class="sources-route" :aria-busy="loading" aria-label="资料" @click="retainReturn">
     <p v-if="loading" role="status">正在读取资料…</p>
     <template v-else-if="error"
       ><h1 tabindex="-1">页面暂时无法打开</h1>
@@ -215,32 +239,29 @@ onBeforeUnmount(() => controller.abort());
       </div></template
     >
     <template v-else>
-      <a :href="route.page === 'adopt-entry' || route.page === 'impact' ? detailHref : '/sources'">{{
-        route.page === 'adopt-entry' || route.page === 'impact' ? '返回原文' : '资料'
-      }}</a>
-      <header class="sources-heading">
-        <div>
+      <header class="sources-heading sources-toolbar">
+        <a class="sources-back" :href="returnTo || contextual(route.page === 'adopt-entry' || route.page === 'impact' ? detailHref : '/sources')">{{ returnTo ? '返回原稿' : route.page === 'adopt-entry' || route.page === 'impact' ? '返回原文' : '资料' }}</a>
+        <div class="sources-title">
           <h1 tabindex="-1">{{ heading }}</h1>
-          <p v-if="source" class="sources-muted">第 {{ source.revision }} 版 · {{ kinds[source.kind] }}</p>
+          <p v-if="source" class="sources-muted">{{ versionIdentity }} · 第 {{ source.revision }} 版 · {{ kinds[source.kind] }}</p>
         </div>
-        <div
+        <details
           v-if="source && !isEditing && route.page !== 'adopt-entry' && route.page !== 'impact'"
-          class="sources-actions"
-        >
+          class="sources-more"
+        ><summary>更多</summary><div class="sources-menu sources-actions">
           <a
             v-if="canRevise"
-            class="sources-button"
-            :href="href(source.sourceId, undefined, undefined, { action: 'revise' })"
+            :href="contextual(href(source.sourceId, undefined, undefined, { action: 'revise' }))"
             >修订资料</a
           >
-          <a v-if="pinned" :href="href(source.sourceId)">查看当前版本</a>
+          <a v-if="pinned" :href="contextual(href(source.sourceId))">查看当前版本</a>
           <a
             v-if="operations.has('source.impact')"
-            class="sources-button"
-            :href="href(source.sourceId, pinned, selectedRange, { action: 'impact' })"
+            :href="contextual(href(source.sourceId, pinned, selectedRange, { action: 'impact' }))"
             >查看影响</a
           >
-        </div>
+          <a v-if="returnTo" :href="contextual('/sources')">资料</a>
+        </div></details>
       </header>
       <div v-if="contextErrors.length" class="sources-notice">
         <p v-for="message in contextErrors" :key="message" role="alert">{{ message }}</p>
@@ -251,20 +272,20 @@ onBeforeUnmount(() => controller.abort());
         :source="source"
         :projects="projects"
         :url="url"
-        @navigate="emit('navigate', $event)"
+        @navigate="navigate"
       />
       <SourceAdoption
         v-else-if="source && route.page === 'adopt-entry' && selectedRange"
         :source="source"
         :range="selectedRange"
         :characters="characters"
-        @navigate="emit('navigate', $event)"
+        @navigate="navigate"
       />
       <SourceImpact
         v-else-if="source && route.page === 'impact'"
         :source="source"
         :url="url"
-        @navigate="emit('navigate', $event)"
+        @navigate="navigate"
       />
       <template v-else-if="source">
         <p v-if="route.page === 'revise'" role="status">这是历史版本，请查看当前版本后修订。</p>
@@ -272,8 +293,9 @@ onBeforeUnmount(() => controller.abort());
           :source="source"
           :range="selectedRange"
           :operations="operations"
-          @navigate="emit('navigate', $event)"
+          @navigate="navigate"
         />
+        <details class="sources-disclosure sources-context"><summary>资料信息</summary>
         <section v-if="source.origin">
           <h2>出处</h2>
           <div class="sources-prose">{{ source.origin }}</div>
@@ -300,6 +322,7 @@ onBeforeUnmount(() => controller.abort());
           </ul>
           <p v-else class="sources-muted">个人资料</p>
         </section>
+        </details>
         <section v-if="q" aria-label="原文匹配">
           <h2>原文匹配</h2>
           <ol v-if="matches.length" class="sources-list" :start="matchOffset + 1">
@@ -308,7 +331,7 @@ onBeforeUnmount(() => controller.abort());
                 {{ snippet(range).before }}<mark>{{ snippet(range).selected }}</mark
                 >{{ snippet(range).after }}
               </p>
-              <a :href="href(source.sourceId, source.revision, range)"
+              <a :href="contextual(href(source.sourceId, source.revision, range))"
                 >定位第 {{ matchOffset + index + 1 }} 处</a
               >
             </li>
@@ -318,19 +341,20 @@ onBeforeUnmount(() => controller.abort());
             <a
               v-if="matchOffset"
               :href="
-                href(source.sourceId, source.revision, undefined, {
+                contextual(href(source.sourceId, source.revision, undefined, {
                   q,
                   matchOffset: Math.max(0, matchOffset - 10),
-                })
+                }))
               "
               >上一页</a
             ><a
               v-if="matches.length > 10"
-              :href="href(source.sourceId, source.revision, undefined, { q, matchOffset: matchOffset + 10 })"
+              :href="contextual(href(source.sourceId, source.revision, undefined, { q, matchOffset: matchOffset + 10 }))"
               >下一页</a
             >
           </nav>
         </section>
+        <details v-if="operations.has('source.backlinks') || evidence.length" class="sources-disclosure sources-context"><summary>引用这条资料的内容</summary>
         <section v-if="operations.has('source.backlinks')">
           <h2>引用这条资料的内容</h2>
           <ul v-if="backlinks.length" class="sources-list">
@@ -365,16 +389,17 @@ onBeforeUnmount(() => controller.abort());
             </li>
           </ul>
         </section>
-        <section v-if="snapshots.length">
-          <h2>版本历史</h2>
+        </details>
+        <details v-if="snapshots.length" class="sources-disclosure sources-context">
+          <summary>版本历史</summary>
           <ul class="sources-history">
             <li v-for="item in snapshots" :key="item.revision">
-              <a :href="href(source.sourceId, item.revision)">第 {{ item.revision }} 版</a
+              <a :href="contextual(href(source.sourceId, item.revision))" :aria-current="item.revision === source.revision ? 'page' : undefined">第 {{ item.revision }} 版</a
               ><span v-if="item.title !== source.title"> · {{ item.title }}</span
               ><span v-if="item.revision === source.revision" class="sources-muted"> · 正在阅读</span>
             </li>
           </ul>
-        </section>
+        </details>
       </template>
     </template>
   </section>

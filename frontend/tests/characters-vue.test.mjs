@@ -17,6 +17,11 @@ const field = (page, name) => page.getByLabel(new RegExp(`^${RegExp.escape(name)
 const link = (page, name) => page.getByRole('link', { name, exact: true });
 const click = (page, name) => page.getByRole('button', { name, exact: true }).click();
 const idAt = page => new URL(page.url()).pathname.split('/').at(-1);
+async function expand(page, label) {
+  const summary = page.locator('summary').filter({ hasText: new RegExp(`^${label}$`) });
+  await summary.waitFor();
+  if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
+}
 const path = id => `/characters/${encodeURIComponent(id)}`;
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ4sAAAAASUVORK5CYII=', 'base64');
 
@@ -192,6 +197,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
       assert.equal(await page.locator('.legacy-route').count(), 0);
       await assertFitsViewport(page);
       await capture(page, `${size}-real-shell`);
+      await expand(page, '更多');
       await link(page, '编辑设定').click();
       await editorReady(page);
       await field(page, '角色设定').fill('从正常导航保存的新设定。');
@@ -227,6 +233,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
       await page.getByRole('article', { name: '角色设定' }).getByText(record.persona, { exact: true }).waitFor();
       assert.equal(await page.locator('.legacy-route').count(), 0);
       await capture(page, `${size}-reading`);
+      await expand(page, '更多');
       await link(page, '编辑设定').click();
       await editorReady(page);
       assert.equal(await field(page, '项目').count(), 0, 'project assignment stays immutable');
@@ -241,6 +248,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
       await ready(page);
       assert.equal(await field(page, '项目').inputValue(), project.projectId);
       await page.getByRole('link').filter({ has: page.getByRole('heading', { name: `${size} 林澈`, exact: true }) }).waitFor();
+      await expand(page, '筛选');
       await field(page, '项目').selectOption('');
       await ready(page);
       assert.equal(new URL(page.url()).searchParams.get('projectId'), null);
@@ -282,6 +290,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     await audio.evaluate(async player => { await player.play(); });
     assert.equal(await audio.evaluate(player => player.duration), 1);
     await capture(page, 'phone-multimedia');
+    await expand(page, '更多');
     await link(page, '写角色日记').click();
     await h1(page, '写日记').waitFor();
     await page.locator('summary').filter({ hasText: /^写作上下文/ }).click();
@@ -295,8 +304,11 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     await link(page, '查看角色证据 · 第 1 版').click();
     await h1(page, '未命名角色').waitFor();
     assert.equal(new URL(page.url()).searchParams.get('revision'), '1');
+    await expand(page, '更多');
     assert.equal(await link(page, '编辑设定').count(), 0);
     await link(page, '查看当前版本').click();
+    await ready(page);
+    await expand(page, '更多');
     await link(page, '编辑设定').click();
     await editorReady(page);
     await field(page, '角色名称').fill('渡船领航员');
@@ -365,12 +377,15 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     const readback = await invoke('character.read', { characterId: saved.characterId });
     assert.deepEqual(readback.entries, saved.entries);
     assert.equal(readback.revision, 2);
+    await expand(page, '版本历史');
     await link(page, '第 1 版').click();
     await ready(page);
     assert.equal(await page.getByText('牢记第二张公告。', { exact: true }).count(), 0);
+    await expand(page, '版本历史');
     await link(page, '第 2 版').click();
     await ready(page);
     await page.getByText('牢记第二张公告。', { exact: true }).waitFor();
+    await expand(page, '更多');
     const sceneStart = link(page, '从这个版本构思场景');
     assert.equal(new URL(await sceneStart.getAttribute('href'), origin).searchParams.get('revision'), '2');
     await sceneStart.click();
@@ -477,6 +492,7 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     assert.equal(merged.revision, 3);
     assert.equal(merged.entries[0].entryId, saved.entries[0].entryId);
     assert.equal(merged.entries[0].blocks[0].text, '本地记录');
+    await expand(page, '更多');
     await link(page, '编辑设定').click();
     await editorReady(page);
     await field(page, '角色名称').fill('本地称呼');
