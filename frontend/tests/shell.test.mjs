@@ -140,6 +140,29 @@ test('shell dispatches exact migration routes and keeps unknown subroutes on the
     assert.equal(await page.locator('.sources-domain').count(), 0);
     assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '资料', exact: true }).getAttribute('aria-current'), 'page');
   }
+  for (const path of ['/characters', '/characters/new']) {
+    await page.goto(path);
+    await page.locator('.characters-route').waitFor();
+    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), 'page');
+  }
+  for (const path of ['/jobs', '/tasks']) {
+    await page.goto(path);
+    await page.locator('.tasks-domain').waitFor();
+    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '任务', exact: true }).getAttribute('aria-current'), 'page');
+  }
+  for (const path of ['/characters/id/history', '/characters/id?action=unknown', '/jobs/new', '/media', '/generations']) {
+    await page.goto(path);
+    await page.locator('.legacy-route').waitFor();
+  }
+  for (const path of ['/drafts/new', '/scenes/id?revision=1', '/scenes/id?action=compare', '/scenes/id?action=branch', '/drafts/id?action=revise', '/drafts/id?action=adopt']) {
+    await page.goto(path);
+    await page.locator('.writing-route').waitFor();
+    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '创作', exact: true }).getAttribute('aria-current'), 'page');
+  }
+  for (const path of ['/scenes/id?narrativeId=story', '/scenes/id?action=revise', '/scenes/id?action=adopt', '/drafts/id?action=adopt-entry', '/scenes/id/unknown']) {
+    await page.goto(path);
+    await page.locator('.legacy-route').waitFor();
+  }
   for (const path of ['/settings/unknown', '/settings/connections/nested', '/author-context/nested', '/create/unknown', '/workspace/unknown']) {
     await page.goto(path);
     await page.locator('.legacy-route').waitFor();

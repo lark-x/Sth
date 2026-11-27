@@ -1,5 +1,8 @@
 import type { Component } from 'vue';
 import { matchSourcesRoute } from './sources/routes';
+import { matchCharactersRoute } from './characters/routes';
+import { matchTasksRoute as matchesTasks } from './tasks/routes';
+import { matchWritingRoute as matchesWriting } from './writing/routes';
 
 export interface RouteProps { url: URL }
 export interface RouteEvents {
@@ -24,6 +27,9 @@ const components = import.meta.glob<{ default: Component }>([
   './connections/ConnectionsRoute.vue',
   './context/ContextRoute.vue',
   './sources/SourcesRoute.vue',
+  './characters/CharacterRoute.vue',
+  './tasks/TasksRoute.vue',
+  './writing/WritingRoute.vue',
 ]);
 
 export const domainRoutes: DomainRoute[] = [
@@ -32,11 +38,14 @@ export const domainRoutes: DomainRoute[] = [
   { id: 'workspace', paths: [], exact: ['/create', '/workspace'], navigation: '/create', module: './workspace/WorkspaceRoute.vue' },
   { id: 'connections', paths: [], exact: ['/settings', '/settings/connections'], navigation: '/settings', module: './connections/ConnectionsRoute.vue' },
   { id: 'context', paths: [], exact: ['/author-context'], navigation: '/create', module: './context/ContextRoute.vue' },
-  { id: 'characters', paths: ['characters'], navigation: '/characters', module: './workspace/CharacterRoute.vue' },
+  { id: 'characters', paths: [], match: matchCharactersRoute, navigation: '/characters', module: './characters/CharacterRoute.vue' },
+  { id: 'character-legacy', paths: ['characters'], navigation: '/characters' },
   { id: 'sources', paths: [], match: matchSourcesRoute, navigation: '/sources', module: './sources/SourcesRoute.vue' },
   { id: 'source-legacy', paths: ['sources', 'judgments', 'research'], navigation: '/sources' },
-  { id: 'writing', paths: ['scenes', 'drafts', 'chapters', 'branches', 'events', 'narratives', 'templates', 'writing-requirements', 'generation-plans', 'compositions'], navigation: '/create', module: './workspace/WritingRoute.vue' },
-  { id: 'tasks', paths: ['jobs', 'tasks', 'generations', 'generation-batches', 'media'], navigation: '/jobs', module: './workspace/TaskRoute.vue' },
+  { id: 'writing', paths: [], match: matchesWriting, navigation: '/create', module: './writing/WritingRoute.vue' },
+  { id: 'writing-legacy', paths: ['scenes', 'drafts', 'chapters', 'branches', 'events', 'narratives', 'templates', 'writing-requirements', 'generation-plans', 'compositions'], navigation: '/create' },
+  { id: 'tasks', paths: [], match: matchesTasks, navigation: '/jobs', module: './tasks/TasksRoute.vue' },
+  { id: 'task-legacy', paths: ['jobs', 'tasks', 'generations', 'generation-batches', 'media'], navigation: '/jobs' },
 ];
 
 export function domainFor(url: URL) {

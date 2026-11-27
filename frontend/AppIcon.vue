@@ -8,6 +8,10 @@ const paths: Record<string, string[]> = {
   tasks: ['m3 6 2 2 3-4', 'M12 6h9', 'm3 13 2 2 3-4', 'M12 13h9', 'M12 20h9'],
   settings: ['M3 6h5m4 0h9M3 18h9m4 0h5M8 3v6m8 6v6', 'M3 12h18'],
   arrow: ['M5 12h14', 'm14 7 5 5-5 5'],
+  next: ['M5 12h14', 'm14 7 5 5-5 5'],
+  back: ['M19 12H5', 'm10 7-5 5 5 5'],
+  plus: ['M12 5v14', 'M5 12h14'],
+  refresh: ['M20 7v5h-5', 'M19 16a8 8 0 1 1 .6-8.4L20 12'],
 };
 </script>
 

@@ -26,6 +26,9 @@ defineEmits<{
 - 精确 `/settings`、`/settings/connections` 使用 `connections/ConnectionsRoute.vue`。其他 settings 地址使用原页面回退。
 - 精确 `/author-context` 使用 `context/ContextRoute.vue`，主导航归属创作。
 - 资料域使用 `sources/routes.ts` 的 `matchSourcesRoute` 精确匹配后加载 `sources/SourcesRoute.vue`。不匹配的资料地址以及 `/research`、`/judgments` 继续使用原页面。
+- 角色域使用 `characters/routes.ts` 的 `matchCharactersRoute`，加载 `characters/CharacterRoute.vue`，导航归属 `/characters`。
+- 任务域使用 `tasks/routes.ts` 的 `matchTasksRoute`，加载 `tasks/TasksRoute.vue`，导航归属 `/jobs`。未匹配的任务编辑、生成和媒体地址继续使用原页面。
+- 长篇写作域使用 `writing/routes.ts` 的 `matchWritingRoute`，加载 `writing/WritingRoute.vue`，导航归属 `/create`。普通场景版本进入 Vue，带 `narrativeId` 的场景别名及未交付的 action、深路径继续使用原页面。
 - 这些模块使用与日记相同的 `url`、`navigate`、`refresh` 契约。模块尚未交付时采用原页面回退。
 
 ## 样式与 API

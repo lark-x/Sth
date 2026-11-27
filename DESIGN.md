@@ -44,7 +44,7 @@
 
 ## 迁移入口
 
-注册表位于 `frontend/routes.ts`。日记、作品、工作区、连接设置和创作决定按模块加载。资料域使用独立 matcher 精确匹配，`/research`、`/judgments` 和其他未匹配地址进入原页面适配层。完整 URL 是各路由组件的输入，参数变更由 shell 重新派发。模块对外提供 `navigate` 和 `refresh` 事件。
+注册表位于 `frontend/routes.ts`。日记、作品、工作区、连接设置和创作决定按模块加载。资料、角色、任务和长篇写作使用各域导出的 matcher 精确匹配，`/research`、`/judgments` 和其他未匹配地址进入原页面适配层。完整 URL 是各路由组件的输入，参数变更由 shell 重新派发。模块对外提供 `navigate` 和 `refresh` 事件。
 
 ## 验收
 
