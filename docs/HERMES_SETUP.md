@@ -4,14 +4,14 @@
 
 ## 普通用户三步
 
-本轮验收的 Windows x64 分发包为 `sth-hermes-1.2.0-ae25ac0-win32-x64.zip`，SHA-256 为 `3f5f04ac4a9c348c9f762903ca96486a06b990c57ecb3bf74981fc8b051abe8e`。收到后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
+本轮验收的 Windows x64 分发包为 `sth-hermes-1.2.0-2307e73-win32-x64.zip`，SHA-256 为 `d8fe171aa7ec92e343bb23c5579c1508624412bee22f65ee7eb78b90827f7b24`。收到后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
 
-当前安装包保存在私有仓库的发布草稿中。仓库维护者可以下载附件；GitHub 已核对的文件大小为 87,680,673 字节。[Windows x64 发布草稿](https://github.com/lark-x/Sth/releases/tag/untagged-2694e3744cb41a4950b1)
+仓库目前公开，安装包仍保存在未发布的草稿中，只有有权访问草稿的维护者可以下载附件。GitHub 已核对文件大小为 87,787,642 字节，服务端摘要与上述 SHA-256 一致。发布目标为 `2307e7351e63571d9873c39df3b96ca91a6592f2`。[Windows x64 发布草稿](https://github.com/lark-x/Sth/releases/tag/untagged-44d41aa989d8bfea1fb6)
 
 1. 安装。在解压后含 `plugin.yaml` 的目录中运行。
 
    ```powershell
-   Set-Location C:/Downloads/sth-hermes-1.2.0-ae25ac0-win32-x64
+   Set-Location C:/Downloads/sth-hermes-1.2.0-2307e73-win32-x64
    hermes plugins install ([System.Uri](Get-Location).Path).AbsoluteUri --enable --force
    ```
 
@@ -125,7 +125,7 @@ $distribution
 
 目标目录和 ZIP 需尚不存在。导出程序在新临时目录中组装白名单构建输入，以清洁环境执行 `npm ci --ignore-scripts`、前端构建及 `npm prune --omit=dev`，然后发布以下内容。
 
-- 清单和五个插件 Python 模块。
+- 插件清单和 Python 模块。
 - `runtime/src` 和共享 `scripts/workspace*.mjs`。
 - `runtime/web`、已构建的 `runtime/frontend/dist` 与生产 `node_modules`。
 - 当前平台、架构的 Node 二进制和对应版本官方许可，生产 package 清单及锁文件。
@@ -137,7 +137,9 @@ JSON 输出包含 `installIdentifier`、目录、平台、架构、ZIP 路径及
 
 ## 隔离验收
 
-验收脚本使用机器已安装的官方 Hermes，在私有临时根建立全新 named profile。它接收最终 ZIP，解压后用正常 Hermes launcher 安装、运行官方 doctor、创建空工作区，并由真实模型保存首篇日记及读取。第二个新 session 再次读取，核验隔离 session 工具回执和 Sth 网页 API。
+2026-11-28 的最终 `2307e73` ZIP 已在机器实际安装的 Hermes 中通过 10 项确定性检查，包含从 `ae25ac0` 旧 ZIP 升级。工作区 ID、终端连接、地址、资料版本和原回执保持一致，升级后写入、重启、撤销和断开均通过；1,930 个分发文件与 25 项生产依赖通过核对。该轮没有启用真实模型，前轮真实模型与跨宿主记录见 [验收记录](ACCEPTANCE.md)。
+
+验收脚本使用机器已安装的官方 Hermes，在私有临时根建立全新 named profile。它接收最终 ZIP，解压后用正常 Hermes launcher 安装、运行官方 doctor、创建空工作区。启用 `--real-model` 后由真实模型保存首篇日记及读取，第二个新 session 再次读取，核验隔离 session 工具回执和 Sth 网页 API。
 
 ```powershell
 $runtime = Join-Path $env:LOCALAPPDATA 'hermes/hermes-agent'

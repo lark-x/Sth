@@ -4,7 +4,7 @@
 
 ## 2026-11-28 · Ulysses 方向整合验收
 
-本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。初轮整合应用代码为 `91be384`，最后独立视觉复核又修正了待确认回执重开时的按钮遮挡。部署与安装包的版本另行核对，不用本地源码代替运行版本。
+本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。初轮整合应用代码为 `91be384`，最后独立视觉复核又修正了待确认回执重开时的按钮遮挡。最终应用提交 `2307e7351e63571d9873c39df3b96ca91a6592f2` 已部署到本机 9322，并用于生成本轮 Hermes ZIP；后续分支提交仅补充测试和验收文档。
 
 | 体验 | 正式页面截图 |
 | --- | --- |
@@ -22,6 +22,17 @@
 完整浏览器回归过程中发现旧菜单入口和旧预览标题断言不再对应正式界面；更新为实际展开菜单、精确选择行/正文/版本后，经独立审查通过。书库异步摘要测试改为等待准确 preview href。原业务、API、安全与版本断言保留，未增加超时、删除或跳过失败用例。最终全套日志为本机 `frontend/.artifacts/ulysses-baseline/final-{browser,manuscript}-accepted.log`，严格标题补验为 `chapter-create-reviewed-final.log`（10/10）。最后回执修复的完整文稿日志为 `frontend/.artifacts/ulysses-release/manuscript-release.log`，六组新图保存在 `frontend/.artifacts/ulysses-baseline/release-*`。失败轮次也保留。
 
 请求量、首屏位置、包体及本机布局位移的前后变化见 [治理对照](ULYSSES_EXECUTION.md#最终整合的收益与代价)。真实 iOS、WKWebView、真人私聊及大库慢设备性能仍属于后续范围。
+
+### 最终部署、数据与分发核对
+
+- 本机 `sth-authoring-web-1` 运行镜像 `sha256:938ddb159bf8f941ecc16851c97bb3c79ee96d13b18d5dc9710aaa7cb8c37ada`。OCI revision、运行源码、原配置、`sth-authoring_workspace` 数据卷和 25 个前端文件均与冻结候选匹配，Docker 与 HTTP 健康检查通过。发布前演练、发布后独立核对均通过：59 张表、4,560 行逐项一致，完整性与外键正常。回滚 dry-run 通过，未执行回滚。
+- 部署后通过实际 9322 页面验收 60/60：Chromium 1280/768/390/320 与 WebKit 390/320，覆盖首页、日记、新建、角色、资料、任务、设置、旧稿、依据开关与已有研究日记。无横向溢出、控制台异常或 HTTP 失败；依据关闭后焦点和滚动恢复。主代理另查看实际桌面读稿、手机旧稿、手机依据与 320px 首页截图。真实作者内容只保存在本机忽略目录。
+- 浏览器验收后的快照核对：其余 58 张表完全不变，原有回执全部保留；仅新增与捕获请求逐项对应的 300 条 `web:owner` 读取回执，没有作者内容或配置写入。结构、内部序列、完整性与外键继续通过。
+- Xingchi GPT-6.1 Sol xhigh 独立复核最后修改涉及的 30 张隔离样例截图：六组各三张回执状态和编辑/冲突首屏，确认重试按钮及焦点框完整可见，没有剩余视觉阻塞。此前完整逐图审查与四种布局的修前失败证据继续保留。
+- Hermes 最终 ZIP 为 `sth-hermes-1.2.0-2307e73-win32-x64.zip`，87,787,642 字节，SHA-256 `d8fe171aa7ec92e343bb23c5579c1508624412bee22f65ee7eb78b90827f7b24`。1,930 个文件、89 个冻结源码输入、生产依赖和截图构建均匹配；包内 25 个前端文件与实际部署镜像逐文件一致。已安装 Hermes 的隔离 profile 从旧 `ae25ac0` ZIP 升级后通过全部 10 项检查，保留资料、版本、连接及原回执，新写入和重启也通过。这是确定性宿主验收，未新增真实模型或真人设备结论。
+- GitHub 已上传[未发布的 Windows x64 草稿](https://github.com/lark-x/Sth/releases/tag/untagged-44d41aa989d8bfea1fb6)，目标为上述完整应用 SHA；资产大小与服务端 SHA-256 均核对一致。[安装和升级说明](HERMES_SETUP.md)。`main` 保留 `ec1f1e4ba41f261419e70658a76b5e68868caada`，本轮交付在 `feat/ulysses-workspace`。
+
+可复核的本机证据位于 `frontend/.artifacts/ulysses-release/`：`verify-release-2307e73.log`、`rollback-dry-2307e73.log`、`live-2307e73/report.json`、`live-data-audit-2307e73.json`、`package-equivalence-2307e73.json`、`deployed-package-frontend-2307e73.json`、`onboarding-2307e73.log` 与 `github-draft-2307e73.json`。发布预检根目录为 `artifacts/release-preflight-20261127/runs/2026-11-27T23-44-31-208Z-ce72a5cf/`。独立发布核验采用截图矩阵模式，其 `browserAcceptancePassed: false` 仅表示未运行该脚本的 targeted-browser 模式；`browserAcceptancePending: false`，实际矩阵和上线后 60 项结果分别如上。
 
 ## 2026-11-28 · 改造前的视觉重新评审
 
