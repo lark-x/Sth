@@ -5,7 +5,7 @@ import type { Draft } from '../../src/story/contracts.ts';
 import { errorText, invoke, operation } from '../api.ts';
 import { useSubmission } from '../workspace/useSubmission.ts';
 import EvidenceContent from './evidence-content.vue';
-const props = defineProps<{ draft: Draft }>();
+const props = defineProps<{ draft: Draft; returnTo?: string }>();
 const emit = defineEmits<{ attached: [] }>();
 const uid = useId();
 const generationId = ref('');
@@ -40,13 +40,13 @@ onBeforeUnmount(() => controller?.abort());
 </script>
 <template>
   <details class="evidence-attachment">
-    <summary>关联已有组稿</summary>
+    <summary>关联已有记录</summary>
     <p>如果此稿使用过已保存的组稿，请核对原记录并确认。关联固定在稿件第 {{ draft.revision }} 版。</p>
     <label :for="`${uid}-generation-id`">组稿编号</label><input :id="`${uid}-generation-id`" v-model="generationId" :disabled="busy || !!pending" maxlength="128">
     <button type="button" :disabled="loading || busy || !!pending" @click="inspect">读取待核对组稿</button>
     <p v-if="loading" role="status">正在读取组稿…</p><p v-if="failure" role="alert">{{ failure }}</p>
     <template v-if="record">
-      <h3>待核对的组稿</h3><EvidenceContent :generation="record" />
+      <h3>待核对的组稿</h3><EvidenceContent :generation="record" :return-to="returnTo" />
       <a v-if="record.result" :href="`/generations/${encodeURIComponent(record.generationId)}/result`" target="_blank" rel="noopener">核对已保存的生成结果（新窗口）</a>
       <p v-if="record.status !== 'succeeded' || !record.result">请先在此组稿保存生成结果，再核对稿件关联。</p>
       <label v-else :for="`${uid}-confirm`"><input :id="`${uid}-confirm`" v-model="confirmed" type="checkbox" :disabled="busy || !!pending">我确认这版稿件使用了这次组稿</label>
@@ -56,10 +56,10 @@ onBeforeUnmount(() => controller?.abort());
   </details>
 </template>
 <style scoped>
-details { margin-block: 1rem; }
 label { display: block; margin-block: .75rem; }
 input:not([type="checkbox"]) { display: block; box-sizing: border-box; inline-size: 100%; min-inline-size: 0; min-block-size: 2.75rem; font: inherit; }
 button, summary { min-block-size: 2.75rem; cursor: pointer; }
+summary { padding-block: .6rem; }
 p { white-space: pre-wrap; line-height: 1.65; }
 [role="alert"] { color: var(--danger); }
 </style>

@@ -25,6 +25,7 @@ const selected = ref('');
 const record = shallowRef<Generation>();
 const recordLoading = ref(false);
 const recordFailure = ref('');
+const returnTo = ref('');
 const preparing = ref(false);
 const prepareLoading = ref(false);
 const prepareFailure = ref('');
@@ -134,6 +135,7 @@ async function openPanel(source?: HTMLElement) {
   if (open.value) return;
   // A viewport resize can precede delivery of the media query's change event.
   compact.value = compactQuery.matches;
+  returnTo.value = location.pathname + location.search + location.hash;
   rememberEditor(); rememberSelection();
   opener = source ?? (document.activeElement instanceof HTMLElement ? document.activeElement : trigger.value);
   position = { x: window.scrollX, y: window.scrollY };
@@ -230,7 +232,10 @@ watch(scope, () => {
   failure.value = ''; recordFailure.value = ''; prepareFailure.value = ''; preparing.value = false;
   loading.value = false; recordLoading.value = false; prepareLoading.value = false;
   editor = undefined; selection = undefined; inputSelection = undefined;
-  if (open.value) void load();
+  if (open.value) {
+    returnTo.value = location.pathname + location.search + location.hash;
+    void load();
+  }
 });
 onMounted(() => {
   owner = root.value?.closest('main') ?? root.value?.parentElement ?? undefined;
@@ -258,43 +263,55 @@ defineExpose({ open: openPanel, close: closePanel });
       @pointerdown="rememberEditor(); rememberSelection()" @click="open ? closePanel() : openPanel()"><AppIcon name="book" /><span>本次依据</span></button>
     <aside v-show="open" :id="`${uid}-panel`" ref="panel" class="evidence-panel" tabindex="-1" :aria-labelledby="`${uid}-heading`"
       :role="compact ? 'dialog' : undefined" :aria-modal="compact && open ? true : undefined">
-      <header><h2 :id="`${uid}-heading`">本次依据</h2><button class="evidence-close" type="button" @click="closePanel">关闭依据</button></header>
+      <header>
+        <div class="evidence-identity">
+          <h2 :id="`${uid}-heading`">本次依据</h2>
+          <p><span>{{ draft?.title ?? scene.title }}</span><span> · 修订 {{ draft?.revision ?? scene.revision }}</span></p>
+        </div>
+        <button class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false">
+            <path d="m18 6-12 12M6 6l12 12" />
+          </svg>
+        </button>
+      </header>
       <p v-if="loading" role="status">正在读取本次依据…</p>
       <p v-if="failure" role="alert">{{ failure }} <button v-if="!mismatch" type="button" :disabled="loading" @click="load()">重新读取本次依据</button></p>
       <template v-if="!mismatch">
         <template v-if="loaded && !items.length">
-          <p v-if="draft">此稿尚无明确关联的组稿记录。普通助手草稿与手写稿可保留这一状态。</p>
+          <p v-if="draft" class="evidence-empty">这版稿件还没有已确认的来源记录</p>
           <p v-else>此场景版本还没有保存的组稿。</p>
         </template>
-        <template v-if="items.length">
-          <label :for="`${uid}-generation`">{{ draft ? '此版本确认关联的组稿' : '为此场景准备的组稿' }}</label>
-          <select :id="`${uid}-generation`" v-model="selected" @change="readRecord">
-            <option v-for="item in items" :key="item.generation.generationId" :value="item.generation.generationId">{{ item.generation.title }} · {{ item.generation.createdAt.slice(0, 10) }}</option>
-          </select>
-          <p v-if="draft">此关联由作者明确确认，固定在稿件第 {{ draft.revision }} 版。</p>
-          <p v-else>这些记录按准备时指定的场景版本列出。稿件使用哪次组稿，由作者在对应稿件版本确认。</p>
-          <button v-if="more" type="button" :disabled="loading" @click="load(true)">读取更早组稿</button>
-        </template>
-        <p v-if="recordLoading" role="status">正在读取组稿快照…</p>
+        <p v-if="!draft && record" class="evidence-caption">为此场景版本准备的组稿</p>
+        <p v-if="recordLoading" role="status">正在读取来源记录…</p>
         <p v-if="recordFailure" role="alert">{{ recordFailure }} <button type="button" @click="readRecord">重试组稿快照</button></p>
-        <EvidenceContent v-if="record" :generation="record" />
+        <EvidenceContent v-if="record" :generation="record" :return-to="returnTo" :confirmed="selectedItem?.relation === 'author-confirmed'" />
         <nav v-if="draft && selectedItem?.passages.length" aria-label="明确关联的稿件片段">
           <a v-for="(passage, index) in selectedItem.passages" :key="index"
             :href="evidenceHref('draft', draft.draftId, draft.revision, passage)">定位稿件片段 {{ index + 1 }} · 依据 {{ passage.referenceIndex + 1 }}</a>
         </nav>
-        <EvidenceAttachment v-if="draft && loaded && !items.length" :key="scope" :draft="draft" @attached="load()" />
-        <details class="evidence-scene-links">
-          <summary>场景关联资料 · 第 {{ scene.revision }} 版</summary>
-          <p>以下为该场景版本保存的关联。各次组稿的实际输入显示在对应记录中。</p>
-          <p v-if="!scene.sources.length && !scene.characters.length">此版场景没有关联原文或人物。</p>
-          <figure v-for="(source, index) in scene.sources" :key="index"><blockquote>{{ source.excerpt }}</blockquote>
-            <figcaption><a :href="evidenceHref('source', source.sourceId, source.revision, source.range)">场景引用原文 {{ index + 1 }} · 第 {{ source.revision }} 版</a></figcaption></figure>
-          <article v-for="character in scene.characters" :key="character.characterId"><h3><a :href="evidenceHref('character', character.characterId, character.revision)">{{ character.name }} · 第 {{ character.revision }} 版</a></h3><p>{{ character.persona }}</p></article>
+        <details v-if="items.length > 1 || more" :key="scope" class="evidence-options">
+          <summary>切换来源记录</summary>
+          <label :for="`${uid}-generation`">{{ draft ? '此版本确认关联的组稿' : '为此场景准备的组稿' }}</label>
+          <select :id="`${uid}-generation`" v-model="selected" @change="readRecord">
+            <option v-for="item in items" :key="item.generation.generationId" :value="item.generation.generationId">{{ item.generation.title }} · {{ item.generation.createdAt.slice(0, 10) }}</option>
+          </select>
+          <button v-if="more" type="button" :disabled="loading" @click="load(true)">读取更早组稿</button>
         </details>
-        <button v-if="!preparing" type="button" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '选择本次依据，准备新稿' }}</button>
-        <p v-if="prepareFailure" role="alert">{{ prepareFailure }}</p>
-        <PrepareWriting v-if="preparing" :key="scope" :scene="scene" :author-context="authorContext"
-          :return-href="evidenceHref('scene', scene.sceneId, scene.revision)!" @prepared="!draft && load()" />
+        <div :key="scope" class="evidence-actions" role="group" aria-label="场景资料与写作操作">
+          <details class="evidence-scene-links">
+            <summary>查看场景资料</summary>
+            <p class="evidence-caption">场景修订 {{ scene.revision }} 的可用资料</p>
+            <p v-if="!scene.sources.length && !scene.characters.length">此版场景没有关联原文或人物。</p>
+            <figure v-for="(source, index) in scene.sources" :key="index"><blockquote>{{ source.excerpt }}</blockquote>
+              <figcaption><a :href="evidenceHref('source', source.sourceId, source.revision, source.range, returnTo)">场景引用原文 {{ index + 1 }} · 第 {{ source.revision }} 版</a></figcaption></figure>
+            <article v-for="character in scene.characters" :key="character.characterId"><h3><a :href="evidenceHref('character', character.characterId, character.revision, undefined, returnTo)">{{ character.name }} · 第 {{ character.revision }} 版</a></h3><p>{{ character.persona }}</p></article>
+          </details>
+          <button v-if="!preparing" class="evidence-prepare" type="button" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '准备新稿' }}</button>
+          <p v-if="prepareFailure" role="alert">{{ prepareFailure }}</p>
+          <PrepareWriting v-if="preparing" :scene="scene" :author-context="authorContext"
+            :return-href="evidenceHref('scene', scene.sceneId, scene.revision)!" @prepared="!draft && load()" />
+          <EvidenceAttachment v-if="draft && loaded && !items.length" :draft="draft" :return-to="returnTo" @attached="load()" />
+        </div>
       </template>
     </aside>
   </div>
@@ -302,25 +319,38 @@ defineExpose({ open: openPanel, close: closePanel });
 
 <style scoped>
 .manuscript-evidence, .evidence-panel { min-inline-size: 0; max-inline-size: 100%; }
-.evidence-trigger, .evidence-close { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-inline-size: 2.75rem; padding: .4rem .65rem; border: 0; border-radius: 4px; background: transparent; color: var(--accent, #285a46); font-size: .875rem; line-height: 1.5; }
+.evidence-trigger, .evidence-close { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-inline-size: 2.75rem; padding: .4rem .65rem; border: 0; border-radius: 4px; background: transparent; color: var(--accent, #252525); font-size: .875rem; line-height: 1.5; }
 .evidence-trigger .icon { flex-shrink: 0; inline-size: 1.1rem; block-size: 1.1rem; }
-.evidence-trigger:hover, .evidence-close:hover { background: var(--sidebar, #eaf0e9); }
-.evidence-trigger[aria-expanded="true"] { background: var(--selection, #d7e6d6); font-weight: 600; }
-.evidence-panel { position: fixed; z-index: 20; inset-block: 0; inset-inline-end: 0; box-sizing: border-box; inline-size: var(--ms-evidence-width, min(320px, 40vw)); block-size: 100dvh; margin: 0; padding: 0 1rem max(1rem, env(safe-area-inset-bottom)); border: 0; border-inline-start: 1px solid var(--line-strong, #87968c); background: var(--sheet, #fff); color: var(--ink, #23332c); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 5rem 1rem; overflow-wrap: anywhere; }
-header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin: 0 -1rem 1rem; padding: max(.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) .75rem max(1rem, env(safe-area-inset-left)); border-block-end: 1px solid var(--line, #d7dfd6); background: var(--sheet, #fff); }
-h2 { margin: 0; font-size: 1.125rem; font-weight: 650; line-height: 1.5; }
+.evidence-trigger:hover, .evidence-close:hover { background: var(--sidebar, #f2f2f2); }
+.evidence-trigger[aria-expanded="true"] { background: var(--selection, #e7e7e7); font-weight: 600; }
+.evidence-panel { position: fixed; z-index: 20; inset-block: 0; inset-inline-end: 0; box-sizing: border-box; inline-size: var(--ms-evidence-width, min(320px, 40vw)); block-size: 100dvh; margin: 0; padding: 0 1rem max(1rem, env(safe-area-inset-bottom)); border: 0; border-inline-start: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); color: var(--ink, #252525); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 5rem 1rem; overflow-wrap: anywhere; font-size: .875rem; }
+header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 -1rem; padding: max(.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) .75rem max(1rem, env(safe-area-inset-left)); border-block-end: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); }
+h2 { margin: 0; font-size: 1rem; font-weight: 650; line-height: 1.5; }
+.evidence-identity { min-inline-size: 0; }
+.evidence-identity p { display: flex; margin: .2rem 0 0; color: var(--muted, #686868); font-size: .75rem; white-space: nowrap; }
+.evidence-identity span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.evidence-identity span:last-child { flex: none; margin-inline-start: .25rem; }
+.evidence-close { flex: none; background: var(--sidebar, #f2f2f2); }
+.evidence-close:hover { background: var(--selection, #e7e7e7); }
 h3 { font-size: 1rem; }
-p, blockquote { white-space: pre-wrap; line-height: 1.75; }
+p, blockquote { white-space: pre-wrap; line-height: 1.8; }
+.evidence-empty { margin-block: 1.25rem .75rem; }
+.evidence-caption { color: var(--muted, #686868); }
 figure { margin: 1rem 0; }
 blockquote { margin: 0 0 .5rem; }
 label { display: block; margin-block: 1rem .4rem; }
 select { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; min-block-size: 2.75rem; padding: .5rem; border: 1px solid var(--line-strong); background: var(--sheet, #fff); color: inherit; font: inherit; }
 button, summary { min-block-size: 2.75rem; cursor: pointer; }
 button { font: inherit; }
-nav { display: flex; flex-wrap: wrap; gap: .75rem; }
-.evidence-scene-links { margin-block: 1.25rem; border-block: 1px solid var(--line); padding-block: .5rem; }
+summary { padding-block: .6rem; }
+nav { display: grid; gap: .35rem; margin-block: .75rem; }
+.evidence-options { padding-block-end: .5rem; }
+.evidence-actions { margin-block-start: .5rem; color: var(--muted, #686868); }
+.evidence-actions :is(blockquote, article, figcaption) { color: var(--ink, #252525); }
+.evidence-prepare { padding: .5rem 0; border: 0; background: transparent; color: inherit; text-align: start; text-decoration: underline; text-underline-offset: .2em; }
+.evidence-prepare:hover:not(:disabled) { color: var(--ink, #252525); }
 [role="alert"] { color: var(--danger); }
-:focus-visible { outline: 2px solid var(--accent, #285a46); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent, #252525); outline-offset: 3px; }
 @media (width < 640px) { .evidence-panel { inset: 0; inline-size: 100%; border: 0; padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)); scrollbar-gutter: auto; } }
 @media (forced-colors: active) { .evidence-trigger[aria-expanded="true"] { outline: 1px solid Highlight; } }
 </style>

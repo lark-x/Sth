@@ -14,6 +14,8 @@ const button = (page, name) => page.getByRole('button', { name, exact: true });
 const panel = page => page.getByRole('complementary', { name: '本次依据', exact: true })
   .or(page.getByRole('dialog', { name: '本次依据', exact: true }));
 const responsivePanel = (page, width) => page.getByRole(width < 640 ? 'dialog' : 'complementary', { name: '本次依据', exact: true });
+const emptyDraft = '这版稿件还没有已确认的来源记录';
+const hrefWithReturn = (path, returnTo) => `${path}&${new URLSearchParams({ returnTo })}`;
 
 async function fixture(t) {
   const backend = await startService(t);
@@ -106,11 +108,17 @@ test('ordinary drafts have an honest empty state and scene links never become ge
   await capture(page, 'quiet-trigger-desktop');
   await button(page, '本次依据').click();
   await panel(page).getByRole('heading', { name: '本次依据', exact: true }).waitFor();
-  await panel(page).getByText(/此稿尚无明确关联的组稿记录/).waitFor();
+  await panel(page).getByText(emptyDraft, { exact: true }).waitFor();
   assert.equal(await panel(page).getByRole('region', { name: '组稿固定输入' }).count(), 0);
-  await panel(page).getByText('场景关联资料 · 第 1 版', { exact: true }).click();
+  assert.equal(await panel(page).getByLabel('组稿编号').isVisible(), false);
+  assert.equal(await panel(page).getByText('钟响两次，渡船离港。', { exact: true }).isVisible(), false);
+  await panel(page).getByText('查看场景资料', { exact: true }).click();
   await panel(page).getByText('钟响两次，渡船离港。', { exact: true }).waitFor();
   await panel(page).getByText('每次钟响都会抬头。', { exact: true }).waitFor();
+  assert.equal(await panel(page).getByRole('link', { name: '场景引用原文 1 · 第 1 版', exact: true }).getAttribute('href'),
+    hrefWithReturn(`/sources/${fx.source.sourceId}?revision=1&start=4&end=14`, fx.path()));
+  assert.equal(await panel(page).getByRole('link', { name: '守灯人 · 第 1 版', exact: true }).getAttribute('href'),
+    hrefWithReturn(`/characters/${fx.character.characterId}?revision=1`, fx.path()));
   assert.equal(calls.filter(call => call.operationId === 'generations.prepare').length, 0);
   assert.equal(calls.filter(call => call.operationId === 'generations.get').length, 0);
   await assertFitsViewport(page);
@@ -140,9 +148,15 @@ test('confirmed association shows pinned originals, characters and author decisi
   await fixed.getByText('钟响两次离港。', { exact: true }).waitFor();
   assert.equal(await fixed.getByText('新公告，响四次。', { exact: true }).count(), 0);
   assert.equal(await fixed.locator('script').count(), 0);
-  assert.match(await fixed.getByRole('link', { name: '引用原文 · 渡口旧公告 · 第 1 版' }).getAttribute('href'), /revision=1$/);
+  assert.equal(await fixed.getByRole('link', { name: '渡口旧公告 · 第 1 版', exact: true }).getAttribute('href'),
+    hrefWithReturn(`/sources/${fx.source.sourceId}?revision=1`, fx.path()));
+  assert.equal(await fixed.getByRole('link', { name: '守灯人 · 第 1 版', exact: true }).getAttribute('href'),
+    hrefWithReturn(`/characters/${fx.character.characterId}?revision=1`, fx.path()));
   assert.match(await panel(page).getByRole('link', { name: '定位稿件片段 1 · 依据 1' }).getAttribute('href'), /revision=1&start=0&end=4$/);
+  assert.equal(await fixed.getByRole('link', { name: '完整提示词与出处' }).count(), 0);
+  await fixed.getByText('查看来源记录', { exact: true }).click();
   assert.match(await fixed.getByRole('link', { name: '完整提示词与出处' }).getAttribute('href'), /\/generations\/.+\/prompt$/);
+  await fixed.getByText('查看来源记录', { exact: true }).click();
   await assertFitsViewport(page);
   await capture(page, 'pinned-inputs-phone');
   await page.setViewportSize({ width: 320, height: 800 });
@@ -182,7 +196,7 @@ test('new writing can add, remove, recover and persist this generation reference
   const fx = await fixture(t);
   const page = await open(t, fx, false, { width: 320, height: 800 });
   await button(page, '本次依据').click();
-  await button(page, '选择本次依据，准备新稿').click();
+  await button(page, '准备新稿').click();
   await page.getByLabel('稿件标题（必填）').fill('钟声后的一幕');
   await page.getByLabel('写作要求（必填）').fill('只使用本次选定的资料。');
   await page.getByLabel('内容模板（必填）').selectOption('short-story');
@@ -196,7 +210,7 @@ test('new writing can add, remove, recover and persist this generation reference
   await capture(page, 'prepare-compact');
   await page.reload();
   await button(page, '本次依据').click();
-  await button(page, '选择本次依据，准备新稿').click();
+  await button(page, '准备新稿').click();
   assert.equal(await page.getByLabel('稿件标题（必填）').inputValue(), '钟声后的一幕');
   assert.equal(await page.locator('.evidence-picker ol li').count(), 1);
   await button(page, '准备写作').click();
@@ -216,7 +230,7 @@ test('reference catalog can select exact historical versions and lost preparatio
   const fx = await fixture(t);
   const page = await open(t, fx, false);
   await button(page, '本次依据').click();
-  await button(page, '选择本次依据，准备新稿').click();
+  await button(page, '准备新稿').click();
   await button(page, '添加本次依据').click();
   await page.getByLabel('选择资料', { exact: true }).selectOption(fx.source.sourceId);
   await page.getByLabel('引用原句（可选，留空引用全文）').fill('钟响两次，渡船离港。');
@@ -239,7 +253,7 @@ test('reference catalog can select exact historical versions and lost preparatio
   assert.ok(committed?.generationId);
   await page.reload();
   await button(page, '本次依据').click();
-  await button(page, '选择本次依据，准备新稿').click();
+  await button(page, '准备新稿').click();
   await button(page, '重试本次准备').click();
   await page.getByRole('link', { name: '查看提示词与出处', exact: true }).waitFor();
   const listed = await fx.invoke('generations.evidence.list', fx.target);
@@ -254,14 +268,16 @@ test('an author can inspect an existing completed generation and explicitly asso
   await fx.invoke('generations.save', { generationId: record.generationId, output: { opening: '灯亮了。', development: '等船。', ending: '离开。' } });
   const page = await open(t, fx);
   await button(page, '本次依据').click();
-  await panel(page).getByText(/此稿尚无明确关联/).waitFor();
-  await page.getByText('关联已有组稿', { exact: true }).click();
+  await panel(page).getByText(emptyDraft, { exact: true }).waitFor();
+  await page.getByText('关联已有记录', { exact: true }).click();
   await page.getByLabel('组稿编号', { exact: true }).fill(record.generationId);
   await button(page, '读取待核对组稿').click();
   await page.getByRole('heading', { name: '待核对的组稿', exact: true }).waitFor();
   await page.getByLabel('我确认这版稿件使用了这次组稿').check();
   await button(page, '确认关联此版本').click();
-  await panel(page).getByText('此关联由作者明确确认，固定在稿件第 1 版。', { exact: true }).waitFor();
+  await panel(page).getByText(`${fx.draft.title} · 修订 1`, { exact: true }).waitFor();
+  await panel(page).getByText('查看来源记录', { exact: true }).click();
+  await panel(page).getByText(/作者已确认关联/).waitFor();
   assert.equal((await fx.invoke('generations.evidence.list', { ...fx.target, draftId: fx.draft.draftId, draftRevision: 1 })).items[0].generation.generationId, record.generationId);
 });
 
@@ -285,9 +301,89 @@ test('prop changes cancel an older snapshot and isolate ordinary drafts and scop
   await page.evaluate(scene => window.switchEvidence(scene), other);
   await panel(page).getByText('此场景版本还没有保存的组稿。', { exact: true }).waitFor();
   release();
-  assert.equal(await panel(page).getByRole('heading', { name: record.title, exact: true }).count(), 0);
+  assert.equal(await panel(page).getByText(record.title, { exact: true }).count(), 0);
   await page.evaluate(({ scene, draft }) => window.switchEvidence(scene, draft), { scene: other, draft: fx.draft });
   await panel(page).getByRole('alert').filter({ hasText: '稿件与场景版本不匹配' }).waitFor();
+});
+
+test('an open panel clears the previous revision immediately and discards a late snapshot across draft switches', async t => {
+  const fx = await fixture(t);
+  async function associate(draft, reference) {
+    const record = await fx.prepare({ title: `${draft.title}记录`, references: [reference] });
+    await fx.invoke('generations.save', { generationId: record.generationId, output: { opening: '灯亮了。', development: '等船。', ending: '离开。' } });
+    await fx.invoke('generations.evidence.attach', { generationId: record.generationId, draftId: draft.draftId,
+      draftRevision: draft.revision, authorConfirmed: true });
+    return record;
+  }
+  await associate(fx.draft, { kind: 'source', id: fx.source.sourceId, revision: 1 });
+  const revised = await fx.invoke('draft.revise', { draftId: fx.draft.draftId, expectedRevision: 1, body: '这是修订后的正文。' });
+  const alternate = await fx.invoke('draft.create', { sceneId: fx.scene.sceneId, sceneRevision: 1, title: '另一候选稿', body: '他转身离开渡口。' });
+  const alternateRecord = await associate(alternate, { kind: 'character', id: fx.character.characterId, revision: 1 });
+  const page = await open(t, fx);
+  const firstPath = `${fx.path()}&draftRevision=1#passage-body`;
+  const secondPath = `${fx.path()}&draftRevision=2#passage-body`;
+  const alternatePath = `/evidence-fixture?sceneId=${fx.scene.sceneId}&draftId=${alternate.draftId}&draftRevision=1#passage-body`;
+  await page.goto(firstPath);
+  await button(page, '工具栏依据').click();
+  await panel(page).getByText(fx.source.body, { exact: true }).waitFor();
+  let release;
+  const delayed = new Promise(resolve => { release = resolve; });
+  let received;
+  const reading = new Promise(resolve => { received = resolve; });
+  let settled;
+  const finished = new Promise(resolve => { settled = resolve; });
+  await page.route('**/api/web/invoke', async route => {
+    const request = route.request().postDataJSON();
+    if (request.operationId !== 'generations.get' || request.input.generationId !== alternateRecord.generationId) return route.continue();
+    const response = await route.fetch();
+    received();
+    await delayed;
+    try { await route.fulfill({ response }); } catch {} finally { settled(); }
+  });
+  async function switchTo(draft, path) {
+    await page.evaluate(({ scene, draft, path }) => {
+      history.pushState(null, '', path);
+      window.switchEvidence(scene, draft);
+    }, { scene: fx.scene, draft, path });
+    await panel(page).getByText(`${draft.title} · 修订 ${draft.revision}`, { exact: true }).waitFor();
+    assert.equal(await page.locator('#passage-body').innerText(), draft.body);
+    assert.equal(await page.locator('.evidence-trigger').getAttribute('aria-expanded'), 'true');
+  }
+  await switchTo(revised, secondPath);
+  await panel(page).getByText(emptyDraft, { exact: true }).waitFor();
+  assert.equal(await panel(page).locator('.evidence-content').count(), 0);
+  await switchTo(alternate, alternatePath);
+  try {
+    await reading;
+    assert.equal(await panel(page).getByText(fx.source.body, { exact: true }).count(), 0);
+    await switchTo(revised, secondPath);
+  } finally { release(); }
+  await finished;
+  await panel(page).getByText(emptyDraft, { exact: true }).waitFor();
+  assert.equal(await panel(page).locator('.evidence-content').count(), 0);
+  await page.unrouteAll({ behavior: 'wait' });
+  await switchTo(alternate, alternatePath);
+  const alternateLink = panel(page).getByRole('link', { name: '守灯人 · 第 1 版', exact: true });
+  assert.equal(await alternateLink.getAttribute('href'), hrefWithReturn(`/characters/${fx.character.characterId}?revision=1`, alternatePath));
+  assert.equal(await panel(page).getByText(fx.source.body, { exact: true }).count(), 0);
+});
+
+test('scene preparation history keeps multiple records available after expanding the selector', async t => {
+  const fx = await fixture(t);
+  const first = await fx.prepare({ title: '人物组稿', references: [{ kind: 'character', id: fx.character.characterId, revision: 1 }] });
+  const second = await fx.prepare({ title: '原文组稿', references: [{ kind: 'source', id: fx.source.sourceId, revision: 1 }] });
+  const page = await open(t, fx, false);
+  await button(page, '工具栏依据').click();
+  const selector = panel(page).getByRole('combobox', { name: '为此场景准备的组稿' });
+  const summary = panel(page).getByText('切换来源记录', { exact: true });
+  await summary.waitFor();
+  assert.equal(await selector.count(), 0);
+  await summary.click();
+  await selector.selectOption(first.generationId);
+  const fixed = panel(page).getByRole('region', { name: '组稿固定输入' });
+  await fixed.getByText(fx.character.persona, { exact: true }).waitFor();
+  await selector.selectOption(second.generationId);
+  await fixed.getByText(fx.source.body, { exact: true }).waitFor();
 });
 
 test('opening uses the current viewport before a delayed media change reaches the component', async t => {
@@ -316,7 +412,7 @@ test('opening uses the current viewport before a delayed media change reaches th
   });
   await page.goto(fx.path());
   await button(page, '工具栏依据').click();
-  await responsivePanel(page, 640).getByText(/此稿尚无明确关联的组稿记录/).waitFor();
+  await responsivePanel(page, 640).getByText(emptyDraft, { exact: true }).waitFor();
   await panel(page).press('Escape');
   for (const width of [390, 640, 639, 640, 390, 640]) {
     await page.setViewportSize({ width, height: 800 });
@@ -370,6 +466,10 @@ test('toolbar opens a fixed independently scrolling side panel and mobile screen
       assert.equal(await panel(page).evaluate(node => node.contains(document.activeElement)), true);
       await page.keyboard.press('Tab');
       assert.equal(await button(page, '关闭依据').evaluate(node => document.activeElement === node), true);
+    }
+    if (width === 1280) {
+      await panel(page).getByText('查看完整内容', { exact: true }).click();
+      await panel(page).getByText(longText, { exact: true }).waitFor();
     }
     await panel(page).evaluate(node => { node.scrollTop = node.scrollHeight; });
     const close = await button(page, '关闭依据').boundingBox();
