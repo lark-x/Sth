@@ -12,6 +12,7 @@ const props = defineProps<{
   revision?: number;
   latestRevision?: number;
   status: string;
+  adoptedLabel?: string;
   sceneHistorical?: boolean;
   alternate?: boolean;
   placement?: Scene['placement'];
@@ -214,7 +215,7 @@ onScopeDispose(() => {
     </div>
     <p :id="`${id}-identity`" class="wr-toolbar-meta">
       <span v-if="revision">第 {{ revision }} 版</span>
-      <span :class="{ 'wr-adopted-label': status === '采用稿' }">{{ status }}</span>
+      <span :class="{ 'wr-adopted-label': status === '采用稿' }">{{ adoptedLabel ?? status }}</span>
       <span v-if="historical">旧版 · 最新第 {{ latestRevision }} 版</span>
       <span v-else-if="revision">最新修订</span>
       <span v-if="sceneHistorical">场景旧版</span>

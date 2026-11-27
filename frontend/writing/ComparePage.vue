@@ -26,6 +26,7 @@ import ReadState from './ReadState.vue';
 import SceneContext from './SceneContext.vue';
 const props = defineProps<{ route: WritingRoute; url: URL }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
+const pinnedScene = props.url.searchParams.has('revision');
 const leftKey = ref('');
 const rightKey = ref('');
 const differences = ref(true);
@@ -97,6 +98,12 @@ const { data, busy, error, reload } = useRead(async (signal) => {
     : [];
   if (!signal.aborted) document.title = `对照候选稿 · ${scene.title} · Sth`;
   return { scene, drafts, versions, compared, contexts };
+});
+const adoptionLabels = computed(() => {
+  const sceneVersion = data.value ? `场景${version(data.value.scene.revision)}` : '';
+  return pinnedScene
+    ? { scope: `${sceneVersion} · 采用状态`, adopted: `${sceneVersion}采用`, other: `${sceneVersion}未采用` }
+    : { scope: `${sceneVersion} · 当前采用状态`, adopted: '采用稿', other: '候选稿' };
 });
 const lines = computed(() =>
   data.value?.compared
@@ -267,6 +274,7 @@ function latestRevision(draft: DraftSummary) {
     <header class="wr-heading wr-reader-heading wr-compare-heading">
       <a :href="back">返回{{ data.scene.title }}</a>
       <h1>对照候选稿</h1>
+      <p class="wr-muted">{{ adoptionLabels.scope }}</p>
       <p v-if="data.scene.branchFrom || data.scene.branchId" class="wr-muted">IF 分支</p>
     </header>
     <template v-if="data.compared && lines">
@@ -287,7 +295,7 @@ function latestRevision(draft: DraftSummary) {
               :key="draftKey(draft)"
               :value="draftKey(draft)"
             >
-              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ' · 采用稿' : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
+              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
             </option>
           </select>
         </div>
@@ -299,7 +307,7 @@ function latestRevision(draft: DraftSummary) {
               :key="draftKey(draft)"
               :value="draftKey(draft)"
             >
-              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ' · 采用稿' : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
+              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
             </option>
           </select>
         </div>
@@ -365,7 +373,7 @@ function latestRevision(draft: DraftSummary) {
               >
             </h2>
             <p class="wr-compare-meta">
-              <span :class="{ 'wr-adopted-label': isAdopted(data.compared[side]) }">{{ isAdopted(data.compared[side]) ? '采用稿' : '候选稿' }}</span>
+              <span :class="{ 'wr-adopted-label': isAdopted(data.compared[side]) }">{{ isAdopted(data.compared[side]) ? adoptionLabels.adopted : adoptionLabels.other }}</span>
               <span>{{ latestRevision(data.compared[side]) === data.compared[side].revision ? '最新修订' : '旧版' }}</span>
               <a
                 :href="

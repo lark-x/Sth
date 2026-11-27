@@ -116,6 +116,19 @@ const adopted = computed(
     data.value?.scene.adopted &&
     draftKey(manuscript.value) === draftKey(data.value.scene.adopted),
 );
+const historicalAdoption = computed(() => {
+  const loaded = data.value;
+  if (loaded && loaded.scene.revision !== loaded.revisions[0]?.revision)
+    return `场景${version(loaded.scene.revision)}采用`;
+});
+const adoptedDraftLabel = computed(() => {
+  const draft = data.value?.scene.adopted;
+  if (!draft) return;
+  const draftRevision = version(draft.revision);
+  return historicalAdoption.value
+    ? `${historicalAdoption.value} · 稿件${draftRevision}`
+    : `已采用${draftRevision}`;
+});
 const latestManuscriptRevision = computed(() =>
   data.value?.drafts.find(draft => draft.draftId === manuscript.value?.draftId)?.revision,
 );
@@ -218,7 +231,8 @@ function versionHref(revision?: number) {
       :revision="manuscript?.revision"
       :latest-revision="latestManuscriptRevision"
       :status="adopted ? '采用稿' : manuscript ? '候选稿' : '暂无稿件'"
-      :scene-historical="data.scene.revision !== data.revisions[0]?.revision"
+      :adopted-label="adopted ? historicalAdoption : undefined"
+      :scene-historical="!!historicalAdoption"
       :alternate="!!(data.scene.branchFrom || data.scene.branchId)"
       :placement="data.scene.placement"
       :chapter-title="data.chapter?.title"
@@ -232,7 +246,7 @@ function versionHref(revision?: number) {
       <template #versions>
         <label v-if="manuscript">稿件<select aria-label="切换稿件" :value="draftKey(manuscript)" @change="switchDraft">
           <option v-if="data.scene.adopted" :value="draftKey(data.scene.adopted)">
-            {{ data.scene.adopted.title }} · 已采用{{ version(data.scene.adopted.revision) }}
+            {{ data.scene.adopted.title }} · {{ adoptedDraftLabel }}
           </option>
           <option
             v-for="draft in data.drafts.filter(item => !data!.scene.adopted || draftKey(item) !== draftKey(data!.scene.adopted))"
@@ -319,7 +333,7 @@ function versionHref(revision?: number) {
     <section
       id="manuscript"
       class="wr-section wr-manuscript wr-reader-sheet"
-      :aria-label="adopted ? '当前采用稿' : '稿件正文'"
+      :aria-label="adopted ? (historicalAdoption ?? '当前采用稿') : '稿件正文'"
     >
       <template v-if="manuscript">
         <DraftEditor
@@ -386,8 +400,7 @@ function versionHref(revision?: number) {
                 v-if="data.scene.adopted?.draftId === draft.draftId"
                 class="wr-selected"
               >
-                已采用{{ version(data.scene.adopted.revision)
-                }}<span v-if="draft.revision !== data.scene.adopted.revision"
+                {{ adoptedDraftLabel }}<span v-if="draft.revision !== data.scene.adopted.revision"
                   >，当前候选稿另有修订</span
                 >
               </p>

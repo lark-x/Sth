@@ -195,3 +195,69 @@ test('the compact reader preserves manuscript identity across layout, edit and e
   assert.equal(servedBundle.sha256, workspace.capturedBuild.bundle.sha256);
   await writeJson(resolve(output, 'manifest.json'), { fixture: fixture.contentSha256, build: workspace.capturedBuild, servedBundle, results });
 });
+
+test('scene adoption labels follow the selected scene revision', { timeout: 45_000 }, async t => {
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  t.after(workspace.close);
+  const { origin, invoke } = workspace;
+  const scene = await invoke('scene.create', { title: '雨夜渡口' });
+  const { sceneId } = scene;
+  const revised = await invoke('scene.revise', { sceneId, expectedRevision: scene.revision, place: '北岸' });
+  const first = await invoke('draft.create', { sceneId, sceneRevision: revised.revision, title: '甲稿', body: '她留在栈桥上。' });
+  const second = await invoke('draft.create', { sceneId, sceneRevision: revised.revision, title: '乙稿', body: '她登上了渡船。' });
+  const historical = await invoke('scene.adopt', { sceneId, expectedRevision: revised.revision, draftId: first.draftId, draftRevision: first.revision });
+  const current = await invoke('scene.adopt', { sceneId, expectedRevision: historical.revision, draftId: second.draftId, draftRevision: second.revision });
+
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ baseURL: origin, viewport: { width: 1280, height: 800 } });
+  const toolbar = page.locator('.wr-toolbar-meta');
+  const region = page.locator('#manuscript');
+  const heading = page.locator('.wr-compare-heading');
+  const left = page.getByRole('article', { name: '左稿', exact: true });
+  const right = page.getByRole('article', { name: '右稿', exact: true });
+  async function compareFromScene() {
+    await button(page, '更多').click();
+    await page.getByRole('link', { name: '对照候选稿', exact: true }).click();
+    await left.waitFor();
+    assert.match(await left.getByRole('heading').innerText(), /甲稿/);
+    assert.match(await right.getByRole('heading').innerText(), /乙稿/);
+    return {
+      sceneRevision: new URL(page.url()).searchParams.get('revision'),
+      scope: await heading.locator('p').allTextContents(),
+      left: await left.locator('.wr-compare-meta span').first().innerText(),
+      right: await right.locator('.wr-compare-meta span').first().innerText(),
+    };
+  }
+
+  await page.goto(`/scenes/${sceneId}`);
+  await body(page).waitFor();
+  assert.equal(await body(page).textContent(), second.body);
+  assert.equal(await region.getAttribute('aria-label'), '当前采用稿');
+  assert.equal(await toolbar.getByText('采用稿', { exact: true }).isVisible(), true);
+  const currentComparison = await compareFromScene();
+
+  await heading.getByRole('link', { name: `返回${scene.title}`, exact: true }).click();
+  await button(page, '稿件与版本').click();
+  await page.getByRole('combobox', { name: '切换场景版本', exact: true }).selectOption(String(historical.revision));
+  await page.waitForURL(url => url.searchParams.get('revision') === String(historical.revision));
+  await body(page).waitFor();
+  assert.equal(await body(page).textContent(), first.body);
+  const historicalLabel = `场景第 ${historical.revision} 版采用`;
+  const historicalRegion = await region.getAttribute('aria-label');
+  const historicalToolbar = await toolbar.getByText(historicalLabel, { exact: true }).isVisible();
+  const historicalComparison = await compareFromScene();
+
+  await left.getByRole('link', { name: `${first.title} · 第 ${first.revision} 版`, exact: true }).click();
+  await body(page).waitFor();
+  assert.equal(await toolbar.getByText('候选稿', { exact: true }).isVisible(), true);
+  assert.deepEqual({ currentComparison, historicalRegion, historicalToolbar, historicalComparison }, {
+    currentComparison: { sceneRevision: null, scope: [`场景第 ${current.revision} 版 · 当前采用状态`], left: '候选稿', right: '采用稿' },
+    historicalRegion: historicalLabel,
+    historicalToolbar: true,
+    historicalComparison: {
+      sceneRevision: String(historical.revision), scope: [`场景第 ${historical.revision} 版 · 采用状态`],
+      left: historicalLabel, right: `场景第 ${historical.revision} 版未采用`,
+    },
+  });
+});
