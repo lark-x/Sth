@@ -88,6 +88,71 @@ test('multi-hop reference history and copied links keep the original reader', { 
   }
 });
 
+test('return history rejects incomplete state and keeps ordinary library navigation unchanged', { timeout: 60_000 }, async t => {
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  t.after(workspace.close);
+  const fixture = await createManuscriptFixture(workspace.invoke);
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  await t.test('a depth without a valid reader does not propagate', async subtest => {
+    const page = await openPage(subtest, browser, workspace.origin, { width: 1280, height: 800 });
+    await page.goto('/settings');
+    await page.getByRole('heading', { level: 1 }).waitFor();
+    await page.evaluate(() => history.replaceState({ sthManuscriptReturnDepth: 1 }, ''));
+    await page.locator('#navigation').getByRole('link', { name: '任务', exact: true }).click();
+    await page.waitForURL('**/jobs');
+    assert.equal(await page.evaluate(() => history.state?.sthManuscriptReturnDepth), undefined);
+    assert.equal(await backLink(page).count(), 0);
+  });
+  for (const [name, path] of [['作品角色', '/characters'], ['作品资料', '/sources']]) {
+    await t.test(`${name} stays an ordinary index entry`, async subtest => {
+      const page = await openPage(subtest, browser, workspace.origin, { width: 1280, height: 800 });
+      await page.goto(fixture.links.oldDraft);
+      await page.locator(passage).waitFor();
+      await page.getByRole('link', { name, exact: true }).click();
+      await page.waitForURL(url => url.pathname === path);
+      await page.getByRole('heading', { level: 1 }).waitFor();
+      assert.equal(await page.evaluate(() => history.state?.sthManuscriptReturn), undefined);
+      assert.equal(await backLink(page).count(), 0);
+    });
+  }
+  await t.test('a canceled history traversal leaves the next return click usable', async subtest => {
+    const page = await openPage(subtest, browser, workspace.origin, { width: 1280, height: 800 });
+    await page.goto(fixture.links.oldPassage);
+    await page.locator(mark).waitFor();
+    await openEvidenceLink(page, fixture.links.character);
+    await page.getByRole('heading', { name: fixture.character.name, level: 1, exact: true }).waitFor();
+    // Fault injection: a browser may cancel a traversal without a popstate.
+    await page.evaluate(() => { window.__returnAttempts = 0; history.go = () => { window.__returnAttempts++; }; });
+    await backLink(page).click();
+    await page.waitForTimeout(1700);
+    await backLink(page).click();
+    await page.locator(mark).waitFor({ timeout: 2500 });
+    assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, fixture.links.oldPassage);
+    assert.equal(await page.evaluate(() => window.__returnAttempts), 1);
+  });
+  for (const mode of ['missing-token', 'out-of-range']) {
+    await t.test(`${mode} history uses the validated manuscript link`, async subtest => {
+      const page = await openPage(subtest, browser, workspace.origin, { width: 1280, height: 800 });
+      await page.goto(fixture.links.oldPassage);
+      await page.locator(mark).waitFor();
+      await openEvidenceLink(page, fixture.links.character);
+      await page.getByRole('heading', { name: fixture.character.name, level: 1, exact: true }).waitFor();
+      await page.evaluate(mode => {
+        const state = { ...history.state };
+        if (mode === 'missing-token') delete state.sthManuscriptReturnToken;
+        else state.sthManuscriptReturnDepth = history.length;
+        history.replaceState(state, '');
+        history.go = () => { throw new Error('Unverifiable history must not be traversed'); };
+      }, mode);
+      await backLink(page).click();
+      await page.locator(mark).waitFor({ timeout: 2500 });
+      assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, fixture.links.oldPassage);
+      assert.equal(await page.locator(passage).textContent(), fixture.bodies.old);
+    });
+  }
+});
+
 function inspect(page) {
   return page.evaluate(({ passage, mark }) => ({
     href: location.pathname + location.search + location.hash,

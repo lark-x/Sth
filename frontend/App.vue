@@ -28,6 +28,7 @@ let evidencePosition: ReadingPosition | undefined;
 let cancelReadingRestore: (() => void) | undefined;
 let routeChange = 0;
 let returning = false;
+let requestedReturn: { href: string; token: string } | undefined;
 let returnTimer: ReturnType<typeof setTimeout> | undefined;
 const destinations = [
   { href: '/diaries', name: '日记', icon: 'diary' },
@@ -44,13 +45,16 @@ const navigationTitle = computed(() => isHome.value ? '首页' : active.value ==
 const ownsReferenceReturn = computed(() => Boolean(manuscriptReturn(url.value)));
 
 function referencePage(target: URL) { return Boolean(characterRoute(target) || sourceRoute(target)); }
+function referenceDetail(target: URL) {
+  return characterRoute(target)?.page === 'detail' || sourceRoute(target)?.page === 'detail';
+}
 function referenceReturn(target: URL, state?: Record<string, unknown> | null): string | undefined {
   if (!referencePage(target)) return;
   const direct = manuscriptReturn(target);
   if (direct) return new URL(direct, target.origin).href;
   // Old in-app reference links have no URL parameter. Validate their saved
   // fallback with the same rule, but never infer a history depth from it.
-  if (target.searchParams.has('returnTo') || typeof state?.sthManuscriptReturn !== 'string') return;
+  if (!referenceDetail(target) || target.searchParams.has('returnTo') || typeof state?.sthManuscriptReturn !== 'string') return;
   const legacy = new URL(target);
   legacy.searchParams.set('returnTo', state.sthManuscriptReturn);
   const validated = manuscriptReturn(legacy);
@@ -58,8 +62,10 @@ function referenceReturn(target: URL, state?: Record<string, unknown> | null): s
 }
 function returnDepth(target: URL, state: Record<string, unknown> | null) {
   const depth = state?.sthManuscriptReturnDepth;
-  return Number.isSafeInteger(depth) && Number(depth) > 0 &&
-    state?.sthManuscriptReturn === referenceReturn(target, state) ? Number(depth) : undefined;
+  const reader = referenceReturn(target, state);
+  return reader && typeof state?.sthManuscriptReturnToken === 'string' && state.sthManuscriptReturnToken.length > 0 &&
+    Number.isSafeInteger(depth) && Number(depth) > 0 && Number(depth) < history.length &&
+    state?.sthManuscriptReturn === reader ? Number(depth) : undefined;
 }
 
 function openNavigation(event: MouseEvent) {
@@ -118,6 +124,7 @@ async function updateRoute(position?: ReadingPosition) {
   cancelReadingRestore = undefined;
   evidencePosition = undefined;
   returning = false;
+  requestedReturn = undefined;
   clearTimeout(returnTimer);
   returnToManuscript.value = referenceReturn(new URL(location.href), history.state);
   focusNextMount = !position;
@@ -153,35 +160,52 @@ function navigate(href: string, replace = false) {
   const depth = returnDepth(url.value, history.state);
   if (!replace && depth && destination.href === returnToManuscript.value) {
     if (!returning) {
+      const source = location.href;
+      const token = history.state.sthManuscriptReturnToken as string;
+      requestedReturn = { href: destination.href, token };
+      returning = true;
+      // A canceled traversal must not consume every subsequent click. Only
+      // revoke this entry's traversal hint; never navigate from a timer.
+      returnTimer = setTimeout(() => {
+        if (location.href === source && history.state?.sthManuscriptReturnToken === token &&
+          history.state?.sthManuscriptReturnDepth === depth) {
+          const state = { ...history.state };
+          delete state.sthManuscriptReturnDepth;
+          delete state.sthManuscriptReturnToken;
+          history.replaceState(state, '');
+        }
+        returning = false;
+        requestedReturn = undefined;
+      }, 1500);
       history.go(-depth);
-      // A canceled traversal must not permanently disable the return control.
-      // Do not start a second navigation when this guard expires.
-      returnTimer = setTimeout(() => { returning = false; }, 1500);
     }
-    returning = true;
     return;
   }
   const nextReturn = referenceReturn(destination);
   const continuing = depth && nextReturn === returnToManuscript.value;
   if (replace) {
     let state = history.state;
-    if (state?.sthManuscriptPosition || state?.sthManuscriptReturn || state?.sthManuscriptReturnDepth) {
+    if (state?.sthManuscriptPosition || state?.sthManuscriptReturn || state?.sthManuscriptReturnDepth || state?.sthManuscriptReturnToken) {
       state = { ...state };
       delete state.sthManuscriptPosition;
       if (!continuing) {
         delete state.sthManuscriptReturn;
         delete state.sthManuscriptReturnDepth;
+        delete state.sthManuscriptReturnToken;
       }
     }
     history.replaceState(state, '', destination);
   } else {
     const auxiliary = referencePage(destination);
-    const matchesReader = nextReturn === url.value.href || !destination.searchParams.has('returnTo');
+    const matchesReader = nextReturn === url.value.href ||
+      (!destination.searchParams.has('returnTo') && referenceDetail(destination));
     const position = auxiliary && matchesReader && writingRoute(url.value)?.page === 'read'
       ? evidencePosition ?? readingPosition() : undefined;
-    if (position) history.replaceState({ ...history.state, sthManuscriptPosition: position }, '');
-    const state = position ? { sthManuscriptReturn: position.href, sthManuscriptReturnDepth: 1 }
-      : continuing ? { sthManuscriptReturn: nextReturn, sthManuscriptReturnDepth: depth + 1 } : null;
+    const token = position ? crypto.getRandomValues(new Uint32Array(4)).join('-') : history.state?.sthManuscriptReturnToken;
+    if (position) history.replaceState({ ...history.state, sthManuscriptPosition: position, sthManuscriptReturnToken: token }, '');
+    const state = position ? { sthManuscriptReturn: position.href,
+      ...(nextReturn === position.href ? { sthManuscriptReturnDepth: 1, sthManuscriptReturnToken: token } : {}) }
+      : continuing ? { sthManuscriptReturn: nextReturn, sthManuscriptReturnDepth: depth + 1, sthManuscriptReturnToken: token } : null;
     history.pushState(state, '', destination);
   }
   void updateRoute();
@@ -223,7 +247,9 @@ function onReplace(event: Event) { navigate((event as CustomEvent<string>).detai
 function onAnnounce(event: Event) { announce((event as CustomEvent<string>).detail); }
 function onPopstate(event: PopStateEvent) {
   const position: ReadingPosition | undefined = event.state?.sthManuscriptPosition;
-  void updateRoute(position?.href === location.href ? position : undefined);
+  const expected = !requestedReturn || (requestedReturn.href === location.href &&
+    event.state?.sthManuscriptReturnToken === requestedReturn.token);
+  void updateRoute(expected && position?.href === location.href ? position : undefined);
 }
 
 window.addEventListener('popstate', onPopstate);
