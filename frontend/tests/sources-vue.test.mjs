@@ -100,7 +100,7 @@ async function fixture(t) {
         });
       },
     }],
-    server: { host: '127.0.0.1', port: 0, strictPort: true, proxy: {
+    server: { host: '127.0.0.1', strictPort: false, proxy: {
       '/api': { target: backend, changeOrigin: true,
         configure(proxy) { proxy.on('proxyReq', request => request.setHeader('Origin', backend)); } },
     } },
@@ -153,7 +153,8 @@ async function capture(page, name) {
   const folder = process.env.STH_SOURCES_VUE_ARTIFACTS;
   if (!folder) return;
   await mkdir(folder, { recursive: true });
-  await page.screenshot({ path: join(folder, `${name}.png`), animations: 'disabled' });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: join(folder, `${name}.png`), fullPage: true, animations: 'disabled' });
 }
 
 test('Vue sources independent routes, retained drafts and exact public API references', { timeout: 240_000 }, async t => {
@@ -239,7 +240,7 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     const page = await open(t, origin, `${path(source.sourceId)}?action=revise`);
     await field(page, '正文').fill('我的本地修改。');
     await navigate(page, '/__sources_outside');
-    await invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '另一位作者的修改。' });
+    await invoke('source.revise', { sourceId: source.sourceId, expectedRevision: 1, body: '另一位作者的修改。', origin: '后来补充的出处' });
     await navigate(page, `${path(source.sourceId)}?action=revise`);
     assert.equal(await field(page, '正文').inputValue(), '我的本地修改。');
     await page.reload();
@@ -421,6 +422,65 @@ test('Vue sources independent routes, retained drafts and exact public API refer
     await link(page, '查看已保存资料').click();
     await saved(page, '离开时仍在保存');
     assert.equal((await invoke('source.search', { query: '离开时仍在保存' })).items.length, 1);
+    await navigate(page, '/sources/new');
+    assert.equal(await field(page, '标题').inputValue(), '', 'recovering the saved record releases the completed draft');
+  });
+
+  await t.test('a missing receipt resubmits the same immutable call', async t => {
+    const page = await open(t, origin);
+    const calls = [];
+    await page.route('**/api/web/invoke', route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId !== 'source.create') return route.continue();
+      calls.push(call);
+      return calls.length === 1 ? route.abort() : route.continue();
+    });
+    await fill(page, { title: '未送达的第一次提交', body: '重发同一次请求。' });
+    await click(page, '新建资料');
+    await page.getByRole('alert').filter({ hasText: '重试同一次提交' }).waitFor();
+    assert.equal(await field(page, '正文').isDisabled(), true);
+    const receipt = page.waitForRequest('**/api/web/receipt');
+    await click(page, '重试同一次提交');
+    assert.equal((await receipt).postDataJSON().stepId, calls[0].stepId);
+    await saved(page, '未送达的第一次提交');
+    assert.deepEqual(calls[0], calls[1]);
+    assert.equal((await invoke('source.search', { query: '未送达的第一次提交' })).items.length, 1);
+  });
+
+  await t.test('cancelled reads cannot replace a newer route and long histories retain old versions', async t => {
+    const slow = await create({ title: '延迟旧页面', body: '不应显示的旧正文。' });
+    const current = await create({ title: '新的资料页面', body: '初版正文。' });
+    for (let revision = 1; revision <= 21; revision++) await invoke('source.revise', {
+      sourceId: current.sourceId, expectedRevision: revision, body: `第 ${revision + 1} 次正文。`,
+    });
+    const page = await open(t, origin, '/sources');
+    let release;
+    let seen;
+    let finished;
+    const received = new Promise(resolve => { seen = resolve; });
+    const settled = new Promise(resolve => { finished = resolve; });
+    const gate = new Promise(resolve => { release = resolve; });
+    t.after(() => release());
+    await page.route('**/api/web/invoke', async route => {
+      const call = route.request().postDataJSON();
+      if (call.operationId !== 'source.read' || call.input.sourceId !== slow.sourceId) return route.continue();
+      const response = await route.fetch();
+      seen();
+      await gate;
+      try { await route.fulfill({ response }); } finally { finished(); }
+    });
+    await page.evaluate(href => window.__sourcesNavigate(href), path(slow.sourceId));
+    await received;
+    await navigate(page, path(current.sourceId));
+    release();
+    await settled;
+    await h1(page, current.title).waitFor();
+    assert.equal(await h1(page, slow.title).count(), 0);
+    assert.equal(await page.locator('.sources-history a').count(), 22);
+    await link(page, '第 1 版').click();
+    await ready(page);
+    assert.equal(await page.locator('#passage-body').textContent(), '初版正文。');
+    assert.equal(await link(page, '修订资料').count(), 0);
   });
 
   await t.test('list and exact-match pagination, literal safe text and fallback boundaries', async t => {

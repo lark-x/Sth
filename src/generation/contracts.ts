@@ -1,6 +1,11 @@
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import { id as resourceId, SourceRangeSchema } from '../sources/contracts.ts';
 import { branchScope, eventRef, eventRefs, narrativeProjectionRef, projectedCheckpoint, viewpoint } from '../story/narrative-contracts.ts';
+import { contextRevision } from '../story/decision-contracts.ts';
+import { generationAuthorContext } from './author-context-contracts.ts';
+
+export { generationAuthorContextRef } from './author-context-contracts.ts';
+export type { GenerationAuthorContext, GenerationAuthorContextRef } from './author-context-contracts.ts';
 
 export const strict = { additionalProperties: false };
 export const id = Type.String({ minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$' });
@@ -134,6 +139,7 @@ export const composition = Type.Object({
   template,
   requirements: Type.Optional(requirements),
   story: Type.Optional(storyProjection),
+  authorContext: Type.Optional(generationAuthorContext),
   references: Type.Array(reference),
   messages: Type.Array(message),
 }, strict);
@@ -142,11 +148,12 @@ export type Composition = Static<typeof composition>;
 const provenanceFields = {
   kind: Type.Union([
     Type.Literal('fixed'), Type.Literal('request'), Type.Literal('brief'), Type.Literal('template'),
-    Type.Literal('requirements'), Type.Literal('input'), Type.Literal('reference'),
+    Type.Literal('requirements'), Type.Literal('input'), Type.Literal('reference'), Type.Literal('author-context'),
   ]),
   path: Type.String(),
   id: Type.Optional(id), revision: Type.Optional(revision),
-  referenceKind: Type.Optional(referenceKind),
+  contextRevision: Type.Optional(contextRevision),
+  referenceKind: Type.Optional(Type.Union([...referenceKind.anyOf, Type.Literal('decision'), Type.Literal('question')])),
   entryId: Type.Optional(resourceId), entryLabel: Type.Optional(Type.String()), blockIndex: Type.Optional(index),
   blockType: Type.Optional(Type.Union([Type.Literal('text'), Type.Literal('image'), Type.Literal('audio'), Type.Literal('reference')])),
   target: Type.Optional(Type.Object({ kind: Type.String(), id: resourceId, revision,

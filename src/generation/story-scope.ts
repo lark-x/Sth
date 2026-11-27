@@ -7,9 +7,9 @@ import { sceneBranchId } from '../story/branches.ts';
 import type { Event } from '../story/narrative-contracts.ts';
 import { projectNarrativeForGeneration, readEvent } from '../story/narrative-storage.ts';
 import { readDraft, readScene, readSceneSummary } from '../story/storage.ts';
-import type { GenerationStoryRef, ReferenceInput } from './contracts.ts';
+import type { GenerationAuthorContextRef, GenerationStoryRef, ReferenceInput } from './contracts.ts';
 
-export function storyScope(db: DatabaseSync, inputs: ReferenceInput[], ref: GenerationStoryRef | undefined) {
+export function storyScope(db: DatabaseSync, inputs: ReferenceInput[], ref: GenerationStoryRef | undefined, author?: GenerationAuthorContextRef) {
   const story = ref && projectNarrativeForGeneration(db, ref);
   const restricted = story?.viewpoint.kind === 'character';
   const known = new Map(story?.knownEvents.map(event => [`${event.eventId}:${event.revision}`, event]));
@@ -27,7 +27,10 @@ export function storyScope(db: DatabaseSync, inputs: ReferenceInput[], ref: Gene
     return sceneBranchId(db, scene.sceneId, scene.branchFrom !== undefined);
   }
 
-  let branchId = story?.branchId;
+  if (author && story && author.branchId !== story.branchId) {
+    throw new OperationError(409, 'generation_author_context_branch_mismatch', 'The author context must use the pinned telling branch.');
+  }
+  let branchId = story ? story.branchId : author?.branchId;
   for (const { kind, id, revision } of inputs) {
     if (restricted && kind !== 'event') {
       throw new OperationError(409, 'generation_viewpoint_reference_forbidden', 'A character viewpoint only accepts exact events visible in the pinned telling.');

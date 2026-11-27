@@ -4,6 +4,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { openBinding, pair } from './credentials.mjs';
 import { request } from './http.mjs';
+import { stat } from 'node:fs/promises';
+import { isAbsolute } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const names = { catalog: 'sth_personal_discover', invoke: 'sth_personal_invoke', receipt: 'sth_personal_receipt' };
 const prefix = 'sth.mcp.v1:';
@@ -50,8 +53,16 @@ function toolResult(value, token, failed = false) {
   return failed ? { isError: true, content } : { content, structuredContent: JSON.parse(text) };
 }
 
-async function serve(path) {
+async function serve(path, { workspace, sourceId } = {}) {
   const { origin, token } = await openBinding(path);
+  if (workspace) {
+    if (!isAbsolute(workspace) || !(await stat(workspace)).isDirectory()) throw new Error('Supply an absolute local workspace directory.');
+    process.chdir(workspace);
+  }
+  if (sourceId) {
+    if (!/^[a-zA-Z0-9_-]{1,200}$/.test(sourceId)) throw new Error('Supply a valid selected source ID.');
+    tools[0] = { ...tools[0], description: `${tools[0].description} Selected Sth sourceId is ${JSON.stringify(sourceId)}. Discover source.read, then read this sourceId without revision for the latest version. This selection is context, and the connection retains its personal catalog access.` };
+  }
   const server = new Server({ name: 'sth-personal-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
@@ -93,14 +104,17 @@ async function serve(path) {
 
 const args = process.argv.slice(2);
 try {
-  if (args[0] === 'pair' && args.length === 2) {
-    process.stdout.write(`${JSON.stringify(await pair(args[1]))}\n`);
-  } else if (args[0] === 'stdio' && args.length <= 2) {
-    await serve(args[1]);
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: {
+    'client-name': { type: 'string' }, workspace: { type: 'string' }, 'source-id': { type: 'string' },
+  } });
+  if (positionals[0] === 'pair' && positionals.length === 2 && !values.workspace && !values['source-id']) {
+    process.stdout.write(`${JSON.stringify(await pair(positionals[1], { clientName: values['client-name'] }))}\n`);
+  } else if (positionals[0] === 'stdio' && positionals.length <= 2 && !values['client-name']) {
+    await serve(positionals[1], { workspace: values.workspace, sourceId: values['source-id'] });
   } else {
-    throw new Error('Usage: node mcp/cli.mjs pair NEW_PRIVATE_DIRECTORY | stdio [BINDING_FILE]');
+    throw new Error('Usage: node mcp/cli.mjs pair NEW_PRIVATE_DIRECTORY [--client-name NAME] | stdio [BINDING_FILE] [--workspace DIRECTORY] [--source-id ID]');
   }
 } catch (error) {
-  process.stderr.write(`${error.message}\n`);
+  process.stderr.write(`${error.code?.startsWith('ERR_PARSE_ARGS') ? 'Invalid MCP arguments.' : error.message}\n`);
   process.exitCode = 1;
 }

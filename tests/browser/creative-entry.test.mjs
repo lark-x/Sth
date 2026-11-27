@@ -79,7 +79,7 @@ async function launch(t, viewport = desktop, { actualShell = false } = {}) {
   const backendOrigin = `http://127.0.0.1:${backend.address().port}`;
   const cache = await mkdtemp(join(tmpdir(), 'sth-creative-vite-'));
   let vite;
-  let server;
+  const server = createServer();
   let browser;
   t.after(async () => {
     await browser?.close();
@@ -101,14 +101,14 @@ async function launch(t, viewport = desktop, { actualShell = false } = {}) {
           : entry;
       },
     }],
-    server: { middlewareMode: true, hmr: false, ws: false, watch: null, proxy: {
+    server: { middlewareMode: true, hmr: { server }, watch: null, proxy: {
       '/api': {
         target: backendOrigin, changeOrigin: true,
         configure(proxy) { proxy.on('proxyReq', request => request.setHeader('Origin', backendOrigin)); },
       },
     } },
   });
-  server = createServer((request, response) => {
+  server.on('request', (request, response) => {
     const path = new URL(request.url, 'http://localhost').pathname;
     const isPage = /^\/(?:workspace|projects|create|scenes|drafts|chapters|branches|narratives|characters|sources|diaries)(?:\/|$)/.test(path) || path === '/';
     if (isPage) {

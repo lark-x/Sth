@@ -5,7 +5,7 @@ import { requireProject } from '../library/storage.ts';
 import { generationBatchOperations } from './batches.ts';
 import { assertText, validateOutput, validateTemplate } from './composition.ts';
 import {
-  generation, generationResult, generationStoryRef, generationSummary, id, inputFields, listOf, pagination, plan, planDefinition,
+  generation, generationAuthorContextRef, generationResult, generationStoryRef, generationSummary, id, inputFields, listOf, pagination, plan, planDefinition,
   promptInspection, promptPage, promptPageInput, referenceInput, requirements, requirementsDefinition, resultLink, revision,
   strict, template, templateDefinition, title, type Requirements, type Template,
 } from './contracts.ts';
@@ -151,23 +151,25 @@ export const generationOperations = [
   }),
   defineOperation({
     id: 'generations.prepare', effect: 'write',
-    description: 'Prepare and persist Sth writing context. Pin a saved telling with story (narrativeId, revision, branchId, using null for mainline). For an IF, optionally add checkpointRevision from a checkpoint that pins this exact telling. Only the viewpoint character can contribute local state. Explicit references can select pinned judgments, events, and source ranges. Character references include the description by default. Set includeDescription to false and select entryIds or entryId and original zero-based blockIndex to use specific blocks. Call generations.save with the structured draft.',
+    description: 'Prepare and persist Sth writing context. Pin a saved telling with story (narrativeId, revision, branchId, using null for mainline). For an IF, optionally add checkpointRevision from a checkpoint that pins this exact telling. Only the viewpoint character can contribute local state. Optional authorContext requires projectId, branchId (null for mainline), and exact contextRevision (0 is the empty context). It must match the project and selected branch. Omitted generation projectId uses authorContext.projectId. Confirmed decisions are binding constraints. Proposals and open questions remain unconfirmed. All sections are read across pages, up to 200 items combined and 200,000 UTF-8 bytes, with larger contexts rejected. Character viewpoints withhold all free-form author context and its item metadata. Explicit references can select pinned judgments, events, and source ranges. Character references include the description by default. Set includeDescription to false and select entryIds or entryId and original zero-based blockIndex to use specific blocks. Call generations.save with the structured draft.',
     inputSchema: Type.Object({
       ...inputFields, templateId: id, templateRevision: readRevision, requirementId: Type.Optional(id),
       requirementRevision: readRevision, references: Type.Optional(Type.Array(referenceInput, { maxItems: 32 })),
       story: Type.Optional(generationStoryRef),
+      authorContext: Type.Optional(generationAuthorContextRef),
     }, strict), outputSchema: generation, interaction: resultInteraction,
     run(input, { db }) {
-      const { templateId, templateRevision, requirementId, requirementRevision, references = [], story, ...parts } = input;
+      const { templateId, templateRevision, requirementId, requirementRevision, references = [], story, authorContext, ...parts } = input;
       assertText(parts.title, parts.brief, ...references.map(reference => reference.excerpt));
       if (parts.projectId !== undefined) requireProject(db, parts.projectId);
       if (requirementId === undefined && requirementRevision !== undefined) {
         throw new OperationError(400, 'generation_requirement_required', 'Provide requirementId with requirementRevision.');
       }
+      const projectId = parts.projectId ?? authorContext?.projectId;
       const context = prepareComposition({
-        ...parts, title: parts.title.trim(), template: readTemplate(db, templateId, templateRevision),
+        ...parts, ...(projectId === undefined ? {} : { projectId }), title: parts.title.trim(), template: readTemplate(db, templateId, templateRevision),
         ...(requirementId === undefined ? {} : { requirements: readRequirements(db, requirementId, requirementRevision) }),
-      }, pinReferences(db, references, story, parts.projectId));
+      }, pinReferences(db, references, story, projectId, authorContext));
       return readGeneration(db, insertGeneration(db, context));
     },
   }),

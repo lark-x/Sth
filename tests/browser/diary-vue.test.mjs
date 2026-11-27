@@ -67,7 +67,7 @@ async function fixture(t) {
         });
       },
     }],
-    server: { host: '127.0.0.1', port: 0, strictPort: true, proxy: {
+    server: { host: '127.0.0.1', strictPort: false, proxy: {
       '/assets': { target: backend, changeOrigin: true },
       '/api': { target: backend, changeOrigin: true,
         configure(proxy) { proxy.on('proxyReq', request => request.setHeader('Origin', backend)); } },
