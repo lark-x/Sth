@@ -4,20 +4,51 @@
   "private": true,
   "type": "module",
   "engines": { "node": ">=24.15.0" },
+  "bin": { "sth-workspace": "./scripts/workspace.mjs" },
+  "files": [
+    "src/",
+    "scripts/workspace*.mjs",
+    "scripts/backup.ts",
+    "web/",
+    "frontend/dist/",
+    "frontend/build-if-needed.mjs",
+    "frontend/node-runtime.mjs",
+    "docs/WORKSPACE_SETUP.md",
+    "adapters/package.json",
+    "adapters/package-lock.json",
+    "adapters/README.md",
+    "adapters/hermes_plugin/*.py",
+    "adapters/hermes_plugin/plugin.yaml",
+    "adapters/mcp/*.mjs",
+    "adapters/scripts/*.mjs",
+    "adapters/scripts/*.ps1"
+  ],
   "scripts": {
-    "start": "node src/main.ts",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit -p frontend/tsconfig.json && vite build",
+    "prestart": "node frontend/build-if-needed.mjs",
+    "start": "node --import ./frontend/node-runtime.mjs src/main.ts",
     "backup": "node scripts/backup.ts",
     "contract": "node scripts/contract.ts",
-    "typecheck": "tsc --noEmit",
+    "workspace": "node scripts/workspace.mjs",
+    "test:onboarding": "node --test tests/onboarding*.test.ts",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit && vue-tsc --noEmit -p frontend/tsconfig.json",
+    "pretest": "npm run build",
     "test": "node --test tests/*.test.ts",
-    "test:browser": "node --test tests/browser/*.test.mjs"
+    "pretest:browser": "npm run build",
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs frontend/tests/*.test.mjs"
   },
   "dependencies": {
-    "@sinclair/typebox": "0.34.52"
+    "@sinclair/typebox": "0.34.52",
+    "vue": "3.5.46"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
+    "@vitejs/plugin-vue": "6.0.11",
     "playwright": "1.62.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vite": "7.3.8",
+    "vue-tsc": "3.3.14"
   }
 }

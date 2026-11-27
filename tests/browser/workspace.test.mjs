@@ -87,6 +87,7 @@ test('workspace phase 1: create and search sources, revise, and follow exact dia
   await goto(page, '/diaries/new', '写日记');
   await fill(page, '标题', '最后一班船');
   await fill(page, '正文', '我在钟响前登船。');
+  await page.locator('summary').filter({ hasText: /^资料引用/ }).click();
   await click(page, '添加资料引用');
   await choose(page, '资料', '北港渡船 · 第 1 版');
   const citationPreview = page.getByRole('link', { name: '查看所选版本原文', exact: true });

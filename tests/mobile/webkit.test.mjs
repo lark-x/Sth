@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { test } from 'node:test';
+import { devices, webkit } from 'playwright';
+import { assertFitsViewport, startService } from '../browser/harness.mjs';
+import { pairPersonalClient } from '../browser/personal-api.mjs';
+
+test('WebKit opens the paired diary link, edits it and reopens the original revision', { timeout: 75_000 }, async t => {
+  const origin = await startService(t);
+  const agent = await pairPersonalClient(origin);
+  const first = await agent.invoke('diary.create', { title: '码头便笺', body: '风从桥洞里过。', diaryDate: '2026-11-27' });
+  const browser = await webkit.launch();
+  t.after(() => browser.close());
+  const context = await browser.newContext({ ...devices['iPhone 13'], baseURL: origin, locale: 'zh-CN' });
+  const errors = [];
+  context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
+  const page = await context.newPage();
+  await page.goto(first.href);
+  await page.getByRole('article').getByText(first.body, { exact: true }).waitFor();
+  await assertFitsViewport(page);
+  await page.getByRole('link', { name: '编辑', exact: true }).click();
+  const ending = `远处有一盏灯。${randomUUID().slice(0, 8)}`;
+  await page.getByRole('textbox', { name: '正文', exact: true }).fill(ending);
+  await page.getByRole('button', { name: '保存修改', exact: true }).click();
+  await page.getByRole('article').getByText(ending, { exact: true }).waitFor();
+  await page.close();
+
+  const reopened = await context.newPage();
+  const historical = `${first.href}?revision=1`;
+  await reopened.goto(historical);
+  await reopened.getByRole('article').getByText(first.body, { exact: true }).waitFor();
+  await reopened.getByRole('link', { name: '查看当前版本' }).click();
+  await reopened.getByRole('article').getByText(ending, { exact: true }).waitFor();
+  await reopened.goBack();
+  await reopened.getByRole('article').getByText(first.body, { exact: true }).waitFor();
+  assert.equal(new URL(reopened.url()).searchParams.get('revision'), '1');
+  const current = await agent.invoke('diary.read', { noteId: first.noteId });
+  assert.deepEqual([current.revision, current.body], [2, ending]);
+  assert.deepEqual(errors, []);
+});

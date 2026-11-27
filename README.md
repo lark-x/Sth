@@ -49,6 +49,8 @@ Hermes 和 MCP 各自的安装、隔离配置与验证方式见 [适配器说明
 
 ## 手机链接
 
+从手机助手打开固定版本、接入 WKWebView 和移动端验收步骤见[手机网页与 iOS 容器接入](docs/IOS_EMBEDDING.md)。
+
 手机上的 `127.0.0.1` 指向手机本身。需要从手机打开网页时，在自己的 HTTPS 反向代理上将域名转发到本机服务，保留原始 Host。给服务设置完整的 `STH_PUBLIC_ORIGIN`（例如 `https://sth.example.net`）和 `STH_WEB_PASSWORD`，并重启。浏览器使用用户名 `sth` 和该密码。值应保存在本地环境配置中。给 Hermes 的 `STH_PERSONAL_OPERATIONS_PORTAL_ORIGIN` 设置同一地址，它就可以在回复中附上手机能打开的链接。默认本地运行无需这些配置。
 
 ## 开发与验收

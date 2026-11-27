@@ -12,8 +12,9 @@ import { authenticate, claim, issueCode, listConnections, revoke } from './conne
 import { maxAssetBytes, readAssetBinary, readAssetMetadata } from './assets/index.ts';
 
 const webRoot = fileURLToPath(new URL('../web/', import.meta.url));
+const frontendRoot = fileURLToPath(new URL('../frontend/dist/', import.meta.url));
 const personal = '/api/v1/personal-operations/';
-const contentTypes: Record<string, string> = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.png': 'image/png', '.woff2': 'font/woff2', '.html': 'text/html' };
+const contentTypes: Record<string, string> = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.gif': 'image/gif', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.html': 'text/html' };
 
 function fail(status: number, code: string, message: string): never {
   throw new OperationError(status, code, message);
@@ -74,14 +75,17 @@ async function page(path: string, res: ServerResponse, head: boolean) {
   const extension = extname(path);
   const isFile = Boolean(extension);
   if (isFile && !Object.hasOwn(contentTypes, extension)) fail(404, 'missing_asset', '资源不存在。');
-  const file = resolve(webRoot, isFile ? '.' + path : 'index.html');
-  if (!file.startsWith(resolve(webRoot) + sep)) fail(404, 'missing_asset', '资源不存在。');
+  const root = !isFile || path === '/index.html' || path.startsWith('/vue/') ? frontendRoot : webRoot;
+  const file = resolve(root, isFile ? '.' + path : 'index.html');
+  if (!file.startsWith(resolve(root) + sep)) fail(404, 'missing_asset', '资源不存在。');
   const data = await readFile(file).catch((error: NodeJS.ErrnoException) => {
+    if (root === frontendRoot && !isFile && error.code === 'ENOENT') fail(503, 'frontend_not_built', '前端尚未构建，请运行 npm run build 后重试。');
     if (error.code === 'ENOENT' || error.code === 'ENOTDIR') fail(404, 'missing_asset', '资源不存在。');
     throw error;
   });
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
-  res.setHeader('Content-Type', (contentTypes[extension] || 'text/html') + '; charset=utf-8');
+  const contentType = contentTypes[extension] || 'text/html';
+  res.setHeader('Content-Type', contentType + (/^(text\/|image\/svg)/.test(contentType) ? '; charset=utf-8' : ''));
   res.end(head ? undefined : data);
 }
 
@@ -103,7 +107,8 @@ export function createApp(db: DatabaseSync, settings: ServerSettings = {}) {
   const ownerDigest = createHash('sha256').update('sth:' + (settings.webPassword ?? '')).digest();
   return createServer({ requestTimeout: 30_000, headersTimeout: 15_000 }, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Referrer-Policy', 'no-referrer');
+    // WebKit needs the same-origin referrer policy to send Origin on owner API posts.
+    res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const host = req.headers.host;

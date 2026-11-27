@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { assertFitsViewport, openBrowser, startService } from '../../tests/browser/harness.mjs';
+import { pairPersonalClient } from '../../tests/browser/personal-api.mjs';
+
+test('an author confirms a proposal on mobile and a fresh connection can recover the earlier context', async t => {
+  const origin = await startService(t);
+  const proposer = await pairPersonalClient(origin);
+  const { projectId } = await proposer.invoke('project.create', { title: '灯塔上的约定' });
+  const proposal = await proposer.invoke('decision.propose', { projectId, title: '渡口的时间', body: '收船时钟响两次。' });
+  const page = await openBrowser(t, origin, { width: 390, height: 844 });
+  await page.goto(`/author-context?projectId=${projectId}`);
+  const old = await page.getByRole('link', { name: '固定此版本' }).getAttribute('href');
+  await page.getByLabel('作者署名').fill('阿南');
+  await page.getByRole('button', { name: '确认这一版' }).click();
+  await page.getByText(/阿南 · /).waitFor();
+  await assertFitsViewport(page);
+  const reader = await pairPersonalClient(origin);
+  const latest = await reader.invoke('story.context', { projectId });
+  assert.equal(latest.confirmedDecisions.items[0].decisionId, proposal.decisionId);
+  assert.equal(latest.confirmedDecisions.items[0].confirmation.confirmedBy, '阿南');
+  assert.equal(latest.pendingDecisions.items.length, 0);
+  await page.goto(old);
+  await page.getByRole('link', { name: '返回最新版' }).waitFor();
+  await page.getByRole('heading', { name: proposal.title }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '确认这一版' }).count(), 0);
+  const earlier = await reader.invoke('story.context', { projectId, contextRevision: proposal.contextRevision });
+  assert.equal(earlier.pendingDecisions.items[0].revision, proposal.revision);
+  assert.deepEqual(earlier.confirmedDecisions.items, []);
+});

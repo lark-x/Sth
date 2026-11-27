@@ -1,5 +1,11 @@
 **
 !package*.json
+!vite.config.ts
+!frontend/
+!frontend/**
+frontend/dist/
+frontend/.artifacts/
+frontend/tests/
 !src/
 !src/**
 !web/
