@@ -1,6 +1,6 @@
 import { timingSafeEqual, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import {
@@ -101,6 +101,9 @@ try {
   });
   runtime.origin = `http://127.0.0.1:${server.address().port}`;
   updateRuntime(home, id, runtime);
+  if (runtime.installationPath.split(sep).includes('node_modules')) {
+    await import('../frontend/node-runtime.mjs');
+  }
   const [{ openDatabase }, { createApp }, mediaModule, generationModule, externalModule] = await Promise.all([
     import('../src/database.ts'), import('../src/server.ts'), import('../src/jobs/index.ts'),
     import('../src/generation/index.ts'), import('../src/sources/external.ts'),

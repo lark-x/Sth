@@ -14,8 +14,9 @@ const maxStep = 512 - prefix.length;
 const operation = '^[a-z][a-z0-9_-]*(?:\\.[a-z][a-z0-9_-]*)*$';
 const operationIdPattern = new RegExp(operation);
 const lookupProperties = {
-  operationId: { type: 'string', maxLength: 100, pattern: operation },
-  stepId: { type: 'string', minLength: 1, maxLength: maxStep, pattern: '^[^\\s\\x00-\\x1f\\x7f]+$' },
+  operationId: { type: 'string', maxLength: 100, pattern: operation, description: 'Exact discovered operation ID, for example source.read.' },
+  stepId: { type: 'string', minLength: 1, maxLength: maxStep, pattern: '^[^\\s\\x00-\\x1f\\x7f]+$',
+    description: 'Required top-level caller step identifier. Use a different value for each logical operation and reuse it only for an identical retry.' },
 };
 
 function schema(properties) {
@@ -23,12 +24,12 @@ function schema(properties) {
 }
 
 const tools = [
-  { name: names.catalog, description: 'List the operation index, then request the full schema by operationId or domain prefix.',
+  { name: names.catalog, description: 'Call with {} for the operation index. Call with {"operationId":"source.read"} for one full schema, or {"view":"full","prefix":"source."} for a domain. Only view, prefix, and operationId are accepted. Fetch individual schemas when the full index is too large.',
     inputSchema: { ...schema({ view: { type: 'string', enum: ['index', 'full'] }, prefix: { type: 'string' }, operationId: lookupProperties.operationId }), required: [] } },
   {
     name: names.invoke,
-    description: 'Invoke a discovered operation. Use a stable event ID and logical step in stepId. Reuse the same stepId and input on retry. Use a complete ISO date for date fields. For a generation prompt, discover generations.prompt.page and follow its cursors for the complete messages or provenance.',
-    inputSchema: schema({ ...lookupProperties, input: {} }),
+    description: 'Invoke a discovered operation with exactly three top-level fields operationId, stepId, and input. Example {"operationId":"source.read","stepId":"read-source-1","input":{"sourceId":"the-source-id"}}. Discover the operation schema before invoking it. Use distinct stepId values for different operations and reuse the same stepId and input on an identical retry. Use a complete ISO date for date fields. For a generation prompt, discover generations.prompt.page and follow its cursors for the complete messages or provenance.',
+    inputSchema: schema({ ...lookupProperties, input: { description: 'The operation input value matching its discovered inputSchema.' } }),
   },
   {
     name: names.receipt,
@@ -76,7 +77,8 @@ async function serve(path, { workspace, sourceId } = {}) {
       endpoint = params.name === names.invoke ? 'invoke' : 'receipt';
       body = lookup(args, endpoint === 'invoke');
     }
-    if (!body) return toolResult({ error: 'invalid_tool_call', message: 'Invalid Sth operation tool call.' }, token, true);
+    if (!body) return toolResult({ error: 'invalid_tool_call',
+      message: tools.find(tool => tool.name === params.name)?.description || 'Unknown Sth tool.' }, token, true);
     try {
       const { status, value } = await request(origin, endpoint, body, token);
       if (status === 401) {

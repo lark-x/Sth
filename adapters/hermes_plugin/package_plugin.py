@@ -15,6 +15,7 @@ import zipfile
 FILES = ("plugin.yaml", "__init__.py", "personal_credentials.py", "personal_operations.py", "native.py", "workspace_cli.py")
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = {".html", ".js", ".css", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff", ".woff2", ".txt"}
+FRONTEND_SOURCE_SUFFIXES = {".ts", ".vue", ".css", ".js", ".mjs", ".svg"}
 PRIVATE_NAMES = {".data", ".env", ".git", ".npmrc", ".ssh", "auth.json", "credential_pool.json", "state.db", "config.yaml"}
 
 
@@ -97,7 +98,8 @@ def package(destination, *, archive=None):
             target = build / "scripts" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / "scripts" / name, target)
-        _copy_tree(ROOT / "frontend", build / "frontend", suffixes={".ts", ".vue", ".css", ".json", ".js", ".mjs", ".svg"}, exclude={"dist", "tests", "node_modules"})
+        _copy_tree(ROOT / "frontend", build / "frontend", suffixes=FRONTEND_SOURCE_SUFFIXES, exclude={"dist", "tests", "node_modules"})
+        shutil.copyfile(ROOT / "frontend" / "tsconfig.json", build / "frontend" / "tsconfig.json")
         _copy_tree(ROOT / "web", build / "web", suffixes=ASSETS)
         _run([npm, "ci", "--ignore-scripts", "--no-audit", "--no-fund"], build, env)
         _run([npm, "run", "build"], build, env)

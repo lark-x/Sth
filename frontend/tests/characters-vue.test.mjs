@@ -544,6 +544,26 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     assert.equal((await invoke('character.list', { name: '离开时保存的人' })).items.length, 1);
   });
 
+  await t.test('a committed save with an incomplete result also retains its receipt for retry', async t => {
+    const page = await open(t, origin, '/characters/new');
+    await editorReady(page);
+    await field(page, '角色名称').fill('补全结果的人');
+    let writeCount = 0;
+    await page.route('**/api/web/invoke', async route => {
+      if (route.request().postDataJSON()?.operationId !== 'character.create') return route.continue();
+      writeCount++;
+      await route.fetch();
+      await route.fulfill({ status: 200, json: { result: {} } });
+    });
+    await click(page, '创建角色');
+    await page.getByRole('button', { name: '重试保存', exact: true }).waitFor();
+    assert.equal(await field(page, '角色名称').isDisabled(), true);
+    await click(page, '重试保存');
+    await h1(page, '补全结果的人').waitFor();
+    assert.equal(writeCount, 1);
+    assert.equal((await invoke('character.list', { name: '补全结果的人' })).items.length, 1);
+  });
+
   await t.test('lists and editor choices include later API pages and read failures have a visible retry', async t => {
     const project = await invoke('project.create', { title: '分页名单' });
     for (let i = 0; i < 23; i++) await invoke('character.create', { name: `分页角色 ${i}`, projectId: project.projectId });

@@ -19,7 +19,7 @@ const { data, busy, error, reload } = useRead(async signal => {
     all<DraftSummary>('draft.revisions', { draftId }, signal),
     all<Backlink>('character.backlinks', { kind: 'draft', id: draftId, revision: draft.revision }, signal),
   ]);
-  document.title = `${draft.title} · Sth`;
+  if (!signal.aborted) document.title = `${draft.title} · Sth`;
   return { draft, scene, revisions, evidence };
 });
 const range = computed(() => {

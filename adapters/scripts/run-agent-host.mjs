@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 import { mkdir, realpath, stat } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
-import { detectHost, hostProfile } from '../mcp/host-process.mjs';
+import { absoluteLocalPath, detectHost, hostProfile } from '../mcp/host-process.mjs';
 
 try {
   const divider = process.argv.indexOf('--');
@@ -14,8 +14,9 @@ try {
   const env = await hostProfile(values.profile || '', values.host);
   let cwd = join(env.HOME, 'workspace');
   if (values.workspace) {
-    if (!isAbsolute(values.workspace) || !(await stat(values.workspace)).isDirectory()) throw new Error('Supply an absolute local workspace directory.');
-    cwd = await realpath(values.workspace);
+    const directory = absoluteLocalPath(values.workspace, 'workspace');
+    if (!(await stat(directory)).isDirectory()) throw new Error('Supply an absolute local workspace directory.');
+    cwd = await realpath(directory);
   } else await mkdir(cwd, { recursive: true });
   const host = await detectHost(values.host, { executable: values.executable, env, cwd });
   if (!host.available) throw new Error('The native agent CLI is unavailable. Run probe-agent-host.mjs for detection details.');

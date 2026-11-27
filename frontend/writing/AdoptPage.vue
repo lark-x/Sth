@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onScopeDispose, ref } from 'vue';
 import { href, message, read, recordHref, revisionParam, version } from './api.ts';
 import type { Draft, Scene } from './api.ts';
 import type { WritingRoute } from './routes.ts';
@@ -11,6 +11,8 @@ const emit = defineEmits<{ navigate: [href: string] }>();
 const current = ref<Scene>();
 const refreshError = ref('');
 const refreshing = ref(false);
+let latestRead: AbortController | undefined;
+onScopeDispose(() => latestRead?.abort());
 const { state: save, submit } = useMutation<Scene>(`sth:writing:adopt:${props.url.pathname}${props.url.search}`, 'scene.adopt', 'sceneId', result => emit('navigate', recordHref('scenes', result.sceneId)));
 const { data, busy, error, reload } = useRead(async signal => {
   const draftId = 'id' in props.route ? props.route.id : '';
@@ -21,20 +23,22 @@ const { data, busy, error, reload } = useRead(async signal => {
     read<Scene>('scene.read', { sceneId: draft.sceneId, revision: draft.sceneRevision }, signal),
   ]);
   current.value = scene;
-  document.title = `采纳候选稿 · ${draft.title} · Sth`;
+  if (!signal.aborted) document.title = `采纳候选稿 · ${draft.title} · Sth`;
   return { draft, context };
 });
 async function loadLatest() {
   if (!current.value || refreshing.value) return;
   refreshing.value = true;
   refreshError.value = '';
+  const active = latestRead = new AbortController();
   try {
-    const scene = await read<Scene>('scene.read', { sceneId: current.value.sceneId }, AbortSignal.timeout(15_000));
+    const scene = await read<Scene>('scene.read', { sceneId: current.value.sceneId }, active.signal);
+    if (active.signal.aborted) return;
     current.value = scene;
     save.conflict = false;
     save.error = '';
-  } catch (reason) { refreshError.value = message(reason); }
-  finally { refreshing.value = false; }
+  } catch (reason) { if (!active.signal.aborted) refreshError.value = message(reason); }
+  finally { if (!active.signal.aborted) refreshing.value = false; }
 }
 function adopt() {
   if (!data.value || !current.value) return;
@@ -49,6 +53,7 @@ function adopt() {
       <div>
         <section class="wr-section wr-manuscript" aria-label="即将采用的稿件"><h2>{{ data.draft.title }} · {{ version(data.draft.revision) }}</h2><p class="wr-prose">{{ data.draft.body }}</p></section>
         <details v-if="current.adopted" class="wr-section"><summary>核对当前采用稿 · {{ current.adopted.title }} · {{ version(current.adopted.revision) }}</summary><p class="wr-prose">{{ current.adopted.body }}</p><a :href="recordHref('drafts', current.adopted.draftId, current.adopted.revision)">查看当前采用版本</a></details>
+        <details v-if="current.revision !== data.context.revision" class="wr-section"><summary>核对目标场景当前上下文 · {{ version(current.revision) }}</summary><SceneContext :scene="current" /></details>
         <form aria-label="确认采纳" method="post" action="/api/web/invoke" @submit.prevent="adopt">
           <p class="wr-muted">确认后，场景的采用稿将指向上方这份精确版本。</p>
           <p v-if="save.error" role="alert" class="wr-notice">{{ save.error }}</p>

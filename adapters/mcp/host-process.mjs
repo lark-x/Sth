@@ -4,10 +4,18 @@ import { access, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/prom
 import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { createPrivateDirectory } from './credentials.mjs';
 
+export function absoluteLocalPath(value, name) {
+  if (typeof value !== 'string' || !isAbsolute(value) || /[\x00-\x1f\x7f]/.test(value)
+      || (process.platform === 'win32' && /^[\\/]{2}/.test(value) && !/^\\\\\?\\[a-z]:\\/i.test(value))) {
+    throw new Error(`Supply an absolute local ${name} path.`);
+  }
+  return resolve(value);
+}
+
 // Deliberately exclude account keys, provider overrides, remote-agent sockets and
 // the caller's host settings. Proxy variables carry network routing only.
 export function isolatedEnvironment(root, inherited = process.env) {
-  if (!isAbsolute(root)) throw new Error('The isolated profile path must be absolute.');
+  root = absoluteLocalPath(root, 'isolated profile');
   const env = Object.fromEntries(Object.entries(inherited).filter(([name]) =>
     /^(PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|PROGRAMFILES|PROGRAMFILES\(X86\)|PROCESSOR_ARCHITECTURE|NUMBER_OF_PROCESSORS|TEMP|TMP|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/i.test(name)));
   const home = join(root, 'home');
@@ -23,8 +31,8 @@ export function isolatedEnvironment(root, inherited = process.env) {
 }
 
 export async function hostProfile(root, host) {
-  if (!isAbsolute(root) || !['codex', 'antigravity'].includes(host)) throw new Error('Supply an absolute dedicated profile and a supported host.');
-  root = resolve(root);
+  root = absoluteLocalPath(root, 'dedicated profile');
+  if (!['codex', 'antigravity'].includes(host)) throw new Error('Supply a supported host.');
   const marker = join(root, '.sth-agent-host-profile.json');
   try {
     await createPrivateDirectory(root);
@@ -79,8 +87,18 @@ export function runHost(launcher, args, { env, cwd, input, timeout = 15_000 } = 
     let oversized = false;
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; void stopHostProcess(child); }, timeout);
-    child.stdout.on('data', chunk => { stdout += chunk; if (stdout.length > 2_000_000 && !oversized) { oversized = true; void stopHostProcess(child); } });
-    child.stderr.on('data', chunk => { stderr += chunk; if (stderr.length > 2_000_000 && !oversized) { oversized = true; void stopHostProcess(child); } });
+    child.stdout.on('data', chunk => {
+      stdout += chunk;
+      if (stdout.length <= 2_000_000) return;
+      stdout = stdout.slice(0, 2_000_000);
+      if (!oversized) { oversized = true; void stopHostProcess(child); }
+    });
+    child.stderr.on('data', chunk => {
+      stderr += chunk;
+      if (stderr.length <= 2_000_000) return;
+      stderr = stderr.slice(0, 2_000_000);
+      if (!oversized) { oversized = true; void stopHostProcess(child); }
+    });
     child.stdin.on('error', () => {});
     child.once('error', () => { clearTimeout(timer); reject(new Error('Could not execute the host CLI. Supply its native executable path.')); });
     child.once('close', code => { clearTimeout(timer); done({ code, stdout, stderr, timedOut, oversized }); });

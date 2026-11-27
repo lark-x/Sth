@@ -32,20 +32,22 @@ async function save() {
   if (saving.value || !quickBody.value.trim()) return;
   saving.value = true;
   saveError.value = '';
-  quickCall.value ??= operation('diary.create', {
+  const call = quickCall.value ??= operation('diary.create', {
     title: quickBody.value.trim().split('\n')[0]!.slice(0, 40),
     body: quickBody.value,
     diaryDate: localDate(),
   });
   try {
-    const saved = await invoke<DiarySummary>(quickCall.value);
+    const saved = await invoke<DiarySummary>(call);
     if (typeof saved.noteId !== 'string' || !saved.noteId) throw new ApiError(502, 'invalid_result', '服务未返回日记编号。');
-    quickBody.value = '';
-    quickCall.value = undefined;
+    if (quickCall.value?.stepId === call.stepId) {
+      quickBody.value = '';
+      quickCall.value = undefined;
+    }
     if (!controller.signal.aborted) emit('navigate', `/diaries/${encodeURIComponent(saved.noteId)}`);
   } catch (error) {
     const uncertain = !(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500;
-    if (!uncertain) quickCall.value = undefined;
+    if (!uncertain && quickCall.value?.stepId === call.stepId) quickCall.value = undefined;
     saveError.value = uncertain ? '保存结果暂未确认，内容已保留。请点击“核对并重试”，确认这次保存。' : errorText(error);
   } finally { saving.value = false; }
 }

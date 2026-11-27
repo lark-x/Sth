@@ -16,10 +16,11 @@ export async function createPrivateDirectory(path) {
 export function restrictWindowsPath(path, directory = false) {
   if (process.platform !== 'win32') return;
   try {
-    const identity = execFileSync('whoami.exe', ['/user', '/fo', 'csv', '/nh'], { encoding: 'utf8', windowsHide: true });
+    const system = join(process.env.SystemRoot, 'System32');
+    const identity = execFileSync(join(system, 'whoami.exe'), ['/user', '/fo', 'csv', '/nh'], { encoding: 'utf8', windowsHide: true });
     const sid = identity.match(/S-1-[\d-]+/)?.[0];
     if (!sid) throw new Error('Missing account SID.');
-    execFileSync('icacls.exe', [path, '/inheritance:r', '/grant:r', `*${sid}:${directory ? '(OI)(CI)' : ''}F`], { windowsHide: true, stdio: 'pipe' });
+    execFileSync(join(system, 'icacls.exe'), [path, '/inheritance:r', '/grant:r', `*${sid}:${directory ? '(OI)(CI)' : ''}F`], { windowsHide: true, stdio: 'pipe' });
   } catch {
     throw new Error('Could not restrict the pairing directory to the Windows account.');
   }

@@ -29,7 +29,7 @@ const { data, busy, error, reload } = useRead(async signal => {
     sceneId, left: { draftId: left.draftId, revision: left.revision }, right: { draftId: right.draftId, revision: right.revision },
   }, signal) : undefined;
   const contexts = compared ? await Promise.all([compared.left, compared.right].map(draft => read<Scene>('scene.read', { sceneId, revision: draft.sceneRevision }, signal))) : [];
-  document.title = `对照候选稿 · ${scene.title} · Sth`;
+  if (!signal.aborted) document.title = `对照候选稿 · ${scene.title} · Sth`;
   return { scene, versions, compared, contexts };
 });
 const lines = computed(() => data.value?.compared ? compareLines(data.value.compared.left.body, data.value.compared.right.body) : undefined);

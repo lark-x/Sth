@@ -28,7 +28,7 @@ export function antigravityAuthStatus(launcher, { env, cwd, timeout = 20_000 }) 
           send(2, 'session/new', { cwd, mcpServers: [] });
         } else if (message.id === 2) {
           outcome = message.error?.code === -32000 && message.error?.message === 'Authentication required'
-            ? { status: 'authentication_required', ...initialized, error: message.error }
+            ? { status: 'authentication_required', ...initialized, error: { code: -32000, message: 'Authentication required' } }
             : { status: message.result?.sessionId ? 'unexpected_authenticated_session' : 'acp_session_failed', ...initialized,
               ...(message.error ? { errorCode: message.error.code } : {}) };
           void stopHostProcess(child);

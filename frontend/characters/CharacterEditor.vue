@@ -42,8 +42,10 @@ async function renderForm() {
     const uiUrl = '/assets/ui.js';
     const editorUrl = '/assets/editor.js';
     const blocksUrl = '/assets/character-blocks.js';
-    const [ui, shared, blocks] = await Promise.all([
+    const apiUrl = '/assets/api.js';
+    const [ui, shared, blocks, api] = await Promise.all([
       import(/* @vite-ignore */ uiUrl), import(/* @vite-ignore */ editorUrl), import(/* @vite-ignore */ blocksUrl),
+      import(/* @vite-ignore */ apiUrl),
     ]);
     const operationId = props.character ? 'character.revise' : 'character.create';
     const operation = props.operations.get(operationId);
@@ -94,10 +96,7 @@ async function renderForm() {
     shared.bindEditor(ctx, draft, {
       operation: operationId, label,
       success: character ? '角色设定已保存' : '角色已创建',
-      result(result: Character) {
-        if (!result.characterId) throw new Error('服务未返回角色编号。');
-        return result;
-      },
+      result: (result: Character) => api.entity(result, 'characterId'),
       href: (result: Character) => href(result.characterId),
       input(current: Draft) {
         const { name, persona, projectId } = current.values;

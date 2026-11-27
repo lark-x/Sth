@@ -84,6 +84,43 @@ test('quick capture preserves its request across a lost response and reload, the
   assert.equal(items[0].body, accepted.input.body);
 });
 
+test('a late quick capture response preserves a newer draft after a successful retry', { timeout: 30_000 }, async t => {
+  const origin = await startService(t);
+  const page = await openBrowser(t, origin, { width: 390, height: 844 });
+  let release;
+  let first;
+  let accepted;
+  const held = new Promise(resolve => { release = resolve; });
+  const committed = new Promise(resolve => { accepted = resolve; });
+  await page.route('**/api/web/invoke', async route => {
+    if (route.request().postDataJSON().operationId === 'diary.create' && !first) {
+      first = route.request();
+      const response = await route.fetch();
+      accepted();
+      await held;
+      await route.fulfill({ response });
+    } else await route.continue();
+  });
+  try {
+    await page.goto('/');
+    await page.getByLabel('此刻想记下什么', { exact: true }).fill('已保存但响应迟到的第一句。');
+    await page.getByRole('button', { name: '记下来', exact: true }).click();
+    await committed;
+    await page.getByRole('link', { name: '查看资料', exact: true }).click();
+    await page.getByRole('heading', { name: '资料', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+    await page.getByRole('button', { name: '核对并重试', exact: true }).click();
+    await page.waitForURL(/\/diaries\/[a-f0-9-]+$/);
+    await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+    await page.getByLabel('此刻想记下什么', { exact: true }).fill('这是接下来要写的第二句。');
+    const completed = page.waitForResponse(response => response.request() === first);
+    release();
+    await (await completed).finished();
+    await page.waitForTimeout(100);
+    assert.equal(await page.getByLabel('此刻想记下什么', { exact: true }).inputValue(), '这是接下来要写的第二句。');
+  } finally { release(); }
+});
+
 test('home shows empty and recoverable error states and preserves an unsaved capture', { timeout: 30_000 }, async t => {
   const origin = await startService(t);
   const page = await openBrowser(t, origin, { width: 320, height: 800 });

@@ -41,4 +41,4 @@ defineEmits<{
 
 `npm pack` 的 `prepack` 构建网页，包内带 `frontend/dist/` 和启动检查脚本。源码安装的 `npm start` 会重新构建，分发包的 `npm start` 使用随包构建产物。`sth-workspace` 与 `npm run workspace -- …` 指向同一生命周期入口。Hermes 插件及其打包脚本、MCP 适配器和安装命令依赖的文件都在发布白名单内，适配器依赖由 `npm --prefix adapters ci` 单独安装。
 
-安装到 `node_modules/sth` 时，`npm start` 预载 `frontend/node-runtime.mjs`。它只为本包 `src/` 注册 Node 的类型擦除加载钩子，支持直接运行随包 TypeScript。工作区守护进程在导入后端前也需加载该入口，确保 `sth-workspace` bin 的安装版可用。
+安装到 `node_modules/sth` 时，`npm start` 预载 `frontend/node-runtime.mjs`，工作区守护进程在导入后端前也加载该入口。它只为本包 `src/` 注册 Node 的类型擦除加载钩子，支持直接运行随包 TypeScript。源码和普通便携目录使用 Node 原生 TypeScript 加载能力。

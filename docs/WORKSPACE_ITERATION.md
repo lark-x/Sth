@@ -38,3 +38,7 @@
 - 复现以上路径需要 Node 24.15+、根目录及 `adapters` 的依赖、已构建前端、Playwright Chromium、已登录的 Codex CLI，以及已配置模型的 Hermes Python。用 Hermes 的 Python 运行 `scripts/accept-research.py host-continuity`，可用 `--hermes-home`、`--provider`、`--model` 选择现有配置。运行记录写入仓库外的私有临时目录。该结果覆盖桌面上的手机宽度网页与 Hermes MCP 连接。原生 Hermes 插件安装、第三宿主和真机体验分别验收。
 - 新增作者上下文的手机浏览器用例验证作者在页面署名并确认提案后，另一连接能读到同一决定；打开固定旧版链接仍可查看当时尚未确认的提案。工作区生命周期及 story 决定的 31 项聚焦用例通过。
 - 9322 运行中的原卷已导出一致性快照。用开发版本单独打开快照副本，核对原有 50 张表、955 行数据，逐表行数与双向差集均一致，完整性检查为 `ok`，外键违规为零。此次演练使用的原始快照 SHA-256 为 `9e5e847675bc41abbd6ff17d8873ca2d170ebec213a171c47c3c8beef4b19d40`。发布前还要复测最终候选版本和已归档媒体。
+- 第二轮分支为 `feat/vue-authoring-and-hosts`。Windows x64 的 Hermes ZIP 在空 profile 上安装并通过官方 doctor，移除 PATH 中的 Node 后成功创建工作区。实际模型写入首篇日记，第二个会话读回；独立集成报告中的十项检查全部通过。该分发包 SHA-256 为 `2c15b0950da24c12f2f10f078ade980e3d3ed96c6fa7369cd2074a806f7f593b`。[Hermes 安装与打包](HERMES_SETUP.md)
+- Antigravity 1.5.18 通过官方共享授权，在隔离配置和数据上启动两个真实会话。第一会话修订资料，第二会话仅凭 ID 读回第一会话写入的随机标记，网页确认第 2 版。单独的空 profile 登录检查返回 `Authentication required`。[宿主实测与限制](AGENT_HOSTS.md)
+- WebKit 在 iPhone 13 模拟参数下通过了配对链接、编辑、保存、关闭重开、旧版链接及历史返回测试。修正了 WebKit 发送 `Origin: null` 导致同源业务请求返回 403 的问题。真实 iPhone Safari 和实际 WKWebView 容器需按设备记录。[移动端契约](IOS_EMBEDDING.md)
+- 作者已确认的决定、待决提案和开放问题可以按作品、分支、上下文版本传入 `generations.prepare`。11 项组稿测试覆盖旧版本重建、视角信息隔离、容量边界及委托恢复。Docker 候选镜像从真实快照副本读回了温妮莎日记、北港场景和归档 PNG；该图片 SHA-256 与旧版发布记录一致。

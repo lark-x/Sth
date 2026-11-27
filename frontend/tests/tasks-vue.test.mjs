@@ -21,22 +21,21 @@ const mobile = { width: 320, height: 800 };
 const timeout = 60_000;
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ4sAAAAASUVORK5CYII=', 'base64');
 
-// Exercise the actual shell and legacy fallback. Only this Vite process sees
-// the registration, so the shared registry remains the coordinating agent's.
+// Exercise the actual shell registry with fixture-owned HTTP and HMR servers.
 async function fixture(t, { viewport = desktop, provider } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'sth-tasks-vue-'));
   const db = openDatabase(join(directory, 'data'));
   const api = createApp(db, { mediaProvider: provider });
   let vite;
-  let web;
+  const web = createServer();
   let browser;
   const workers = [];
   t.after(async () => {
     await browser?.close();
     await Promise.all(workers.map(worker => worker.stop()));
-    web?.closeAllConnections();
-    if (web) await new Promise(done => web.close(done));
     await vite?.close();
+    web.closeAllConnections();
+    if (web.listening) await new Promise(done => web.close(done));
     api.closeAllConnections();
     await new Promise(done => api.close(done));
     db.close();
@@ -50,25 +49,14 @@ async function fixture(t, { viewport = desktop, provider } = {}) {
     root: join(root, 'web'), configFile: false, publicDir: false,
     cacheDir: join(directory, 'vite-cache'), logLevel: 'error',
     resolve: { alias: { '/frontend': join(root, 'frontend') } },
-    plugins: [{
-      name: 'register-tasks-only-in-test', enforce: 'pre',
-      transform(code, id) {
-        if (id.replaceAll('\\', '/') !== `${root.replaceAll('\\', '/')}/frontend/routes.ts`) return;
-        assert.ok(code.includes('export function routeLoader(url: URL)'));
-        return `import { matchTasksRoute } from './tasks/routes.ts';\n`
-          + code.replace('export function routeLoader(url: URL)', 'function registeredRouteLoader(url: URL)')
-          + `\nexport function routeLoader(url: URL) {
-            return matchTasksRoute(url) ? () => import('./tasks/TasksRoute.vue') : registeredRouteLoader(url);
-          }`;
-      },
-    }, vue()],
-    server: { middlewareMode: true, hmr: false, proxy: { '/api': {
+    plugins: [vue()],
+    server: { middlewareMode: true, hmr: { server: web }, watch: null, proxy: { '/api': {
       target: backend, changeOrigin: true,
       configure(proxy) { proxy.on('proxyReq', request => request.setHeader('Origin', backend)); },
     } } },
     optimizeDeps: { noDiscovery: true, include: ['vue'] },
   });
-  web = createServer(vite.middlewares);
+  web.on('request', vite.middlewares);
   await new Promise(done => web.listen(0, '127.0.0.1', done));
   const origin = `http://127.0.0.1:${web.address().port}`;
   browser = await chromium.launch();
@@ -77,11 +65,15 @@ async function fixture(t, { viewport = desktop, provider } = {}) {
   page.setDefaultTimeout(8000);
   const errors = [];
   const offsite = [];
+  const socketHosts = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('websocket', socket => socketHosts.push(new URL(socket.url()).host));
   page.on('request', request => { if (new URL(request.url()).origin !== origin) offsite.push(request.url()); });
   t.after(() => {
     assert.deepEqual(errors, [], 'no uncaught browser errors');
     assert.deepEqual(offsite, [], 'all browser requests use the isolated service');
+    assert.ok(socketHosts.length > 0, 'Vite HMR opens a socket during the browser test');
+    assert.ok(socketHosts.every(host => host === new URL(origin).host), 'HMR sockets use this fixture HTTP server');
   });
   async function invoke(operationId, input) {
     const response = await fetch(`${backend}/api/web/invoke`, {
@@ -296,7 +288,6 @@ test('Vue job actions retry once via receipts, reconcile, preview exact image by
   await link(page, '查看场景 · 第 1 版').click();
   await heading(page, scene.title).waitFor();
   assert.equal(new URL(page.url()).searchParams.get('revision'), '1');
-  await page.locator('.legacy-route').waitFor();
   await goto(page, `/jobs/${job.jobId}`, job.title);
   await page.getByRole('navigation', { name: '任务视图' }).getByRole('link', { name: '全部任务' }).click();
   await heading(page, '任务').waitFor();

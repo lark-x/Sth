@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { onScopeDispose, reactive, ref, watch } from 'vue';
 import { href, read, recordHref, requiredId, revisionParam, version } from './api.ts';
 import type { Draft, Scene } from './api.ts';
 import type { WritingRoute } from './routes.ts';
@@ -16,6 +16,8 @@ const form = reactive({ title: '', body: '', expectedRevision: undefined as numb
 const initialized = ref(false);
 const latest = ref<Draft>();
 const conflictReadError = ref('');
+let latestRead: AbortController | undefined;
+onScopeDispose(() => latestRead?.abort());
 const { state: save, submit } = useMutation<Draft>(`${key}:call`, editing ? 'draft.revise' : 'draft.create', 'draftId', result => {
   retain(key);
   emit('navigate', recordHref('drafts', result.draftId));
@@ -35,14 +37,18 @@ const { data, busy, error, reload } = useRead(async signal => {
     if (draft && !save.pending && form.expectedRevision !== draft.revision) { latest.value = draft; save.conflict = true; save.error = '稿件已有更新。核对最新版本后再保存你的文字。'; }
     initialized.value = true;
   }
-  document.title = `${editing ? '修订候选稿' : '新建候选稿'} · Sth`;
+  if (!signal.aborted) document.title = `${editing ? '修订候选稿' : '新建候选稿'} · Sth`;
   return { scene, draft };
 });
 watch(form, () => { if (initialized.value) retain(key, { ...form }); });
 async function loadLatest() {
+  latestRead?.abort();
+  const active = latestRead = new AbortController();
   conflictReadError.value = '';
-  try { latest.value = await read<Draft>('draft.read', { draftId }, AbortSignal.timeout(15_000)); }
-  catch { conflictReadError.value = '最新版本读取失败，请重试。'; }
+  try {
+    const result = await read<Draft>('draft.read', { draftId }, active.signal);
+    if (!active.signal.aborted) latest.value = result;
+  } catch { if (!active.signal.aborted) conflictReadError.value = '最新版本读取失败，请重试。'; }
 }
 function useLatest() {
   if (!latest.value) return;
@@ -59,7 +65,7 @@ function saveDraft(event: Event) {
   title.setCustomValidity(form.title.trim() ? '' : '请输入稿件标题。');
   body.setCustomValidity(form.body.trim() ? '' : '请输入稿件正文。');
   if (!element.reportValidity()) return;
-  void submit(editing ? { draftId, expectedRevision: form.expectedRevision, title: form.title.trim(), body: form.body }
+  void submit(editing ? { draftId, expectedRevision: form.expectedRevision, sceneRevision: form.sceneRevision, title: form.title.trim(), body: form.body }
     : { sceneId: data.value.scene.sceneId, sceneRevision: form.sceneRevision, title: form.title.trim(), body: form.body });
 }
 </script>
@@ -71,7 +77,7 @@ function saveDraft(event: Event) {
       <form class="wr-editor" aria-label="编辑候选稿" action="/api/web/invoke" method="post" @submit.prevent="saveDraft">
         <label for="wr-title">标题</label><input id="wr-title" v-model="form.title" name="title" required maxlength="300" :readonly="save.busy || !!save.pending" @input="($event.target as HTMLInputElement).setCustomValidity('')">
         <label for="wr-body">正文</label><textarea id="wr-body" v-model="form.body" name="body" required maxlength="100000" rows="20" :readonly="save.busy || !!save.pending" @input="($event.target as HTMLTextAreaElement).setCustomValidity('')" />
-        <p class="wr-muted">保存的稿件可继续修订，随后可对照并选择采用。</p>
+        <p class="wr-muted">保存正文及本页所示的场景上下文版本，随后可对照并选择采用。</p>
         <p v-if="save.error" role="alert" class="wr-notice">{{ save.error }}</p>
         <div v-if="save.conflict" class="wr-conflict">
           <button type="button" class="wr-button" @click="loadLatest">读取最新版本</button>

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
+import { link, lstat, mkdir, readFile, readdir, symlink, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -8,7 +8,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { installHost } from '../mcp/hosts.mjs';
 import { updateAntigravityConfig } from '../mcp/host-json.mjs';
-import { hostProfile, isolatedEnvironment, runHost } from '../mcp/host-process.mjs';
+import { absoluteLocalPath, hostProfile, isolatedEnvironment, runHost } from '../mcp/host-process.mjs';
 import { setupService } from './service-fixture.mjs';
 
 const cli = fileURLToPath(new URL('../mcp/cli.mjs', import.meta.url));
@@ -90,6 +90,11 @@ test('isolated profiles exclude production credentials and bind Windows credenti
   assert.match(env.ANTIGRAVITY_CREDENTIAL_SCOPE, /^sth-[a-f0-9]{24}$/);
   assert.equal(env.CODEX_HOME, join(f.directory, 'codex'));
   assert.equal(env.HTTP_PROXY, 'http://proxy:1234');
+  if (process.platform === 'win32') {
+    for (const remote of ['\\\\server\\share\\config.json', '//server/share/profile', '\\\\.\\pipe\\host']) {
+      assert.throws(() => absoluteLocalPath(remote, 'configuration'), /absolute local/);
+    }
+  }
   const root = join(f.directory, 'host-profile');
   assert.deepEqual(await hostProfile(root, 'antigravity'), await hostProfile(root, 'antigravity'));
   await assert.rejects(hostProfile(root, 'codex'), /different host/);
@@ -129,6 +134,12 @@ test('independent Codex and Antigravity pairings select one source and preserve 
       const tools = await client.listTools();
       assert.equal(tools.tools.length, 3);
       assert.ok(tools.tools[0].description.includes(source.sourceId));
+      assert.ok(tools.tools.find(tool => tool.name === 'sth_personal_invoke').description.includes('top-level'));
+      const invalid = await client.callTool({ name: 'sth_personal_invoke', arguments: {
+        operationId: 'source.read', caller: { stepId: 'nested-by-mistake' }, input: { sourceId: source.sourceId },
+      } });
+      assert.equal(invalid.isError, true);
+      assert.match(JSON.parse(invalid.content[0].text).message, /top-level.*stepId/);
       assert.deepEqual(await invoke(client, 'source.read', 'same-step', { sourceId: source.sourceId }), source);
     }
     const changed = await invoke(clientAgy, 'source.revise', 'revise-shared', { sourceId: source.sourceId, expectedRevision: 1, body: 'Antigravity 保存的共享内容。' });
@@ -161,6 +172,9 @@ test('installer refuses unsafe paths, invalid source, existing entries, locks an
     await assert.rejects(installHost({ ...options, ...extra }));
   }
   const linked = join(f.directory, 'linked.json');
+  await link(config, linked);
+  await assert.rejects(installHost({ ...options, config: linked }), /regular/);
+  await unlink(linked);
   // File symlink creation on Windows may require developer mode. Junctions do
   // not, so exercise the redirected parent there as well.
   if (process.platform !== 'win32') {
@@ -170,6 +184,8 @@ test('installer refuses unsafe paths, invalid source, existing entries, locks an
     const alias = join(f.directory, 'junction');
     await symlink(join(f.directory, 'Antigravity'), alias, 'junction');
     await assert.rejects(installHost({ ...options, config: join(alias, 'mcp.json') }), /symlink or junction/);
+    await assert.rejects(installHost({ ...options, config: join(alias, 'must-not-create', 'mcp.json') }), /symlink or junction/);
+    await assert.rejects(lstat(join(f.directory, 'Antigravity', 'must-not-create')), { code: 'ENOENT' });
   }
   assert.equal(await readFile(config, 'utf8'), initial);
   assert.equal((await readdir(f.directory)).filter(name => name.endsWith('.pending')).length, 0);

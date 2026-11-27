@@ -35,7 +35,7 @@
 .wr-facts dd { margin: 0; white-space: pre-wrap; }
 .wr-list { margin-block: .5rem; padding-inline-start: 1.2rem; }
 .wr-list li { margin-block: .6rem; }
-.wr-list a { display: inline-block; padding-block: .4rem; }
+.wr-list a { display: inline-flex; align-items: center; min-block-size: 3rem; padding-block: .4rem; }
 .writing-route blockquote { margin: .5rem 0 .8rem; color: var(--muted, #56665b); }
 .writing-route summary { cursor: pointer; padding-block: .65rem; min-block-size: 3rem; color: var(--accent, #285a46); }
 .wr-candidates { list-style: none; padding: 0; margin-block: .5rem 0; }
@@ -44,6 +44,7 @@
 .wr-selected { font-size: .9rem; font-weight: 650; color: var(--accent, #285a46); }
 .wr-history { display: flex; flex-wrap: wrap; gap: .8rem 1.5rem; padding: 0; list-style: none; }
 .wr-history li { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; min-block-size: 3rem; }
+.wr-history a { display: inline-flex; align-items: center; min-block-size: 3rem; }
 .wr-compare-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 1rem; align-items: end; margin-block: .5rem 1rem; }
 .wr-editor { padding-block: 1rem; }
 .wr-editor label, .wr-compare-form label { display: block; font-weight: 600; margin-block: .6rem .4rem; }

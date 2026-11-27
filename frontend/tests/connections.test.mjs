@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer as createHttpServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { createServer as createViteServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
@@ -20,26 +23,26 @@ const mobile = { width: 320, height: 800 };
 const timeout = 40_000;
 const defaults = {
   host: 'codex', origin: 'http://127.0.0.1:19321', repository: 'F:\\Sth 本地',
-  profile: 'C:\\Sth 测试\\profiles\\author', distribution: 'C:\\Sth 测试\\plugin-new',
+  profile: '', distribution: 'C:\\Downloads\\sth-hermes-1.2.0-win32-x64',
   bindingDirectory: 'C:\\Sth 测试\\pair-new', config: 'C:\\Sth 测试\\codex\\config.toml',
   workspace: 'F:\\写作空间', executable: '', binaryDirectory: '',
 };
 
-// Mount the domain directly until the coordinating agent registers it in the
-// shared shell. Vite's dependency cache, SQLite and all grants are temporary.
-async function fixture(t, { viewport = desktop, protectedOwner = false, fallbackClipboard = false } = {}) {
+// Domain tests and the actual Vue shell share an isolated API, dependency
+// cache and browser. They never install a plugin or load a real host profile.
+async function fixture(t, { viewport = desktop, protectedOwner = false, fallbackClipboard = false, shell = false } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'sth-connections-'));
   const db = openDatabase(join(directory, 'data'));
   const password = randomUUID();
   const api = createApp(db, protectedOwner ? { publicOrigin: 'https://sth-connections.test', webPassword: password } : {});
   let vite;
-  let web;
+  const web = createHttpServer();
   let browser;
   t.after(async () => {
     await browser?.close();
-    web?.closeAllConnections();
-    if (web) await new Promise(done => web.close(done));
     await vite?.close();
+    web.closeAllConnections();
+    if (web.listening) await new Promise(done => web.close(done));
     api.closeAllConnections();
     await new Promise(done => api.close(done));
     db.close();
@@ -68,10 +71,13 @@ async function fixture(t, { viewport = desktop, protectedOwner = false, fallback
     }}).mount('#app');
   </script></body></html>`;
   vite = await createViteServer({
-    root, configFile: false, cacheDir: join(directory, 'vite-cache'), logLevel: 'error',
+    root: shell ? join(root, 'web') : root, configFile: false, publicDir: false,
+    cacheDir: join(directory, 'vite-cache'), logLevel: 'error',
+    resolve: { alias: { '/frontend': join(root, 'frontend') } },
     plugins: [vue(), {
       name: 'connections-domain-test',
       configureServer(server) {
+        if (shell) return;
         server.middlewares.use(async (request, response, next) => {
           if (!request.headers.accept?.includes('text/html')) return next();
           try {
@@ -81,7 +87,7 @@ async function fixture(t, { viewport = desktop, protectedOwner = false, fallback
         });
       },
     }],
-    server: { middlewareMode: true, hmr: false, proxy: { '/api': {
+    server: { middlewareMode: true, hmr: { server: web }, watch: null, proxy: { '/api': {
       target: backend, changeOrigin: true,
       configure(proxy) {
         proxy.on('proxyReq', request => request.setHeader('Origin', backend));
@@ -89,7 +95,7 @@ async function fixture(t, { viewport = desktop, protectedOwner = false, fallback
     } } },
     optimizeDeps: { noDiscovery: true, include: ['vue'] },
   });
-  web = createHttpServer(vite.middlewares);
+  web.on('request', vite.middlewares);
   await new Promise(done => web.listen(0, '127.0.0.1', done));
   const origin = `http://127.0.0.1:${web.address().port}`;
   browser = await chromium.launch();
@@ -106,11 +112,15 @@ async function fixture(t, { viewport = desktop, protectedOwner = false, fallback
   page.setDefaultTimeout(6000);
   const errors = [];
   const offsite = [];
+  const socketHosts = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('websocket', socket => socketHosts.push(new URL(socket.url()).host));
   page.on('request', request => { if (new URL(request.url()).origin !== origin) offsite.push(request.url()); });
   t.after(() => {
     assert.deepEqual(errors, [], 'no uncaught browser errors');
     assert.deepEqual(offsite, [], 'no external assets, logins or host-service calls');
+    assert.ok(socketHosts.length > 0, 'Vite HMR opens a socket during the browser test');
+    assert.ok(socketHosts.every(host => host === new URL(origin).host), 'HMR sockets use this fixture HTTP server');
   });
   return { page, origin, backend };
 }
@@ -154,42 +164,79 @@ test('connections register only the two settings routes, preserving query string
   }
 });
 
-test('installation commands follow adapter entrypoints, quote paths, and carry no connection code or replacement flags', async () => {
-  const installer = await readFile(join(root, 'adapters/scripts/install-agent-host.mjs'), 'utf8');
-  const native = await readFile(join(root, 'adapters/hermes_plugin/native.py'), 'utf8');
-  const packagePlugin = await readFile(join(root, 'adapters/hermes_plugin/package_plugin.py'), 'utf8');
-  const pairingCli = await readFile(join(root, 'adapters/mcp/cli.mjs'), 'utf8');
-  const hermesTest = await readFile(join(root, 'adapters/tests/hermes_onboarding.py'), 'utf8');
-  assert.match(pairingCli, /positionals\[0\] === 'pair'/);
-  assert.match(packagePlugin, /add_argument\("destination"/);
-  assert.match(native, /add_parser\("connect"/);
-  assert.match(hermesTest, /cli\("plugins", "install", distribution\["installIdentifier"\], "--enable"/);
-  for (const flag of ['host', 'config', 'binding', 'workspace', 'executable']) assert.match(installer, new RegExp(`${flag}: \\{ type: 'string' \\}`));
-  for (const host of ['hermes', 'codex', 'antigravity']) {
+test('Codex and Antigravity keep their adapter commands and validate local paths and remote origins', () => {
+  for (const host of ['codex', 'antigravity']) {
     const { command, error } = installCommand({ ...defaults, host, repository: "F:\\Sth's $data` local", executable: 'C:\\CLI\\codex.cmd', binaryDirectory: 'C:\\CLI\\agy-new' });
     assert.equal(error, '');
     assert.ok(command.startsWith("$ErrorActionPreference = 'Stop'"));
     assert.ok(command.includes("Set-Location -LiteralPath 'F:\\Sth''s $data` local'"));
     assert.match(command, /\$env:STH_PERSONAL_OPERATIONS_ORIGIN = 'http:\/\/127\.0\.0\.1:19321'/);
     assert.doesNotMatch(command, /--replace|STH_PERSONAL_OPERATIONS_TOKEN|STH_WEB_PASSWORD|9322|sth personal connect /);
-    if (host === 'hermes') {
-      assert.match(command, /hermes plugins install \$package.installIdentifier --enable/);
-      assert.match(command, /hermes sth connect --origin 'http:\/\/127\.0\.0\.1:19321'/);
-      assert.match(command, /hermes sth status/);
-    } else {
-      assert.match(command, /Read-Host -MaskInput/);
-      assert.match(command, /node adapters\/mcp\/cli\.mjs pair \$bindingDirectory --client-name/);
-      assert.ok(command.includes(`--host ${host} --config '${defaults.config}'`));
-      assert.match(command, /personal-connection\.json/);
-    }
+    assert.match(command, /Read-Host -MaskInput/);
+    assert.match(command, /node adapters\/mcp\/cli\.mjs pair \$bindingDirectory --client-name/);
+    assert.ok(command.includes(`--host ${host} --config '${defaults.config}'`));
+    assert.match(command, /personal-connection\.json/);
   }
   for (const options of [{ repository: 'relative/path' }, { config: 'C:\\config\nmalicious' }, { origin: 'http://192.168.1.5:9321' }, { origin: 'https://user@sth.test' }]) {
     const result = installCommand({ ...defaults, ...options });
     assert.equal(result.command, '');
     assert.ok(result.error);
   }
-  assert.equal(installCommand({ ...defaults, host: 'hermes', profile: 'C:\\production-hermes' }).command, '');
   assert.equal(installCommand({ ...defaults, origin: 'https://sth.test' }).error, '');
+});
+
+test('Hermes uses a complete distribution, the current profile and the chosen workspace action', () => {
+  const options = { ...defaults, host: 'hermes', repository: '', bindingDirectory: '', config: '', workspace: '', workspaceName: '我的写作' };
+  const connect = installCommand(options);
+  assert.equal(connect.error, '');
+  assert.match(connect.command, /hermes plugins install \(\[System.Uri\]\(Get-Location\).Path\).AbsoluteUri --enable --force/);
+  assert.match(connect.command, /hermes sth workspace connect 'http:\/\/127\.0\.0\.1:19321' --workspace '我的写作'/);
+  assert.match(connect.command, /hermes sth workspace use '我的写作'/);
+  assert.doesNotMatch(connect.command, /HERMES_HOME|hermes -p|py -3|npm|node |adapters|--repository|STH_PERSONAL_OPERATIONS/);
+  const create = installCommand({ ...options, hermesAction: 'create', origin: 'http://192.168.1.5:9321' });
+  assert.equal(create.error, '');
+  assert.match(create.command, /hermes sth workspace create '我的写作'/);
+  assert.doesNotMatch(create.command, /workspace connect|192\.168|connect --origin/);
+  for (const input of [{ distribution: 'relative' }, { profile: 'C:\\profiles\\author' }, { workspaceName: '../escape' }, { workspaceName: '' }]) {
+    assert.ok(installCommand({ ...options, ...input }).error);
+  }
+  assert.ok(installCommand({ ...options, origin: 'http://192.168.1.5:9321' }).error);
+  assert.equal(installCommand({ ...options, origin: 'https://sth.test', profile: 'author' }).error, '');
+});
+
+test('PowerShell executes generated Hermes commands with correct file URI, profile and action arguments', {
+  skip: process.platform !== 'win32', timeout,
+}, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'sth-connections-pwsh-'));
+  t.after(async () => {
+    assert.equal(dirname(directory), resolve(tmpdir()));
+    assert.match(basename(directory), /^sth-connections-pwsh-[a-z0-9]+$/i);
+    await rm(directory, { recursive: true, force: true, maxRetries: 5 });
+  });
+  const distribution = join(directory, "Sth's $data` 分发包");
+  await mkdir(distribution);
+  for (const profile of ['', 'author']) {
+    for (const hermesAction of ['create', 'connect']) {
+      const { command, error } = installCommand({ ...defaults, host: 'hermes', distribution, profile, hermesAction, workspaceName: '我的写作' });
+      assert.equal(error, '');
+      const script = join(directory, `${profile || 'current'}-${hermesAction}.ps1`);
+      await writeFile(script, `[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$global:calls = [System.Collections.Generic.List[object]]::new()
+function hermes { $global:calls.Add(@($args)); $global:LASTEXITCODE = 0 }
+${command}
+ConvertTo-Json -InputObject $global:calls.ToArray() -Depth 5 -Compress`, 'utf8');
+      const { stdout } = await promisify(execFile)('pwsh', ['-NoProfile', '-NonInteractive', '-File', script], { windowsHide: true });
+      const calls = JSON.parse(stdout.trim());
+      const prefix = profile ? ['-p', profile] : [];
+      assert.deepEqual(calls[0].slice(0, prefix.length + 2), [...prefix, 'plugins', 'install']);
+      assert.equal(fileURLToPath(calls[0][prefix.length + 2]), distribution);
+      assert.deepEqual(calls[0].slice(prefix.length + 3), ['--enable', '--force']);
+      const expected = hermesAction === 'create'
+        ? [[...prefix, 'sth', 'workspace', 'create', '我的写作']]
+        : [[...prefix, 'sth', 'workspace', 'connect', defaults.origin, '--workspace', '我的写作'], [...prefix, 'sth', 'workspace', 'use', '我的写作']];
+      assert.deepEqual(calls.slice(1), [...expected, [...prefix, 'sth', 'status']]);
+    }
+  }
 });
 
 test('desktop connections pair, copy, cancel and revoke real grants, with history and back links', { timeout }, async t => {
@@ -245,14 +292,19 @@ test('320px installation guides switch Hermes, Codex and Antigravity with real f
   await pairing(page).getByRole('button', { name: '收起', exact: true }).click();
   assert.equal(await pairing(page).locator('code').count(), 0);
   await page.getByText('安装与连接助手', { exact: true }).click();
-  await page.getByRole('textbox', { name: 'Sth 安装目录', exact: true }).fill(defaults.repository);
-  await page.getByRole('textbox', { name: 'Hermes 独立 profile 目录', exact: true }).fill(defaults.profile);
-  await page.getByRole('textbox', { name: '新的插件分发目录', exact: true }).fill(defaults.distribution);
+  await page.getByRole('textbox', { name: '已解压的完整插件分发目录', exact: true }).fill(defaults.distribution);
   const command = page.locator('.install-guide pre');
-  assert.ok((await command.innerText()).includes(`hermes sth connect --origin '${origin}'`));
+  assert.ok((await command.innerText()).includes(`hermes sth workspace connect '${origin}' --workspace 'my-writing'`));
+  assert.equal(await page.getByRole('textbox', { name: 'Hermes profile 名称（可选）', exact: true }).inputValue(), '');
+  await page.getByRole('radio', { name: '创建自己的工作区', exact: true }).check();
+  assert.match(await command.innerText(), /hermes sth workspace create 'my-writing'/);
+  await page.getByRole('textbox', { name: 'Hermes profile 名称（可选）', exact: true }).fill('author');
+  assert.match(await command.innerText(), /hermes -p 'author' plugins install/);
+  assert.match(await command.innerText(), /hermes -p 'author' sth workspace create/);
   await assertFitsViewport(page);
   await capture(page, 'mobile-hermes');
   await page.getByRole('combobox', { name: '助手宿主', exact: true }).selectOption('codex');
+  await page.getByRole('textbox', { name: 'Sth 安装目录', exact: true }).fill(defaults.repository);
   await page.getByRole('textbox', { name: '新的私有配对目录', exact: true }).fill(defaults.bindingDirectory);
   await page.getByRole('textbox', { name: '宿主配置文件', exact: true }).fill(defaults.config);
   await page.getByRole('textbox', { name: '宿主本地工作目录', exact: true }).fill(defaults.workspace);
@@ -274,9 +326,60 @@ test('320px installation guides switch Hermes, Codex and Antigravity with real f
   await capture(page, 'mobile-antigravity');
   await page.reload();
   await page.getByText('安装与连接助手', { exact: true }).click();
-  assert.equal(await page.getByRole('textbox', { name: 'Sth 安装目录', exact: true }).inputValue(), '');
+  assert.equal(await page.getByRole('textbox', { name: '已解压的完整插件分发目录', exact: true }).inputValue(), '');
+  assert.equal(await page.getByRole('textbox', { name: 'Hermes profile 名称（可选）', exact: true }).inputValue(), '');
   assert.deepEqual(await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } })), { local: {}, session: {} });
 });
+
+for (const [name, viewport] of [['desktop', desktop], ['mobile', mobile]]) {
+  test(`${name}: actual Vue shell offers both normal Hermes flows and preserves connection navigation`, { timeout }, async t => {
+    const { page, origin, backend } = await fixture(t, { viewport, shell: true });
+    await page.goto('/');
+    await page.getByRole('navigation', { name: '应用设置', exact: true }).getByRole('link', { name: '设置', exact: true }).click();
+    await page.getByRole('heading', { level: 1, name: '连接设置', exact: true }).waitFor();
+    assert.equal(await page.locator('#app .sth-app').count(), 1);
+    assert.equal(await page.locator('.legacy-route').count(), 0);
+    await page.getByRole('link', { name: '连接管理', exact: true }).click();
+    await page.getByRole('link', { name: '返回设置', exact: true }).waitFor();
+    await page.getByText('安装与连接助手', { exact: true }).click();
+    const guide = page.locator('.install-guide');
+    await guide.getByText(/直接包含 plugin.yaml 和 runtime/).waitFor();
+    assert.equal(await guide.getByRole('radio', { name: '连接此工作区', exact: true }).isChecked(), true);
+    assert.equal(await guide.getByRole('textbox', { name: 'Sth 安装目录', exact: true }).count(), 0);
+    assert.doesNotMatch(await guide.innerText(), /Python|npm|Node\.js|Sth 源码|独立 profile|测试账号|专用机器人/);
+    await guide.getByRole('textbox', { name: '已解压的完整插件分发目录', exact: true }).fill(defaults.distribution);
+    const command = guide.locator('pre');
+    assert.match(await command.innerText(), /hermes plugins install/);
+    assert.ok((await command.innerText()).includes(`workspace connect '${origin}'`));
+    assert.doesNotMatch(await command.innerText(), /hermes -p|HERMES_HOME/);
+    await guide.getByRole('radio', { name: '创建自己的工作区', exact: true }).check();
+    await guide.getByRole('textbox', { name: '新工作区名称', exact: true }).fill('my-story');
+    assert.match(await command.innerText(), /hermes sth workspace create 'my-story'/);
+    assert.doesNotMatch(await command.innerText(), /workspace connect/);
+    await guide.getByRole('button', { name: '复制安装命令', exact: true }).click();
+    assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n'), await command.innerText());
+    await assertFitsViewport(page);
+    await capture(page, `${name}-shell-hermes-create`);
+    await guide.getByRole('radio', { name: '连接此工作区', exact: true }).check();
+    await guide.getByRole('textbox', { name: 'Hermes profile 名称（可选）', exact: true }).fill('author');
+    await guide.getByRole('textbox', { name: '在 Hermes 中的工作区名称', exact: true }).fill('team');
+    assert.ok((await command.innerText()).includes(`hermes -p 'author' sth workspace connect '${origin}' --workspace 'team'`));
+    assert.match(await command.innerText(), /hermes -p 'author' sth workspace use 'team'/);
+    await assertFitsViewport(page);
+    await capture(page, `${name}-shell-hermes-connect`);
+    const code = await generate(page);
+    await claim(backend, code, `Hermes ${name} isolated`);
+    await records(page).getByRole('button', { name: '刷新', exact: true }).click();
+    await records(page).getByRole('button', { name: `撤销连接 Hermes ${name} isolated`, exact: true }).waitFor();
+    await page.getByRole('link', { name: '返回设置', exact: true }).click();
+    await page.getByRole('link', { name: '连接管理', exact: true }).waitFor();
+    await page.goBack();
+    await page.getByRole('link', { name: '返回设置', exact: true }).waitFor();
+    await page.goto('/settings/models');
+    await page.locator('.legacy-route').waitFor();
+    assert.equal(await page.locator('.connections-route').count(), 0);
+  });
+}
 
 test('connection errors are recoverable, expiry clears secrets, and revoke failures keep the dialog open', { timeout }, async t => {
   const { page, backend } = await fixture(t);

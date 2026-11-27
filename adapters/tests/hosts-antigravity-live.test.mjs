@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { detectHost, hostProfile, runHost, stopHostProcess } from '../mcp/host-process.mjs';
@@ -85,7 +85,7 @@ function acp(launcher, env, cwd, allow) {
 
 test('Antigravity existing authorization performs fixture MCP calls and reads back in a new session', {
   skip: process.env.STH_TEST_AGY_REUSE_LOGIN !== '1' && 'Explicitly opt in with STH_TEST_AGY_REUSE_LOGIN=1 and STH_TEST_AGY',
-  timeout: 180_000,
+  timeout: 360_000,
 }, async t => {
   assert.ok(process.env.STH_TEST_AGY, 'Supply the official native Antigravity executable.');
   const f = await setupService(t);
@@ -143,7 +143,7 @@ test('Antigravity existing authorization performs fixture MCP calls and reads ba
     assert.ok(first.result?.sessionId, `ACP session creation failed with code ${first.error?.code}.`);
     writeSession = first.result.sessionId;
     const write = await agent.request('session/prompt', { sessionId: first.result.sessionId, prompt: [{ type: 'text', text:
-      `Use only the sth-fixture MCP server. Discover source.read and source.revise, read source ${source.sourceId}, then revise it with expectedRevision 1 and body exactly ${marker}. Use caller stepId agy-fixture-write. Do not use file, command, browser, or other tools. Report the saved source ID and revision.` }] }, 65_000);
+      `Use only the sth-fixture MCP server. Discover source.read and source.revise individually using the operationId parameter. Read source ${source.sourceId}, then revise it with expectedRevision 1 and body exactly ${marker}. Each invoke takes top-level operationId, stepId, and input. Use stepId agy-fixture-initial-read for the read and agy-fixture-write for the revision. Use only the requested MCP tools. Report the saved source ID and revision.` }] }, 150_000);
     assert.ok(!write.error, `ACP fixture write failed with code ${write.error?.code}.`);
     t.diagnostic(`Write turn ended with ${agent.permissions.filter(item => item.allowed).length} fixture permissions and ${f.calls.filter(call => call.action === 'invoke').length} Sth invokes.`);
     const saved = await f.invoke('source.read', 'fixture-web-read', { sourceId: source.sourceId });
@@ -153,23 +153,40 @@ test('Antigravity existing authorization performs fixture MCP calls and reads ba
     assert.ok(second.result?.sessionId, 'A new ACP session could not be created.');
     assert.notEqual(second.result.sessionId, first.result.sessionId);
     const updateStart = agent.updates.length;
+    const invokesBeforeRead = f.calls.filter(call => call.action === 'invoke' && call.status === 200).length;
     const read = await agent.request('session/prompt', { sessionId: second.result.sessionId, prompt: [{ type: 'text', text:
-      `Use only the sth-fixture MCP server. Discover source.read and read source ${source.sourceId} at its latest revision. Use caller stepId agy-fixture-read. Reply with its exact body and revision. Do not use file, command, browser, or other tools.` }] }, 65_000);
+      `Use only the sth-fixture MCP server. Discover source.read using the operationId parameter and read source ${source.sourceId} at its latest revision. The invoke takes top-level operationId, stepId, and input. Use stepId agy-fixture-read. Reply with its exact body and revision. Use only the requested MCP tools.` }] }, 150_000);
     assert.ok(!read.error, `ACP fixture read failed with code ${read.error?.code}.`);
     const secondUpdates = agent.updates.slice(updateStart);
-    assert.ok(secondUpdates.some(item => item.update?.sessionUpdate === 'agent_message_chunk' && item.update.content?.text?.includes(marker))
-      || secondUpdates.filter(item => item.update?.sessionUpdate === 'agent_message_chunk').map(item => item.update.content?.text || '').join('').includes(marker),
-    'The fresh session did not return the saved fixture marker.');
+    const reply = secondUpdates.filter(item => item.update?.sessionUpdate === 'agent_message_chunk').map(item => item.update.content?.text || '').join('');
+    assert.ok(reply.includes(marker), 'The fresh session did not return the saved fixture marker.');
+    assert.ok(secondUpdates.some(item => item.update?.rawInput?.ToolName === 'sth_personal_invoke'
+      && item.update.rawInput.Arguments?.operationId === 'source.read'), 'The fresh session must invoke source.read.');
+    assert.ok(f.calls.filter(call => call.action === 'invoke' && call.status === 200).length > invokesBeforeRead,
+      'The fresh session must reach the fixture Sth service.');
     const toolCalls = agent.updates.filter(item => item.update?.sessionUpdate === 'tool_call' || item.update?.sessionUpdate === 'tool_call_update');
-    assert.ok(toolCalls.length >= 4, 'Expected actual ACP MCP tool-call events.');
+    const actualCalls = agent.updates.filter(item => item.update?.sessionUpdate === 'tool_call');
+    const mcpCalls = actualCalls.filter(item => item.update.rawInput?.ServerName === 'sth-fixture');
+    const metadataFiles = ['sth_personal_discover', 'sth_personal_invoke'].map(name =>
+      join(env.HOME, '.gemini', 'antigravity-cli', 'mcp', 'sth-fixture', `${name}.json`));
+    const metadataReads = actualCalls.filter(item => {
+      if (item.update.kind !== 'read') return false;
+      const paths = Object.entries(item.update.rawInput || {}).filter(([key, value]) => /path|file/i.test(key) && typeof value === 'string');
+      if (paths.length !== 1) return false;
+      const path = paths[0][1].startsWith('file:') ? fileURLToPath(paths[0][1]) : resolve(workspace, paths[0][1]);
+      return metadataFiles.some(file => process.platform === 'win32' ? path.toLowerCase() === file.toLowerCase() : path === file);
+    });
+    assert.ok(mcpCalls.length >= 6, 'Expected discovery, read, write, and fresh-session discovery and read calls.');
+    assert.equal(mcpCalls.length + metadataReads.length, actualCalls.length, 'Only fixture MCP calls and their generated schema reads may run.');
     assert.ok(agent.permissions.every(item => item.allowed), 'Unexpected permission requests were cancelled.');
     assert.equal(await readFile(config, 'utf8'), installed);
     assert.equal(await readFile(join(settingsDirectory, 'settings.json'), 'utf8'), settings);
     assert.ok(f.calls.filter(call => call.action === 'invoke' && call.status === 200).length >= 4);
-    t.diagnostic(`${host.version} completed two new ACP sessions with ${toolCalls.length} tool events and fixture revision ${saved.revision}.`);
+    t.diagnostic(`${host.version} completed two new ACP sessions with ${mcpCalls.length} MCP calls, ${metadataReads.length} generated-schema reads, ${toolCalls.length} tool events and fixture revision ${saved.revision}.`);
   } catch (error) {
     t.diagnostic(JSON.stringify({ fixtureRequests: f.calls.map(call => call.action), permissions: agent.permissions,
-      tools: agent.updates.filter(item => item.update?.sessionUpdate === 'tool_call').map(item => item.update.title) }));
+      tools: agent.updates.filter(item => item.update?.sessionUpdate === 'tool_call').map(item => ({ title: item.update.title,
+        kind: item.update.kind, inputKeys: Object.keys(item.update.rawInput || {}) })) }));
     throw error;
   } finally { await agent.close(); }
 });

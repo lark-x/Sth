@@ -18,7 +18,7 @@ const { data, busy, error, reload } = useRead(async signal => {
     all<Backlink>('character.backlinks', { kind: 'scene', id: sceneId, revision: scene.revision }, signal),
     scene.placement ? read<{ title: string }>('chapter.read', { chapterId: scene.placement.chapterId }, signal) : undefined,
   ]);
-  document.title = `${scene.title} · Sth`;
+  if (!signal.aborted) document.title = `${scene.title} · Sth`;
   return { scene, drafts, revisions, branches, narratives, evidence, chapter };
 });
 </script>

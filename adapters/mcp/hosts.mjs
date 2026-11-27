@@ -1,21 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { lstat, mkdir, mkdtemp, open, readFile, realpath, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, open, readFile, realpath, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { openBinding, restrictWindowsPath } from './credentials.mjs';
 import { request } from './http.mjs';
-import { detectHost, prepareProfile, runHost } from './host-process.mjs';
+import { absoluteLocalPath, detectHost, prepareProfile, runHost } from './host-process.mjs';
 import { updateAntigravityConfig } from './host-json.mjs';
 
 const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
-function absolute(value, name) {
-  if (typeof value !== 'string' || !isAbsolute(value) || /[\x00-\x1f\x7f]/.test(value)) {
-    throw new Error(`Supply an absolute local ${name} path.`);
-  }
-  return resolve(value);
+function samePath(left, right) {
+  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
 }
 
 async function configuration(path) {
@@ -75,23 +72,33 @@ async function preservePermissions(from, to, state) {
 export async function installHost({ host, config, binding, workspace, sourceId, name = 'sth-personal', replace = false, executable }) {
   if (!['codex', 'antigravity'].includes(host)) throw new Error('Host must be codex or antigravity.');
   if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(name)) throw new Error('Use an MCP name of 1 to 64 letters, digits, underscores or hyphens.');
-  config = absolute(config, 'configuration');
-  binding = absolute(binding, 'binding');
-  workspace = await realpath(absolute(workspace, 'workspace'));
+  config = absoluteLocalPath(config, 'configuration');
+  binding = absoluteLocalPath(binding, 'binding');
+  workspace = await realpath(absoluteLocalPath(workspace, 'workspace'));
   if (!(await lstat(workspace)).isDirectory()) throw new Error('The workspace must be a local directory.');
   if (sourceId !== undefined && (typeof sourceId !== 'string' || !/^[a-zA-Z0-9_-]{1,200}$/.test(sourceId))) throw new Error('Supply a valid selected source ID.');
   const credential = await openBinding(binding);
-  if (config.toLowerCase() === (await realpath(binding)).toLowerCase() || config.toLowerCase() === cli.toLowerCase()) {
+  if (samePath(config, await realpath(binding)) || samePath(config, cli)) {
     throw new Error('The configuration must be separate from the credential and server files.');
   }
   const entry = { command: await realpath(process.execPath), args: [cli, 'stdio', binding, '--workspace', workspace,
     ...(sourceId ? ['--source-id', sourceId] : [])] };
-  await mkdir(dirname(config), { recursive: true });
   // Reject redirected directories as well as symlink files. This also prevents
-  // aliases from bypassing the per-target lock.
-  if ((await realpath(dirname(config))).toLowerCase() !== dirname(config).toLowerCase()) {
-    throw new Error('Use the real configuration directory, without symlink or junction ancestors.');
+  // aliases from bypassing the per-target lock. Check the existing ancestor
+  // before mkdir so a rejected junction cannot receive new subdirectories.
+  let ancestor = dirname(config);
+  while (true) {
+    try {
+      if (!samePath(await realpath(ancestor), ancestor)) {
+        throw new Error('Use the real configuration directory, without symlink or junction ancestors.');
+      }
+      break;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      ancestor = dirname(ancestor);
+    }
   }
+  await mkdir(dirname(config), { recursive: true });
   const lock = `${config}.sth-install-lock`;
   let handle;
   try { handle = await open(lock, 'wx', 0o600); } catch { throw new Error('The selected configuration is locked by another installation.'); }
@@ -118,6 +125,7 @@ export async function installHost({ host, config, binding, workspace, sourceId, 
     staged = join(dirname(config), `.sth-host-${randomUUID()}.pending`);
     const file = await open(staged, 'wx', before.state ? before.state.mode & 0o777 : 0o600);
     await file.close();
+    if (before.state && process.platform !== 'win32') await chmod(staged, before.state.mode & 0o777);
     restrictWindowsPath(staged);
     await writeFile(staged, next);
     await preservePermissions(config, staged, before.state);

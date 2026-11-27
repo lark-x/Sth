@@ -24,7 +24,7 @@ const { data, busy, error, reload } = useRead(async signal => {
     draft = await read<Draft>('draft.read', { draftId, revision: draftRevision }, signal);
     if (draft.sceneId !== sceneId) throw new Error('稿件与场景不匹配');
   } else if (draftRevision) throw new Error('缺少稿件');
-  document.title = `建立 IF 分支 · ${scene.title} · Sth`;
+  if (!signal.aborted) document.title = `建立 IF 分支 · ${scene.title} · Sth`;
   return { scene, draft };
 });
 function branch(event: Event) {

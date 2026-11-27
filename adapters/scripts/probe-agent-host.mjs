@@ -18,7 +18,7 @@ try {
     const listing = await runHost(host.launcher, ['mcp', 'list', ...(values.host === 'codex' ? ['--json'] : [])], { env, cwd });
     const auth = values.host === 'antigravity' ? await antigravityAuthStatus(host.launcher, { env, cwd }) : undefined;
     process.stdout.write(JSON.stringify({ host: host.host, version: host.version, executable: host.launcher.path,
-      configList: { code: listing.code, output: listing.stdout.trim() }, ...(auth ? { auth } : {}),
+      configList: { code: listing.code, readable: listing.code === 0 }, ...(auth ? { auth } : {}),
       profile: values.profile, workspace: cwd }) + '\n');
     if (listing.code !== 0 || (auth && auth.status !== 'authentication_required')) process.exitCode = 1;
   }

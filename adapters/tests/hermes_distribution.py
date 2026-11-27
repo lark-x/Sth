@@ -22,14 +22,14 @@ class DistributionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source, target = root / "source", root / "payload"
-            for name in ("main.ts", "diary/Page.vue", ".env.production", ".data/secret.ts",
+            for name in ("main.ts", "diary/Page.vue", "tasks/legacy.js", ".env.production", ".data/secret.ts",
                          "node_modules/secret.ts", "tests/secret.ts", "dist/stale.ts", "credentials.json"):
                 path = source / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("fixture", encoding="utf-8")
-            exporter._copy_tree(source, target, suffixes={".ts", ".vue"}, exclude={"node_modules", "tests", "dist"})
+            exporter._copy_tree(source, target, suffixes=exporter.FRONTEND_SOURCE_SUFFIXES, exclude={"node_modules", "tests", "dist"})
             self.assertEqual({p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file()},
-                             {"main.ts", "diary/Page.vue"})
+                             {"main.ts", "diary/Page.vue", "tasks/legacy.js"})
 
     def test_audit_rejects_private_files_before_git_publication(self):
         for name in (".env", ".env.local", ".data/cache.ts", "auth.json", "state.db", "owner.binding"):

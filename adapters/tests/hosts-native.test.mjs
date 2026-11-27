@@ -88,5 +88,8 @@ for (const [host, executable] of [['antigravity', process.env.STH_TEST_AGY], ['c
     } finally {
       await client.close();
     }
+    await assert.rejects(installHost({ ...options, sourceId: undefined }), /--replace/);
+    assert.equal((await installHost({ ...options, sourceId: undefined, replace: true })).changed, true);
+    assert.equal((await installHost({ ...options, sourceId: undefined })).changed, false);
   });
 }
