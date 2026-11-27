@@ -1,15 +1,15 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdtempSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, posix, resolve } from 'node:path';
+import { dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { parse as parseVue } from '@vue/compiler-sfc';
 import { NodeTypes, parse as parseHtml } from '@vue/compiler-dom';
-import { build } from 'vite';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
+const worktree = root.split(sep).join('/');
 const savedPath = join(root, 'docs/architecture-baseline.json');
 const roots = ['src', 'frontend', 'web', 'adapters', 'scripts'];
 const rootInputs = ['package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts'];
@@ -26,11 +26,11 @@ const stable = value => Array.isArray(value) ? value.map(stable) : value && type
   ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
 const digest = value => hash(JSON.stringify(stable(value)));
 
-function run(command, args, input, optional = false) {
-  const result = spawnSync(command, args, { cwd: root, input, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+function run(command, args, { input, optional = false, shell = false } = {}) {
+  const result = spawnSync(command, args, { cwd: root, input, shell, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
   if (optional && result.error?.code === 'ENOENT') return undefined;
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`${command} exited with ${result.status ?? result.signal}\n${result.stderr}`);
+  if (result.status !== 0) throw new Error(`${command} exited with ${result.status ?? result.signal}\n${result.stdout}${result.stderr}`);
   return result.stdout;
 }
 
@@ -158,9 +158,10 @@ function pythonRegions(files) {
   if (!files.length) return {};
   const input = JSON.stringify(Object.fromEntries(files.map(({ file, text }) => [file, text])));
   const args = ['-X', 'utf8', '-c', pythonCollector];
+  const options = { input, optional: true };
   const output = process.platform === 'win32'
-    ? run('py', ['-3', ...args], input, true) ?? run('python', args, input, true)
-    : run('python3', args, input, true);
+    ? run('py', ['-3', ...args], options) ?? run('python', args, options)
+    : run('python3', args, options);
   if (output === undefined) throw new Error('Python 3 is required to analyze the Python sources.');
   return JSON.parse(output);
 }
@@ -363,18 +364,35 @@ async function persistence() {
   }
 }
 
-async function buildSizes() {
-  const output = await build({ configFile: join(root, 'vite.config.ts'), configLoader: 'native', envFile: false,
-    logLevel: 'silent', build: { write: false } });
-  const bundles = Array.isArray(output) ? output : [output];
-  const files = bundles.flatMap(bundle => bundle.output.map(entry => {
-    const content = Buffer.from(entry.type === 'chunk' ? entry.code : entry.source);
-    return { file: entry.fileName, bytes: content.length, sha256: hash(content) };
-  })).sort(byJson);
-  return { bytes: files.reduce((total, file) => total + file.bytes, 0), files };
+function buildSizes() {
+  const outputDir = 'frontend/dist';
+  const output = join(root, outputDir);
+  if (realpathSync(dirname(output)) !== dirname(output) ||
+      (lstatSync(output, { throwIfNoEntry: false }) && realpathSync(output) !== output)) {
+    throw new Error(`Expected ${outputDir} to resolve inside this worktree without redirects.`);
+  }
+  const npmOptions = { shell: true };
+  const source = {
+    worktree, command: 'npm run build', extraArgs: [],
+    npmScript: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts.build,
+    viteConfig: 'vite.config.ts', outputDir,
+    node: process.versions.node, npm: run('npm --version', [], npmOptions).trim(),
+    platform: `${process.platform}/${process.arch}`, nodeEnv: process.env.NODE_ENV ?? null,
+  };
+  run('npm run build', [], npmOptions);
+  const files = [];
+  for (const entry of readdirSync(output, { recursive: true, withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    const path = join(entry.parentPath, entry.name);
+    if (!entry.isFile()) throw new Error(`Unexpected non-file build output: ${path}`);
+    const content = readFileSync(path);
+    files.push({ file: relative(output, path).split(sep).join('/'), bytes: content.length, sha256: hash(content) });
+  }
+  if (!files.some(entry => entry.file === 'index.html')) throw new Error(`npm run build did not produce ${outputDir}/index.html.`);
+  return { source, bytes: files.reduce((total, file) => total + file.bytes, 0), files: files.sort(byJson) };
 }
 
-async function snapshot() {
+async function snapshot(includeBuild) {
   const { files, excluded } = sources();
   const { inventory, edges, unresolved, tokenStreams } = analyze(files);
   const inputs = rootInputs.map(file => ({ file, sha256: hash(readFileSync(join(root, file))) }));
@@ -397,7 +415,8 @@ async function snapshot() {
     method: { roots, cloneTokens, cloneLines, hotspotScore }, coverage: { groups: stable(coverage), excluded: stable(excluded) },
     inventory, dependencies: { edges, unresolved, groups: stable(dependencyGroups),
       runtimeCycles: cycles(edges.filter(edge => edge.type !== 'type')), allCycles: cycles(edges) },
-    duplicates: duplicates(tokenStreams), contract: publicContract(), persistence: await persistence(), build: await buildSizes(),
+    duplicates: duplicates(tokenStreams), contract: publicContract(), persistence: await persistence(),
+    ...(includeBuild ? { build: buildSizes() } : {}),
   };
 }
 
@@ -414,12 +433,19 @@ function diffRows(before, after, key) {
 
 function compare(before, after) {
   if (before.version !== after.version) throw new Error('Baseline format differs. Regenerate the reference with the same analyzer version.');
+  const { build: beforeBuild, ...beforeStatic } = before;
+  const { build: afterBuild, ...afterStatic } = after;
   const change = (left, right) => digest(left) === digest(right) ? null : { before: left, after: right };
   const json = item => JSON.stringify(item);
   const dependencies = {};
   for (const field of ['edges', 'unresolved', 'runtimeCycles', 'allCycles']) dependencies[field] = diffRows(before.dependencies[field], after.dependencies[field], json);
+  const build = afterBuild ? {
+    status: 'compared', source: change(beforeBuild.source, afterBuild.source), bytes: change(beforeBuild.bytes, afterBuild.bytes),
+    ...diffRows(beforeBuild.files, afterBuild.files, item => item.file),
+  } : { status: 'skipped' };
   return {
-    stale: digest(before) !== digest(after), inputSha256: { before: before.inputSha256, after: after.inputSha256 },
+    stale: digest(beforeStatic) !== digest(afterStatic) || Boolean(afterBuild && digest(beforeBuild) !== digest(afterBuild)),
+    inputSha256: { before: before.inputSha256, after: after.inputSha256 },
     method: change(before.method, after.method), files: diffRows([...before.inventory, ...before.inputs], [...after.inventory, ...after.inputs], item => item.file),
     coverage: change(before.coverage, after.coverage), dependencies: { ...dependencies, groups: change(before.dependencies.groups, after.dependencies.groups) },
     duplicates: diffRows(before.duplicates, after.duplicates, item => json([item.sha256, item.spans])),
@@ -430,19 +456,26 @@ function compare(before, after) {
       sha256: change(before.persistence.sha256, after.persistence.sha256), userVersion: change(before.persistence.userVersion, after.persistence.userVersion),
       applicationId: change(before.persistence.applicationId, after.persistence.applicationId),
       migrationSources: diffRows(before.persistence.migrationSources, after.persistence.migrationSources, item => item.file) },
-    build: { bytes: change(before.build.bytes, after.build.bytes), ...diffRows(before.build.files, after.build.files, item => item.file) },
+    build,
   };
 }
 
 try {
-  const [mode, reference, ...extra] = process.argv.slice(2);
-  if (extra.length || (mode && !['--help', '--write', '--check', '--compare'].includes(mode)) || (reference && !['--check', '--compare'].includes(mode))) {
-    throw new Error('Usage: node scripts/architecture-baseline.mjs [--write | --check [path] | --compare [path]]');
+  const args = process.argv.slice(2);
+  const skipFlags = args.filter(arg => arg === '--skip-build').length;
+  const [mode, reference, ...extra] = args.filter(arg => arg !== '--skip-build');
+  const comparing = mode === '--check' || mode === '--compare';
+  if (skipFlags > 1 || extra.length || (mode && !['--help', '--write'].includes(mode) && !comparing) ||
+      ((reference || skipFlags) && !comparing) || reference?.startsWith('--')) {
+    throw new Error('Usage: node scripts/architecture-baseline.mjs [--write | --check [path] [--skip-build] | --compare [path] [--skip-build]]');
   }
-  if (mode === '--help') console.log('Print the current snapshot, --write to refresh docs/architecture-baseline.json, or --compare/--check against an optional reference JSON.');
+  if (mode === '--help') console.log('Print or --write the current snapshot. Use --compare/--check against an optional reference JSON and --skip-build for a static-only comparison.');
   else {
-    const before = mode === '--check' || mode === '--compare' ? JSON.parse(readFileSync(reference ? resolve(reference) : savedPath, 'utf8')) : undefined;
-    const after = await snapshot();
+    const before = comparing ? JSON.parse(readFileSync(reference ? resolve(reference) : savedPath, 'utf8')) : undefined;
+    if (before && !skipFlags && before.build?.source?.worktree !== worktree) {
+      throw new Error('Build comparison requires a reference produced by npm run build in this worktree. Use --skip-build for a static-only comparison.');
+    }
+    const after = await snapshot(!skipFlags);
     const result = before ? compare(before, after) : after;
     const output = JSON.stringify(result, null, 2) + '\n';
     if (mode === '--write') writeFileSync(savedPath, output);

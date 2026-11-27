@@ -20,15 +20,18 @@
 
 ```sh
 npm ci
+node scripts/architecture-baseline.mjs --check --skip-build
+node scripts/architecture-baseline.mjs --compare /path/to/previous-baseline.json --skip-build
 node scripts/architecture-baseline.mjs --check
 node scripts/architecture-baseline.mjs --compare
-node scripts/architecture-baseline.mjs --compare /path/to/previous-baseline.json
 node scripts/architecture-baseline.mjs --write
 ```
 
 `--check` 返回 `0` 表示一致、`1` 表示快照过期、`2` 表示采集或参数错误。`--compare` 输出同样的增量 JSON，差异本身返回 `0`。两个比较命令默认以已保存快照为参考，也可指定历史文件。无参数时输出当前完整快照，`--write` 在所有采集完成后才更新已保存文件。
 
-每批先保留旧快照，再核对文件、依赖及循环、重复区段、复杂度热点、operation、schema 对象和构建产物的增减。确认差异后执行 `--write` 和 `--check`，随代码检查受影响的源码入口链接。链接锚点用于定位，逐文件分析和实测数值以快照为准。这一阶段以可重跑快照、可定位入口和有证据的处理决定为完成条件。行为、性能与真实设备验证由迭代验收记录追踪。 [迭代约束](WORKSPACE_ITERATION.md#2026-11-28-补充执行约束)
+只读审查和跨工作树比较使用 `--skip-build`。该参数跳过构建及产物对照，输出 `build.status: "skipped"`。源码、构建配置和锁文件哈希、架构指标、operation 与空库 schema 仍参与过期判断。默认检查会重跑 `npm run build` 并更新本工作树的 `frontend/dist`。完整构建对照要求参考快照来自同一工作树的该命令，历史内存快照和其他工作树的快照可用静态模式对照。
+
+每批先保留旧快照，再核对文件、依赖及循环、重复区段、复杂度热点、operation 和 schema 对象的增减。确认差异后在采集工作树执行 `--write` 和 `--check`，随代码检查受影响的源码入口链接。链接锚点用于定位，逐文件分析和实测数值以快照为准。这一阶段以可重跑快照、可定位入口和有证据的处理决定为完成条件。行为、性能与真实设备验证由迭代验收记录追踪。 [迭代约束](WORKSPACE_ITERATION.md#2026-11-28-补充执行约束)
 
 ## 采集口径
 
@@ -39,7 +42,7 @@ node scripts/architecture-baseline.mjs --write
 | 重复区段 | JS、TS 和 Vue 脚本属于同一词法组，Python 单独采集；源文件和测试各自比较。跨文件匹配连续完全相同的 token 序列，门槛为 80 个 token 且两侧各跨至少 5 行。忽略注释及普通空白，保留 token 类型、标识符、字面值和 Python 缩进结构。记录经逐 token 验证的最大区段、哈希和两侧行号。首采 1 对源码、10 对测试。导入、测试装配和惯用写法可能命中。改名、改常量、换语言、换结构或同文件的语义重复可能漏掉。 |
 | 认知复杂度代理 | 每个函数、方法、回调与顶层范围独立计分。`if`、循环、`switch`/`match`、`catch`/`except` 和条件表达式各计 `1 + 当前计分分支嵌套深度`，布尔短路与 JS 空值合并的每个操作符计 `1`。单独的 `else`、各 `case`、递归、Python 推导式与模板表达式没有专门加分。保留文件总分、最高分和分数至少 12 的范围。此代理用于同口径查阅变化，与 Sonar 认知复杂度及跨语言绝对分数无一一对应。PowerShell、CSS、配置和 SVG 只有文件级哈希。 |
 | 公共契约与持久化 | [契约入口](../scripts/contract.ts#L9)在内存 SQLite 注册完整 operation 目录。对完整目录及 116 个描述符分别哈希，JSON 对象键排序，数组保留原顺序。范围是 operation 描述符及资源路径，HTTP 路由、认证和宿主封装仍通过源码及验收检查。用明确的系统临时目录运行真实 [openDatabase](../src/database.ts#L15)，记录应用 ID、格式版本、`sqlite_schema` 及 147 个对象各自的指纹，并保存两个迁移入口的源文件摘要。采集结束清理临时 SQLite。已有数据上的升级结果、落盘 JSON 语义和业务行为需通过迁移及操作测试验证。 |
-| 构建尺寸 | 使用仓库 [Vite 配置](../vite.config.ts#L7)，在内存中生成构建并记录 25 个输出文件的字节数和 SHA-256，首采合计 502,951 字节。该值是未压缩产物总量，范围不含服务单独从 `web/assets/` 返回且未进入构建的旧资源。首屏请求、在线传输量、字体时序和样本页指标由主线性能采集验证。 |
+| 构建尺寸 | `build` 只记录 `F:/Project/Sth-worktrees/architecture` 本机工作树的 `npm run build` 落盘产物。仓库脚本执行 `vue-tsc --noEmit -p frontend/tsconfig.json && vite build`，调用没有追加参数，使用 Vite CLI 默认生产模式及默认配置加载方式。[配置](../vite.config.ts#L28)指定 `frontend/dist`、`emptyOutDir: true`、资产目录 `vue` 和目标 `es2022`。本次 25 个文件共 501,703 未压缩字节，逐文件记录 SHA-256。主树 summary 单独保留。此总量的范围为 `frontend/dist`，服务另行返回的旧资源和线上指标由主线采集。 [构建命令](../package.json#L28) |
 
 ## 有证据的结构问题
 
