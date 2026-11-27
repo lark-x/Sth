@@ -72,6 +72,7 @@ const form = reactive({
   sceneRevision: undefined as number | undefined,
 });
 const bodyInput = ref<HTMLTextAreaElement>();
+const saveButton = ref<HTMLButtonElement>();
 const saveNotice = ref<HTMLElement>();
 const formId = useId();
 const changed = computed(
@@ -243,7 +244,11 @@ function focusBody() {
 watch(busy, async (value) => {
   if (!value && !error.value) {
     await nextTick();
-    if (!save.conflict) focusBody();
+    if (save.pending) {
+      fitBody();
+      saveButton.value?.focus({ preventScroll: true });
+      saveButton.value?.scrollIntoView({ block: 'center', behavior: 'instant' });
+    } else if (!save.conflict) focusBody();
   }
 });
 watch(
@@ -334,6 +339,7 @@ function saveDraft(event: Event) {
       >
         <div class="wr-editor-save">
           <button
+            ref="saveButton"
             type="submit"
             class="wr-button wr-primary"
             :disabled="save.busy || save.conflict"

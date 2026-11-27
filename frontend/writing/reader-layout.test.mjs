@@ -9,6 +9,77 @@ const output = resolve('frontend/.artifacts/reader-layout/verified');
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const body = page => page.locator('#passage-body');
 
+test('restored uncertain saves expose the retry action without losing ordinary draft cursors', { timeout: 120_000 }, async t => {
+  const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
+  t.after(workspace.close);
+  const directory = resolve(process.env.STH_RECEIPT_ARTIFACTS ?? 'frontend/.artifacts/receipt-focus');
+  await mkdir(directory, { recursive: true });
+  for (const [engine, width, height] of [[chromium, 390, 844], [webkit, 390, 844], [webkit, 320, 640], [chromium, 1280, 900]]) {
+    await t.test(`${engine.name()} ${width}`, async t => {
+      const browser = await engine.launch();
+      t.after(() => browser.close());
+      const page = await browser.newPage({ baseURL: workspace.origin, viewport: { width, height } });
+      page.setDefaultTimeout(7000);
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      t.after(() => assert.deepEqual(errors, []));
+      const scene = await workspace.invoke('scene.create', { title: '回执恢复位置' });
+      const draft = await workspace.invoke('draft.create', { sceneId: scene.sceneId, sceneRevision: 1, title: '一次保存的回执', body: '保存前的正文。' });
+      await page.goto(`/drafts/${draft.draftId}`);
+      await body(page).waitFor();
+      await button(page, '编辑').click();
+      const editor = page.getByRole('textbox', { name: '正文', exact: true });
+      const prose = '港口的灯在风中摇晃。作者继续写这一幕，保留正文末尾的光标。\n\n'.repeat(18);
+      await editor.fill(prose);
+      await editor.evaluate(element => { element.setSelectionRange(element.value.length, element.value.length); element.dispatchEvent(new Event('select')); });
+      await page.reload();
+      await page.waitForFunction(length => {
+        const field = document.querySelector('textarea[name="body"]');
+        return field === document.activeElement && field.selectionStart === length;
+      }, prose.length);
+      assert.equal(await editor.inputValue(), prose, 'ordinary reload restores the unsaved prose');
+      const writes = [], receipts = [];
+      await page.route('**/api/web/receipt', async route => { receipts.push(route.request().postDataJSON()); await route.continue(); });
+      await page.route('**/api/web/invoke', async route => {
+        const call = route.request().postDataJSON();
+        if (call.operationId !== 'draft.revise') return route.continue();
+        writes.push(call);
+        const response = await route.fetch();
+        assert.equal(response.status(), 200);
+        await route.fulfill({ status: 503, json: { code: 'response_lost' } });
+      });
+      await button(page, '保存修订').click();
+      await page.getByRole('alert').filter({ hasText: '保存结果尚未确认' }).waitFor();
+      await page.reload();
+      const retry = button(page, '重试同一次提交');
+      await ready(page, retry);
+      const layout = await retry.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const toolbar = document.querySelector('.wr-reader-toolbar').getBoundingClientRect();
+        const points = [[rect.left + 2, rect.top + 2], [rect.right - 2, rect.bottom - 2]];
+        return { focused: document.activeElement === element, top: rect.top, bottom: rect.bottom, toolbarBottom: toolbar.bottom,
+          unobscured: points.every(([x, y]) => element.contains(document.elementFromPoint(x, y))), viewport: innerHeight };
+      });
+      const stem = `${engine.name()}-${width}`;
+      await writeJson(resolve(directory, `${stem}.json`), layout);
+      await page.screenshot({ path: resolve(directory, `${stem}-reopened.png`), animations: 'disabled' });
+      assert.ok(layout.top >= layout.toolbarBottom && layout.bottom <= layout.viewport && layout.unobscured, `retry is fully visible: ${JSON.stringify(layout)}`);
+      assert.equal(layout.focused, true, 'pending receipt recovery prioritizes the retry action');
+      assert.equal(await editor.inputValue(), prose);
+      assert.equal(await editor.getAttribute('readonly'), '');
+      await retry.click();
+      await body(page).waitFor();
+      assert.equal(await body(page).textContent(), prose);
+      const saved = await workspace.invoke('draft.read', { draftId: draft.draftId });
+      assert.equal(saved.body, prose);
+      assert.equal(saved.revision, 2);
+      assert.equal(writes.length, 1, 'receipt recovery must not write another revision');
+      assert.deepEqual(receipts, [{ operationId: 'draft.revise', stepId: writes[0].stepId }]);
+      await page.screenshot({ path: resolve(directory, `${stem}-recovered.png`), animations: 'disabled' });
+    });
+  }
+});
+
 async function ready(page, locator) {
   await locator.waitFor();
   await page.evaluate(async () => {
