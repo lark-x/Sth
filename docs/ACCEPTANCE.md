@@ -1,6 +1,14 @@
-# Sth 本机交付验收 · 2026-11-24
+# Sth 本机交付验收
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
+
+## 2026-11-27 · 三宿主创作工作区
+
+`feat/vue-authoring-and-hosts` 的代码提交 `2f596583438ea8f553f4478a33e2333d640356eb` 已发布至 9322。运行镜像为 `sth-local:authoring-2f59658`，健康检查通过。数据卷沿用 `sth-authoring_workspace`，发布前后 16 项原服务环境设置一致。发布前一致性快照的 SHA-256 为 `9e5e847675bc41abbd6ff17d8873ca2d170ebec213a171c47c3c8beef4b19d40`，旧镜像为 `sth-local:research-citations-20261124`。
+
+- 干净克隆的 123 项浏览器测试全部通过。核心套件 126 项通过，按配置跳过的 1 项 ComfyUI 实机用例单独启用后也通过，生成的 768×512 PNG 在 SQLite 快照中逐字节恢复。移动 WebKit 日记编辑、重开和历史导航另行通过。
+- 上线后在 Chromium 桌面和 WebKit 手机参数下重新打开首页、指定版本的温妮莎日记与北港场景、媒体详情、连接设置。运行实例暴露 113 项操作。归档图片从正式实例下载后的 SHA-256 为 `de58cf3e81adbe783a0bd57ffff3b63c46efb4520ce1af884d133c8928222c42`。
+- 原生 Hermes 完整插件安装、新会话读回、Hermes 写入与手机网页修订后 Codex 读回两版、Antigravity 实际模型修订和独立会话读回，分别在隔离数据上验收。真实 iPhone Safari、WKWebView 以及真机 QQ/微信收发仍需按具体设备检查。[详细迭代记录](WORKSPACE_ITERATION.md) · [iOS 接入与设备验收](IOS_EMBEDDING.md)
 
 ## 资料研究与多视角叙事
 
