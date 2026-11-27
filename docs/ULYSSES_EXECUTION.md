@@ -13,10 +13,16 @@
 
 | 任务 | 模型 | 允许写入范围 | 依赖与接口影响 | 状态与验收 |
 | --- | --- | --- | --- | --- |
-| A0 架构基线 | ChatflowsAI GPT-6.2 Sol xhigh | `scripts/architecture-baseline.mjs`、`docs/ARCHITECTURE.md`、`docs/architecture-baseline.json` | 全量首次扫描；不改业务契约 | 进行中；可复现图、循环、重复、复杂度及接口指纹，并可检查过期与比较增量 |
-| P1 可点击样稿 | Xingchi GPT-6.1 Sol xhigh | `docs/prototypes/ulysses-workspace*` | 已确认的灰白视觉；仅模拟数据，无正式业务写入 | 进行中；首页、读稿、角色与依据的四宽度截图和完整路径 |
+| A0 架构基线 | ChatflowsAI GPT-6.2 Sol xhigh | `scripts/architecture-baseline.mjs`、`docs/ARCHITECTURE.md`、`docs/architecture-baseline.json` | 全量首次扫描；不改业务契约 | `b06e3bd` 后按独立审查修复测试覆盖、登记库与依赖列号，提交 `e0cb151` 复审中 |
+| P1 可点击样稿 | Xingchi GPT-6.1 Sol xhigh | `docs/prototypes/ulysses-workspace*` | 已确认的灰白视觉；仅模拟数据，无正式业务写入 | `8f2f82a`；四宽度双引擎 8/8，主代理已查看重点截图，独立审查中 |
 | N1 返回原稿原段 | ChatflowsAI GPT-6.2 Sol xhigh | `frontend/App.vue`、新增 `frontend/navigation-state.ts` 与 `frontend/tests/navigation-state.test.mjs` | 先复现，基线记录完成再改正式代码；保持 URL 与 history 中既有状态 | 进行中；先记录旧版与选段返回失败，再验证浏览器 Back 和显式返回路径 |
-| M0 布局与性能基线 | 当前主模型 | `scripts/measure-authoring.mjs`、本执行记录与忽略目录下证据 | 复用现有隔离 fixture；不新增产品依赖 | 采集工具已编写，待实际运行与独立审查 |
+| M0 布局与性能基线 | 当前主模型 | `scripts/measure-authoring.mjs`、`scripts/manuscript-fixture.mjs` 的快照度量方法、本执行记录与忽略目录下证据 | 复用现有隔离 fixture；不新增产品依赖 | 采集和负例完成，独立复审通过；修正错误页、列表完整性、采样窗口和产物来源 |
+| C1 章内新建直接落笔 | ChatflowsAI GPT-6.2 Sol xhigh | `web/assets/workspace.js` 场景创建流程、`web/assets/scene-placement.js`、新增章内创建测试及旧测试对应行为段 | 复用场景创建与章节编排接口；遇冲突恢复同一场景 | 实施中；测试旧行为证据、创建/编排响应丢失、重试、并发章序和独立场景 |
+| T1 统一视觉基础 | Xingchi GPT-6.1 Sol xhigh | `web/assets/notebook.css`、`book.svg`、`web/index.html`、`frontend/styles.css`、文稿 frame/列表 CSS；既有列表测试的准确颜色期望 | 与 P1 共同视觉规则、现存根变量作为权威；不改业务状态 | 实施中；首页/读稿/角色/资料的颜色、字体、窄屏和操作可达性 |
+| L1 真实文稿摘要与范围 | ChatflowsAI GPT-6.2 Sol xhigh | `library-data.ts`、`LibraryPanels.vue`、新增摘要测试；既有列表测试的业务段 | API 保持；与 T1 分开 CSS/业务所有权 | 实施中；已采用/候选版本准确、全文搜索不漏、全库范围一致、记录请求成本 |
+| A2 角色与资料呈现 | Xingchi GPT-6.1 Sol xhigh | 角色与资料的 Index/Page/CSS、共享 `manuscript/return-link.ts`、新增引用页测试 | 依赖 T1 共享变量；接入 `returnTo` 原稿链接，不改公共业务契约 | 实施中；四宽度真实内容、固定旧版、筛选与历史按需展开、返回地址校验 |
+| R1 读写工具栏与正文 | ChatflowsAI GPT-6.2 Sol xhigh | `ManuscriptTools.vue`、Draft/Scene/ComparePage、`writing.css` 及相关精确交互测试 | T1 字体与布局合同；保留依据事件和全部版本/采用语义 | 实施中；常显稿件身份、按需版本、四宽度首屏、读写同排版、比稿与恢复 |
+| S2 次要页面一致性 | Xingchi GPT-6.1 Sol xhigh | creative-entry CSS、任务与连接组件的呈现、新增布局验证 | 先继承 T1 再以实际截图决定最小修复；无证据不改 | 实施中；作品概览、任务/媒体/设置、旧章节和提示词承接页 |
 
 每个任务完成后由新上下文 Reviewer 检查实际差异及证据，主代理完成集成验证后才标记完成。
 
@@ -30,12 +36,20 @@
 | 核心测试 | 130 通过，1 条需真实 ComfyUI 的用例跳过 | `core.log` |
 | 通用浏览器测试 | 147 通过 | `browser.log` |
 | 适配器测试 | 14 通过，7 条环境条件用例跳过 | `adapters.log` |
-| 文稿专项 | 运行中 | `manuscript.log` |
-| 改造前截图 | 首轮进程原生退出，完整性未确认；已有画面仅供具体项对照 | `screens.log`、`screens/` |
+| 文稿专项 | 124 通过 | `manuscript.log` |
+| 改造前截图 | 首轮原生退出；单独重跑后 12/12 场景通过，44 张图，源码与实际提供构建保持一致 | `screens-rerun.log`、`screens-rerun/manifest.json` |
+| 布局与加载采样 | 最终修正后 36 次完成；六路径×1280/390px×3次，正文/速记/列表目标明确，实际服务快照与采后哈希一致 | `metrics-final/metrics.json` |
+| 采集失败判定 | HTTP 200 的残留首页控件加错误提示被拒绝，报告为 failed，浏览器和临时工作区清理成功 | `metrics-error-probe.log`、`metrics-error-probe/metrics.json` |
+| 复审修正的负例 | HTTP 200 错误页仍失败且保留请求计数；迟发请求重新取得完整静默窗、挂起超时和失败计数保存 | `metrics-final-error.log`、`metrics-quiet-probe.log` |
+| 桌面列表完整性 | 桌面与手机共同校验四条预期文稿，补测 12/12 采样完成 | `metrics-complete-lists/metrics.json` |
 
 复现命令使用仓库现有的 `npm run build`、`npm run typecheck`、`node --test tests/*.test.ts`、`npm run test:browser`、`npm run test:manuscript`，以及在 `adapters` 目录运行 `npm test`。每次执行分别保存输出、退出码和时间；环境条件跳过不能计作真实外部集成通过。
 
-页面基线用 `node scripts/measure-authoring.mjs --out frontend/.artifacts/ulysses-baseline/metrics` 采集固定样例的请求数、传输体积、首屏正文位置、实际字体和本机加载时间。计时记录本机样例性能，不作为线上真实用户指标。前后比较须使用同一机器、命令、浏览器和数据，不用单次波动声称提速。
+页面基线用 `node scripts/measure-authoring.mjs --out frontend/.artifacts/ulysses-baseline/metrics-final --samples 3` 采集固定样例的请求数、传输体积、首屏正文位置、实际字体和本机加载时间。1280px 与 390px 各测首页、作品、旧稿、角色、资料和日记三次，每项首个样本额外记录截图及 CDP 实际字体。首页目标是速记输入框，手机作品页目标是列表，其余为正文，不能把各类目标的顶部位置混作同一指标。
+
+页面就绪以期望样例正文/列表与字体为依据；请求观测另持续至 500ms 无新请求，上限 15s，记录实际观察时长、发出/完成/失败/在途数和包括主文档的响应字节。构建体积来自真正提供页面的隔离快照，离线 gzip 仅为压缩估算。计时记录本机样例性能，不作为线上真实用户指标。前后比较须使用同一机器、命令、浏览器和数据，不用单次波动声称提速。
+
+原始 `metrics/` 和中间 `metrics-reviewed/` 保留为审查记录，最终前后比较使用 `metrics-final/`。R0 发现其可接受错误页、包体可能来自另一构建，以及采样窗口/目标覆盖/失败清理问题；修复后再次采集，并由同一独立 Reviewer 复核修正范围。
 
 ## 已采纳的决策
 
@@ -44,8 +58,22 @@
 - 章内创建独立验收创建成功、归章冲突和已输入正文并存的情况，重试应保留原场景、正文及他人最新章序。
 - 历史选段直达与跨辅助页返回分别验证，证据跟随所读稿件修订；无关联时明确说明缺失。
 - 列表真实摘要同时比较请求数，避免每个条目额外读取全文造成加载成本扩大。
+- Astra 建议本轮保持现有公共 API。已采用稿用准确版本原文；未采用稿的摘要按可见条目渐进读取，并标明稿名和修订、与打开目标一致。原有全文搜索范围单独验证，尚未完成全文读取时不能宣称没有结果。冷首屏、滚动和冷搜索的请求成本分别比较。
 - 修复者与复验者分开；未完成验证的变更不部署。
+
+## 已交回的实现批次
+
+- N1 `a01a0d1`：原六条返回路径偏移 96px，修正后为 0px；独立复跑 16/16。复审发现辅助页刷新后返回入口未初始化，已用真实刷新红测复现并补一行初始化，17/17 通过，独立 Reviewer 已关闭该项，待主线集成验收。
+- C1 `38eba5a`：章内创建直接归章再进入写稿，保存响应丢失沿原回执恢复，章序冲突先读最新再明确提交。作者聚焦与完整回归通过，独立审查待完成。原作者尝试启动 Reviewer 返回 `Model provider chatflowsai not found`；主代理已按指定路由重新安排独立审查，没有更换模型。
+- T1 `5e8e654`：root 是共享主题权威，Vue 壳和 frame 复用；首页 390px 顶栏从 133px 到约 108px，首条近期文稿底部从约 703px 到 573px。独立审查中。依据宽度从旧 clamp 改为已约定 min 后，主代理用 `0ffbfe3` 更新唯一精确宽度断言，实际 frame 七组路径通过，未删除或放宽其他断言。
+- P1 `8f2f82a`：普通 320/390px 样稿正文盒约 223px，默认中文实测为 Noto Sans SC；样稿的模拟保存不能计为正式产品完成。
 
 ## 治理变更记录要求
 
 每个正式结构调整在本节追加问题、范围、证据、收益、成本、风险、验收及前后结果。目前没有批准额外的架构改造。已有 API、持久化数据格式、安全策略和外部契约的变化必须另行论证，不能夹在视觉改造中。
+
+| 项目 | 问题与证据 | 影响范围 | 预期收益与成本 | 风险与验收 | 前后结果 |
+| --- | --- | --- | --- | --- | --- |
+| T1 主题统一 | 当前 root、Vue 壳与文稿 frame 各自覆盖主题，截图仍继承绿色且跨页不一致 | 既有主题 CSS、图标和页面 meta | 共享一套权威变量，后续页面复用；成本为已列六个视觉文件及精确颜色断言 | 旧页对比度与窄屏可能回归；真实跨页截图、计算样式、键盘/触控验证 | 待集成后比较 |
+| N1 阅读返回 | 原 App 导航统一滚动顶部；需以任务内复现和红测证实具体丢位 | App 与小范围阅读位置状态 | 旧版与选段跨页返回可恢复；不替换路由框架 | 异步加载与新导航争用、覆盖 history 状态；新旧链接和重复返回测试 | 待独立审查 |
+| M0 快照度量 | 独立审查证实旧判定可把错误页作为成功，统计包体与页面来源不同 | 隔离测试 fixture 的新增度量方法与采集脚本 | 获得同来源可比较数据；成本为测试工具修改，无产品依赖 | 修改共享 fixture 的兼容风险；原哈希接口保持不变，正常采样与注入错误均验证 | 36 次正常采样及完整列表补测 12 次通过；降级与缺项负例正确失败；独立复审通过 |

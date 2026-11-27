@@ -18,6 +18,7 @@ import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/pr
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
 import { startService } from '../tests/browser/harness.mjs';
 
 export const root = resolve(import.meta.dirname, '..');
@@ -76,7 +77,7 @@ export async function inspectManuscriptBuild(ui = 'source') {
   };
 }
 
-async function inspectBundle(directory) {
+async function inspectBundle(directory, metrics = false) {
   const files = [];
   async function walk(path, prefix = '') {
     for (const entry of await readdir(path, { withFileTypes: true })) {
@@ -87,8 +88,18 @@ async function inspectBundle(directory) {
   }
   await walk(directory);
   const hash = createHash('sha256');
-  for (const file of files.sort()) hash.update(file).update('\0').update(await readFile(join(directory, file))).update('\0');
-  return { sha256: hash.digest('hex'), fileCount: files.length };
+  const entries = [];
+  for (const file of files.sort()) {
+    const bytes = await readFile(join(directory, file));
+    hash.update(file).update('\0').update(bytes).update('\0');
+    if (metrics) entries.push({ file, bytes: bytes.length, gzipBytes: gzipSync(bytes).length,
+      sha256: createHash('sha256').update(bytes).digest('hex') });
+  }
+  return { sha256: hash.digest('hex'), fileCount: files.length, ...(metrics ? {
+    files: entries, totalBytes: entries.reduce((sum, entry) => sum + entry.bytes, 0),
+    totalGzipBytes: entries.reduce((sum, entry) => sum + entry.gzipBytes, 0),
+    gzipMethod: 'Offline gzip per file; not observed HTTP compression.',
+  } : {}) };
 }
 
 export async function startManuscriptWorkspace({ ui = 'source' } = {}) {
@@ -132,6 +143,7 @@ export async function startManuscriptWorkspace({ ui = 'source' } = {}) {
     let origin = apiOrigin;
     let capturedBuild;
     let inspectServedBundle;
+    let measureServedBundle;
     if (ui === 'source') {
       const { createServer } = await import('vite');
       const cacheDir = await mkdtemp(join(tmpdir(), 'sth-manuscript-vite-'));
@@ -161,6 +173,7 @@ export async function startManuscriptWorkspace({ ui = 'source' } = {}) {
       assert.equal(after.contentSha256, snapshotSource.contentSha256, 'Application source changed during the isolated build. Retry after the edits finish.');
       capturedBuild = { ...snapshotSource, ui, bundle: await inspectBundle(outDir), compiledAt: new Date().toISOString() };
       inspectServedBundle = () => inspectBundle(outDir);
+      measureServedBundle = () => inspectBundle(outDir, true);
       const server = await preview({ ...configuration, build: { outDir }, preview: {
         host: '127.0.0.1', port: 0, strictPort: false, open: false, proxy: {
           '/api': { target: apiOrigin, changeOrigin: true,
@@ -170,7 +183,7 @@ export async function startManuscriptWorkspace({ ui = 'source' } = {}) {
       cleanup.push(() => server.close());
       origin = `http://127.0.0.1:${server.httpServer.address().port}`;
     }
-    return { origin, apiOrigin, dataDir, invoke, calls, close, isolated: true, ui, capturedBuild, inspectServedBundle };
+    return { origin, apiOrigin, dataDir, invoke, calls, close, isolated: true, ui, capturedBuild, inspectServedBundle, measureServedBundle };
   } catch (error) {
     await close().catch(cleanupError => { error.cleanupError = cleanupError.message; });
     throw error;
