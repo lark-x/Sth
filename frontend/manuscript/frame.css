@@ -81,3 +81,22 @@
   .sth-app .manuscript-frame:not(.ms-focus):has(.evidence-trigger[aria-expanded=true]) { grid-template-columns: 17rem minmax(0,1fr); }
   .manuscript-frame:not(.ms-focus):has(.evidence-trigger[aria-expanded=true]) > .manuscript-sheets { display: flex; grid-column: 1; }
 }
+
+/* Review needs space for the two manuscripts. Keep the existing library
+   instance and author focus preference; the reader regains its list on return. */
+@media (width >= 640px) {
+  .sth-app .manuscript-frame:has(.wr-review-page):not(.ms-focus) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .manuscript-frame:has(.wr-review-page) > .manuscript-sheets { display: none; }
+}
+@media (640px <= width < 1050px) {
+  .sth-app .manuscript-frame.ms-library-open:has(.wr-review-page):not(.ms-focus) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+}
+@media (width >= 1050px) {
+  .sth-app .manuscript-frame:has(.wr-review-page):not(.ms-focus) {
+    grid-template-columns: var(--ms-library-width) minmax(0, 1fr);
+  }
+}
