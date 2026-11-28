@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { createManuscriptFixture, startManuscriptWorkspace } from '../../scripts/manuscript-fixture.mjs';
+import { diagnoseRoute } from '../tests/route-diagnostics.mjs';
 
 test('reader keeps the manuscript name on the paper and exposes the full path in the mobile version menu', { timeout: 90_000 }, async t => {
   const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
@@ -42,8 +43,10 @@ test('reader keeps the manuscript name on the paper and exposes the full path in
   assert.equal(await versionPath.locator('span').last().textContent(), fixture.scene.title);
   assert.equal(await mobile.locator('.wr-version-title').textContent(), fixture.drafts[0].title);
 
-  await mobile.goto(fixture.links.scene);
-  await mobile.getByRole('button', { name: '稿件与版本', exact: true }).click();
+  await diagnoseRoute(mobile, async () => {
+    await mobile.goto(fixture.links.scene);
+    await mobile.getByRole('button', { name: '稿件与版本', exact: true }).click();
+  });
   assert.equal(await mobile.locator('.wr-version-path').isVisible(), true);
   assert.equal(await mobile.locator('.wr-version-path > span:last-child').textContent(), fixture.scene.title);
   assert.deepEqual(await mobile.locator('.wr-version-path a').allTextContents(), [fixture.project.title, fixture.chapters[1].title]);

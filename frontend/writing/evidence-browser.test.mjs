@@ -237,6 +237,7 @@ test('new writing can add, remove, recover and persist this generation reference
   const page = await open(t, fx, false, { width: 320, height: 800 });
   await button(page, '本次依据').click();
   await panel(page).getByText('当前显示场景准备记录，尚未关联到具体稿件。', { exact: true }).waitFor();
+  await panel(page).getByText('此场景版本还没有保存的组稿。', { exact: true }).waitFor();
   assert.equal(await panel(page).getByText('此场景版本还没有保存的组稿。', { exact: true }).count(), 1);
   await capture(page, 'evidence-scene-no-record');
   await button(page, '准备新稿').click();

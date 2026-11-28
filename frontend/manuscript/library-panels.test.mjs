@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { createServer as createViteServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { assertFitsViewport, openBrowser, startService } from '../../tests/browser/harness.mjs';
+import { diagnoseRoute } from '../tests/route-diagnostics.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const recentKey = 'sth:manuscripts:recent:v1';
@@ -733,8 +734,11 @@ test('library preserves project navigation and exposes management through the re
         }
 
         const manuscriptHref = new URL(page.url()).pathname + new URL(page.url()).search;
-        await management.getByRole('link', { name: '作品总览', exact: true }).click();
-        await page.getByRole('article', { name: project.title, exact: true }).waitFor();
+        await diagnoseRoute(page, async () => {
+          await management.getByRole('link', { name: '作品总览', exact: true }).click();
+          await page.waitForURL(url => url.pathname === projectPath && url.searchParams.get('view') === 'overview');
+          await page.getByRole('article', { name: project.title, exact: true }).waitFor();
+        });
         assert.equal(new URL(page.url()).searchParams.get('returnTo'), manuscriptHref);
         const overview = page.getByRole('navigation', { name: '作品内容', exact: true });
         assert.equal(await overview.getByRole('link', { name: '章节', exact: true }).getAttribute('href'), `/chapters?projectId=${project.projectId}`);

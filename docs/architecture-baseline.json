@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "10f321b1b0385e343b5c930fb3e859095b538eba6e0e44a8ec74a192da911d58",
+  "inputSha256": "b9021b78cc41c06bd7c0627a30a2cfba29662a0ba6644b1704843cbb68c53650",
   "inputs": [
     {
       "file": "package.json",
@@ -126,11 +126,11 @@
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 631848,
-        "complexity": 32,
-        "dependencies": 32,
-        "duplicates": 32,
-        "files": 32
+        "bytes": 634615,
+        "complexity": 33,
+        "dependencies": 33,
+        "duplicates": 33,
+        "files": 33
       },
       "scripts/source/mjs": {
         "bytes": 189044,
@@ -1791,16 +1791,16 @@
       "file": "frontend/manuscript/library-panels.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 52779,
-      "sha256": "3d2c45ef9e607ee349eb46df0d8f48b1ea1f0e4f20ab6f6fbb0e518f3977770a",
+      "bytes": 53024,
+      "sha256": "e7eb4e536c3d485c1575c890277770eaa68b809959008fbd4a79765b08b75ac4",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 130,
-        "total": 80,
+        "functions": 132,
+        "total": 81,
         "max": 11,
         "hotspots": []
       }
@@ -2582,6 +2582,24 @@
       }
     },
     {
+      "file": "frontend/tests/route-diagnostics.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 2172,
+      "sha256": "88c7a9ff5252b0ccf4894d72891d3c654b77bdb4faf9175ee6d95f8abb90fafe",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 13,
+        "total": 4,
+        "max": 2,
+        "hotspots": []
+      }
+    },
+    {
       "file": "frontend/tests/secondary-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
@@ -3352,8 +3370,8 @@
       "file": "frontend/writing/evidence-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 41581,
-      "sha256": "f46e0ab1a9f06fc7d5c88d7207138c338f3ae3976e7f768e604f50ee59256fc7",
+      "bytes": 41685,
+      "sha256": "c05b5d151416265d49e6fd7d687277c7a9ac437b0a1f0d4df468e19f2bb6b8f2",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3366,7 +3384,7 @@
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 554,
+            "line": 555,
             "score": 20
           }
         ]
@@ -3549,15 +3567,15 @@
       "file": "frontend/writing/reader-style.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 3438,
-      "sha256": "c9825d739869039883d3000677c5a9faf264d29b38d566e9c02e866b857b1300",
+      "bytes": 3556,
+      "sha256": "49293600a6974260c3c60023760a499e28b567fb0d16d80d44c477077ffc86de",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 3,
+        "functions": 4,
         "total": 0,
         "max": 0,
         "hotspots": []
@@ -3567,15 +3585,15 @@
       "file": "frontend/writing/reading-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 8586,
-      "sha256": "dbe58b7b35558f0edbeb1056dfe942749d1cb3b5484f81b7b1885493dc0dc9a8",
+      "bytes": 8714,
+      "sha256": "7a531c50264cdae0fbb45d95b39ddce7dc9edd05e639bc1af67a52ec80ef05bc",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 30,
+        "functions": 31,
         "total": 13,
         "max": 4,
         "hotspots": []
@@ -7837,6 +7855,13 @@
       },
       {
         "from": "frontend/manuscript/library-panels.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 11,
+        "column": 1
+      },
+      {
+        "from": "frontend/manuscript/library-panels.test.mjs",
         "to": "tests/browser/harness.mjs",
         "type": "static",
         "line": 10,
@@ -9622,9 +9647,23 @@
       },
       {
         "from": "frontend/writing/reader-style.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/reader-style.test.mjs",
         "to": "scripts/manuscript-fixture.mjs",
         "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/reading-browser.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 7,
         "column": 1
       },
       {
@@ -13406,7 +13445,7 @@
       "adapters -> adapters (python)": 18,
       "adapters -> adapters (static)": 29,
       "adapters -> src (static)": 2,
-      "frontend -> frontend (static)": 235,
+      "frontend -> frontend (static)": 238,
       "frontend -> frontend (type)": 68,
       "frontend -> scripts (static)": 17,
       "frontend -> src (static)": 6,
@@ -13538,8 +13577,8 @@
       "spans": [
         [
           "frontend/manuscript/library-panels.test.mjs",
-          84,
-          102
+          85,
+          103
         ],
         [
           "frontend/tests/writing-vue.test.mjs",

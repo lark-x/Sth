@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { startManuscriptWorkspace } from '../../scripts/manuscript-fixture.mjs';
+import { diagnoseRoute } from '../tests/route-diagnostics.mjs';
 
 const artifacts = resolve('frontend/.artifacts/writing-reader/reading-persistence');
 const readingPrefix = 'sth:writing:reading:';
@@ -76,8 +77,10 @@ test('reading coordinates persist across closed tabs with explicit links and dra
       await t.test(`${engine} ${kind} closes its tab and resumes through 最近写过 in a new page`, async t => {
         const context = await newContext(t);
         const page = await context.newPage();
-        await page.goto(href);
-        await ready(page);
+        await diagnoseRoute(page, async () => {
+          await page.goto(href);
+          await ready(page);
+        });
         await readAt(page, offset, key);
         const position = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
         assert.deepEqual(Object.keys(position).sort(), ['offset', 'top']);
