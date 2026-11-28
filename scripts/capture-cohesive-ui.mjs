@@ -80,11 +80,14 @@ try {
               await page.goto(href);
               await page.waitForFunction(() => {
                 const visible = node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden';
-                const heading = [...document.querySelectorAll('main h1, .library-sheets-heading h2, .library-brand')].some(visible);
+                const heading = [...document.querySelectorAll('main h1, .library-sheets-heading h2')].some(visible);
                 const loading = [...document.querySelectorAll('[aria-busy=true], [role=status]')].some(node => visible(node) &&
                   (node.getAttribute('aria-busy') === 'true' || /^(正在(?:打开|读取|加载)|加载中)/.test(node.textContent.trim())));
                 return heading && !loading;
               });
+              // Route content and its requests must finish before the next full
+              // navigation; the shared brand alone is not a loaded page.
+              await page.waitForLoadState('networkidle');
               await page.evaluate(async () => { await document.fonts.ready; await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))); });
               record.observation = await page.evaluate(() => {
                 const visible = node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden';
@@ -96,7 +99,7 @@ try {
                 };
                 return {
                   title: document.title,
-                  headings: [...document.querySelectorAll('main h1, main h2')].filter(visible).map(node => node.textContent.trim()),
+                  headings: [...document.querySelectorAll('main h1, main h2, .library-sheets-heading h2')].filter(visible).map(node => node.textContent.trim()),
                   alerts: [...document.querySelectorAll('[role=alert]')].filter(visible).map(node => node.textContent.trim()),
                   legacy: Boolean(document.querySelector('.legacy-route')),
                   viewportWidth: innerWidth,
@@ -117,6 +120,7 @@ try {
               await page.screenshot({ path: resolve(out, record.image), fullPage: false, animations: 'disabled' });
               assert.ok(record.observation.contentWidth <= viewport.width + 1, 'No horizontal page overflow');
               assert.ok(!/找不到页面|页面暂时无法打开/.test(record.observation.title), 'Route resolves to its actual page');
+              assert.ok(record.observation.headings.length > 0, 'Actual route content has a visible heading');
               assert.deepEqual(record.pageErrors, [], 'No uncaught browser error');
               assert.deepEqual(record.observation.smallTouchControls, [], 'Shared mobile controls have 44px touch height');
               assert.deepEqual(record.observation.unreadablePrimaryControls, [], 'Primary action text remains legible after domain styles');

@@ -3,6 +3,15 @@ import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { createManuscriptFixture, startManuscriptWorkspace } from '../../scripts/manuscript-fixture.mjs';
 
+function controlContrast(node) {
+  const css = getComputedStyle(node);
+  const lum = rgb => rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)
+    .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+    .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  const a = lum(css.color), b = lum(css.backgroundColor);
+  return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+}
+
 test('shared controls keep readable actions and writing typography across lazy-loaded domains', { timeout: 120_000 }, async t => {
   const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
   t.after(workspace.close);
@@ -48,14 +57,7 @@ test('shared controls keep readable actions and writing typography across lazy-l
             assert.equal(await trigger.evaluate(node => node.parentElement.open), false);
             assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
           }
-          const contrast = await action.evaluate(node => {
-            const css = getComputedStyle(node);
-            const lum = rgb => rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)
-              .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
-              .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
-            const a = lum(css.color), b = lum(css.backgroundColor);
-            return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
-          });
+          const contrast = await action.evaluate(controlContrast);
           assert.ok(contrast >= 4.5, `primary link contrast ${contrast}`);
           await action.click();
           const sourceBody = page.getByLabel('正文', { exact: true });
@@ -68,6 +70,13 @@ test('shared controls keep readable actions and writing typography across lazy-l
           const returned = await measure();
           assert.equal(returned.font, 16);
           assert.ok(returned.height - returned.padding >= returned.line * 2 - 1);
+
+          await page.goto(`${fixture.links.project}?view=overview`);
+          const newProject = page.getByRole('link', { name: '新建作品', exact: true });
+          await newProject.waitFor();
+          assert.ok(await newProject.evaluate(controlContrast) >= 4.5, 'workspace link rules preserve primary button contrast');
+          await newProject.click();
+          await page.getByRole('heading', { name: '新建作品', exact: true }).waitFor();
 
           await page.goto(`/drafts/${fixture.drafts[0].draftId}?action=revise&revision=1`);
           const writing = page.locator('textarea[name=body]');

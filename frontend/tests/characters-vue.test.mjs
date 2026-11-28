@@ -141,7 +141,15 @@ async function fixture(t) {
     assert.match(basename(cache), /^sth-characters-vue-[a-z0-9]+$/i);
     await rm(cache, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
+  const started = performance.now();
   await vite.listen();
+  const listeningMs = Math.round(performance.now() - started);
+  // The real shell is a second entry beside the virtual host. Compile both
+  // its static graph and the lazy route before exercising business behavior.
+  await vite.environments.client.warmupRequest('/frontend/main.ts');
+  await vite.environments.client.warmupRequest('/frontend/characters/CharacterRoute.vue');
+  await vite.environments.client.waitForRequestsIdle();
+  t.diagnostic(JSON.stringify({ host: 'characters', listeningMs, warmupReadyMs: Math.round(performance.now() - started) }));
   const origin = `http://127.0.0.1:${vite.httpServer.address().port}`;
   async function invoke(operationId, input) {
     const response = await fetch(`${backend}/api/web/invoke`, {
@@ -161,8 +169,11 @@ async function ready(page) {
 }
 async function open(t, origin, href = '/characters', viewport = phone) {
   const page = await openBrowser(t, origin, viewport);
+  const started = performance.now();
   assert.equal((await diagnoseRoute(page, () => page.goto(href))).status(), 200);
+  const gotoMs = Math.round(performance.now() - started);
   await ready(page);
+  if (href.includes('__characters_shell')) t.diagnostic(JSON.stringify({ href, width: viewport.width, gotoMs, readyMs: Math.round(performance.now() - started) }));
   return page;
 }
 async function navigate(page, href) {

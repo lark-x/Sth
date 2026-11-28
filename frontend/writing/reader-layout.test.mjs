@@ -170,7 +170,7 @@ test('the compact reader preserves manuscript identity across layout, edit and e
           }
           assert.equal(await page.getByRole('heading', { level: 1, name: fixture.drafts[0].title, exact: true }).count(), 1);
           assert.equal(await picker.isVisible(), true);
-          assert.equal(await picker.innerText(), '第 1 版 · 历史');
+          assert.equal(await picker.innerText(), '第 1 版 · 采用', 'an adopted older revision remains visibly adopted');
           assert.equal(await picker.getAttribute('aria-describedby'), await status.getAttribute('id'));
           assert.match(await status.textContent(), /第 1 版\s*采用稿\s*旧版 · 最新第 2 版/);
           const toolbarLayout = await page.locator('.wr-reader-toolbar').evaluate(element => {

@@ -36,7 +36,7 @@ test('reader keeps the manuscript name on the paper and exposes the full path in
   assert.equal(await desktop.getByRole('heading', { level: 1, name: fixture.drafts[0].title, exact: true }).count(), 1);
   const desktopPicker = desktop.getByRole('button', { name: '稿件与版本', exact: true });
   assert.equal(await desktopPicker.isVisible(), true);
-  assert.equal(await desktopPicker.innerText(), '第 1 版 · 历史');
+  assert.equal(await desktopPicker.innerText(), '第 1 版 · 采用');
   assert.equal(await desktopPicker.getAttribute('aria-describedby'), await desktop.locator('.wr-toolbar-meta').getAttribute('id'));
   assert.equal(await desktop.locator('.wr-reader-path').isVisible(), true);
   await desktop.getByRole('button', { name: '稿件与版本', exact: true }).click();

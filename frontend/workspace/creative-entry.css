@@ -13,8 +13,8 @@
 .creative-entry h2 { font-size: 1.22rem; line-height: 1.45; text-wrap: balance; }
 .creative-entry h3 { font-size: 1.04rem; line-height: 1.5; text-wrap: balance; }
 .creative-entry h4 { margin-block-start: 1rem; font-size: .9rem; }
-.creative-entry a { color: var(--ink); text-underline-offset: .22em; }
-.creative-entry a:hover { text-decoration-thickness: 2px; }
+.creative-entry a:where(:not(.ui-button, .button)) { color: var(--ink); text-underline-offset: .22em; }
+.creative-entry a:where(:not(.ui-button, .button)):hover { text-decoration-thickness: 2px; }
 .creative-entry :focus-visible { outline-color: var(--focus-ring); outline-offset: 3px; }
 .creative-entry input, .creative-entry textarea { caret-color: var(--ink); }
 .creative-entry ::selection { background: var(--selection); color: var(--ink); }
