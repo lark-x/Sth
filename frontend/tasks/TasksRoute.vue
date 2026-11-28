@@ -192,7 +192,7 @@ function tabHref(href: string) {
 
 <style scoped>
 .tasks-domain { min-inline-size: 0; overflow-wrap: anywhere; color: var(--ink); }
-.tasks-domain h1 { font-family: var(--sans); text-wrap: balance; }
+.tasks-domain h1 { font: 600 var(--page-title-size, 1.5rem)/var(--page-title-leading, 1.4) var(--sans); text-wrap: balance; }
 .heading-copy { min-inline-size: 0; }
 .provenance a, figcaption a, summary { min-block-size: 2.75rem; }
 .tasks-domain .workspace-nav { flex-wrap: wrap; margin-block: .65rem 1.25rem; }

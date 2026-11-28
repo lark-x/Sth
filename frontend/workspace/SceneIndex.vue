@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onScopeDispose, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import { all, href, message, pageOf, recordHref } from './api.ts';
 import type { Project, Scene } from './api.ts';
 
@@ -56,21 +57,21 @@ onScopeDispose(() => controller?.abort());
     <search>
       <form action="/create" method="get" class="ce-scene-filters" aria-label="筛选场景"
         @submit.prevent="emit('navigate', href('/create', { projectId, q: query.trim() }))">
-        <div class="ce-field">
+        <div class="field ce-field">
           <label for="ce-scene-project">作品</label>
           <select id="ce-scene-project" v-model="projectId" name="projectId">
             <option value="">全部作品</option>
             <option v-for="item in projects" :key="item.projectId" :value="item.projectId">{{ item.title }}</option>
           </select>
         </div>
-        <div class="ce-field">
+        <div class="field ce-field">
           <label for="ce-scene-query">完整场景名称</label>
           <input id="ce-scene-query" v-model="query" type="search" name="q" maxlength="300" enterkeyhint="search">
         </div>
-        <button type="submit" class="ce-button">搜索场景</button>
+        <Button type="submit" class="ce-button" variant="outline">搜索场景</Button>
       </form>
     </search>
-    <p v-if="error" role="alert" class="ce-error">{{ error }} <button type="button" class="ce-button" @click="load(!scenes.length)">重新读取</button></p>
+    <p v-if="error" role="alert" class="ce-error">{{ error }} <Button class="ce-button" variant="outline" @click="load(!scenes.length)">重新读取</Button></p>
     <p v-if="busy && !scenes.length" role="status" class="ce-empty">正在读取场景…</p>
     <p v-else-if="!scenes.length && !error" class="ce-empty">没有匹配的场景，可以修改名称或作品筛选。</p>
     <ul v-if="scenes.length" class="ce-items">
@@ -79,6 +80,6 @@ onScopeDispose(() => controller?.abort());
         <p class="ce-muted">{{ [`第 ${scene.revision} 版`, scene.time, scene.place].filter(Boolean).join(' · ') }}</p>
       </li>
     </ul>
-    <button v-if="more" type="button" class="ce-button" :disabled="busy" @click="load()">{{ busy ? '正在读取…' : '加载更多场景' }}</button>
+    <Button v-if="more" class="ce-button" variant="outline" :disabled="busy" @click="load()">{{ busy ? '正在读取…' : '加载更多场景' }}</Button>
   </section>
 </template>

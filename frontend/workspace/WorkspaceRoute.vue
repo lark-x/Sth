@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import { all, href, message, read, recordHref } from './api.ts';
 import type { Character, Diary, Project, Source, StartContext } from './api.ts';
 import ContinueShelf from './ContinueShelf.vue';
@@ -127,8 +128,8 @@ onScopeDispose(() => { controller?.abort(); detachMedia?.(); });
   <div class="creative-entry" @click="linkClick">
     <header class="ce-heading">
       <h1 tabindex="-1">{{ title }}</h1>
-      <a v-if="!isNew" class="ce-button ce-primary" href="/projects/new">新建作品</a>
-      <a v-else class="ce-button" href="/projects">返回作品</a>
+      <Button v-if="!isNew" as="a" class="ce-button" href="/projects/new">新建作品</Button>
+      <Button v-else as="a" class="ce-button" variant="outline" href="/projects">返回作品</Button>
     </header>
     <nav class="ce-tabs" aria-label="创作入口">
       <a href="/projects" :aria-current="!continuing && !isNew && !sceneList ? 'page' : undefined">作品</a>
@@ -136,7 +137,7 @@ onScopeDispose(() => { controller?.abort(); detachMedia?.(); });
       <a href="/scenes" :aria-current="sceneList ? 'page' : undefined">场景</a>
     </nav>
     <p v-if="busy" role="status" class="ce-empty">正在读取{{ continuing ? '已有内容' : '作品' }}…</p>
-    <p v-if="error" role="alert" class="ce-error">{{ error }} <button class="ce-button" type="button" @click="load">重新读取</button></p>
+    <p v-if="error" role="alert" class="ce-error">{{ error }} <Button class="ce-button" variant="outline" @click="load">重新读取</Button></p>
     <SceneIndex v-if="sceneList" :url="url" @navigate="emit('navigate', $event)" />
     <ProjectCreate v-else-if="isNew" @created="created" />
     <template v-else-if="continuing">
@@ -155,10 +156,10 @@ onScopeDispose(() => { controller?.abort(); detachMedia?.(); });
           <summary>{{ project?.title ?? '选择作品' }} · 切换作品</summary>
           <search>
             <form action="/projects" method="get" aria-label="查找作品" @submit.prevent="filter = filterDraft.trim()">
-              <label for="ce-project-search">查找作品</label>
+              <label class="ui-label" for="ce-project-search">查找作品</label>
               <div class="ce-search-line">
-                <input id="ce-project-search" v-model="filterDraft" name="q" type="search" enterkeyhint="search" maxlength="300">
-                <button type="submit" class="ce-button">查找</button>
+                <input id="ce-project-search" v-model="filterDraft" class="ui-input" name="q" type="search" enterkeyhint="search" maxlength="300">
+                <Button type="submit" class="ce-button" variant="outline">查找</Button>
               </div>
             </form>
           </search>
@@ -175,7 +176,7 @@ onScopeDispose(() => { controller?.abort(); detachMedia?.(); });
     <section v-else-if="!busy && !error" class="ce-empty">
       <h2>开始你的第一部作品</h2>
       <p>先起一个名字，或从已存角色、资料、日记继续。</p>
-      <div class="ce-actions"><a class="ce-button ce-primary" href="/projects/new">新建作品</a><a href="/workspace?tab=continue">从已有内容继续</a></div>
+      <div class="ce-actions"><Button as="a" class="ce-button" href="/projects/new">新建作品</Button><a href="/workspace?tab=continue">从已有内容继续</a></div>
     </section>
     <details class="ce-tools">
       <summary>更多创作工具</summary>

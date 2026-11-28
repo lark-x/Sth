@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onScopeDispose, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import { all, href, message, pageOf, read, recordHref, sourceHref } from './api.ts';
 import type { Character, Chapter, Diary, Project, Scene, Source } from './api.ts';
 import SceneWriting from './SceneWriting.vue';
@@ -83,18 +84,18 @@ onScopeDispose(() => controller?.abort());
         <a :href="href('/diaries', { projectId: project.projectId })">日记</a>
       </nav>
     </header>
-    <p v-if="relatedError" role="alert" class="ce-error">{{ relatedError }} <button class="ce-button" type="button" :disabled="busy" @click="loadScenes(true)">重新读取作品</button></p>
+    <p v-if="relatedError" role="alert" class="ce-error">{{ relatedError }} <Button class="ce-button" variant="outline" :disabled="busy" @click="loadScenes(true)">重新读取作品</Button></p>
     <nav v-if="chapters.length" class="ce-chapters" aria-label="作品章节">
       <a v-for="chapter in chapters" :key="chapter.chapterId" :href="recordHref('chapters', chapter.chapterId)">{{ chapter.title }}</a>
     </nav>
-    <p v-if="error" role="alert" class="ce-error">{{ error }} <button class="ce-button" type="button" :disabled="busy" @click="loadScenes()">重新读取场景</button></p>
+    <p v-if="error" role="alert" class="ce-error">{{ error }} <Button class="ce-button" variant="outline" :disabled="busy" @click="loadScenes()">重新读取场景</Button></p>
     <p v-if="busy && !scenes.length" role="status" class="ce-empty">正在读取作品内容…</p>
     <section v-else-if="!scenes.length && !error" class="ce-empty" aria-label="开始写作品">
       <h3>从第一个场景开始</h3>
       <p>可以从已存角色或资料构思，也可以先写场景，再安排进章节。</p>
       <div class="ce-actions">
-        <a class="ce-button ce-primary" href="/workspace?tab=continue">从已有内容继续</a>
-        <a class="ce-button" :href="href('/scenes/new', { projectId: project.projectId, returnTo: href(recordHref('projects', project.projectId), { view: 'overview' }) })">新建场景</a>
+        <Button as="a" class="ce-button" href="/workspace?tab=continue">从已有内容继续</Button>
+        <Button as="a" class="ce-button" variant="outline" :href="href('/scenes/new', { projectId: project.projectId, returnTo: href(recordHref('projects', project.projectId), { view: 'overview' }) })">新建场景</Button>
         <a :href="href('/chapters/new', { projectId: project.projectId })">新建章节</a>
       </div>
     </section>
@@ -120,7 +121,7 @@ onScopeDispose(() => controller?.abort());
       <div class="ce-actions"><a :href="recordHref('scenes', scene.sceneId)">继续这个场景</a></div>
       <SceneWriting :scene="scene" />
     </section>
-    <button v-if="more" type="button" class="ce-button" :disabled="busy" @click="loadScenes()">{{ busy ? '正在读取…' : '加载更多场景' }}</button>
+    <Button v-if="more" class="ce-button" variant="outline" :disabled="busy" @click="loadScenes()">{{ busy ? '正在读取…' : '加载更多场景' }}</Button>
     <section v-if="scenes.length" class="ce-book-footer">
       <div class="ce-actions">
         <a :href="href('/scenes/new', { projectId: project.projectId, returnTo: href(recordHref('projects', project.projectId), { view: 'overview' }) })">新建场景</a>

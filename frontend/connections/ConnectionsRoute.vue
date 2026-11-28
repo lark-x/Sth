@@ -202,7 +202,7 @@ watch(() => props.url.href, (_value, _previous, onCleanup) => {
 
 <style scoped>
 .connections-route { min-inline-size: 0; max-inline-size: 53rem; margin-inline: auto; color: var(--ink); }
-.connections-route h1 { font: 650 1.8rem/1.4 var(--sans); text-wrap: balance; }
+.connections-route h1 { font: 600 var(--page-title-size, 1.5rem)/var(--page-title-leading, 1.4) var(--sans); text-wrap: balance; }
 .connections-route h2 { font: 650 1.18rem/1.5 var(--sans); text-wrap: balance; }
 .connections-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .45rem 1rem; padding-block-end: 1rem; border-block-end: 1px solid var(--line); }
 .connections-header h1 { inline-size: 100%; }
@@ -211,7 +211,7 @@ watch(() => props.url.href, (_value, _previous, onCleanup) => {
 .service-origin { padding-block: .75rem 1.4rem; color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
 .service-origin code { color: var(--ink); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-block-end: .65rem; }
-.pairing-section { padding-block: 1.1rem 1.35rem; border-block: 1px solid var(--line); }
+.pairing-section { padding-block: 1.1rem 1.35rem; border-block-start: 1px solid var(--line); }
 .section-note { max-inline-size: 70ch; font-size: .9rem; color: var(--muted); line-height: 1.8; }
 #code-status { margin-block-start: .5rem; }
 .pairing-code { max-inline-size: 40rem; margin-block-start: .9rem; padding-block-start: .75rem; border-block-start: 1px solid var(--line); }

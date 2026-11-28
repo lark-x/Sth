@@ -1,5 +1,10 @@
 /* Presentation refinements for native routes mounted beneath .legacy-route.
    Shared control appearance remains in controls.css. */
+.legacy-route h1 {
+  font: 600 var(--page-title-size, 1.5rem)/var(--page-title-leading, 1.4) var(--sans);
+  text-wrap: balance;
+}
+
 .legacy-route :is(.workspace-section, .settings-section) {
   padding-block: 1.15rem;
   border-block-end: 1px solid var(--line);

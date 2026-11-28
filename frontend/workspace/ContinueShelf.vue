@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import { href, message, pageOf, recordHref, startHref } from './api.ts';
 import type { Character, Diary, Source } from './api.ts';
 
@@ -50,7 +51,7 @@ onScopeDispose(() => controller?.abort());
         <a :href="href(`/${kind}/new`, { projectId })">{{ kind === 'diaries' ? '写日记' : `新建${label}` }}</a>
       </div>
     </header>
-    <p v-if="error" role="alert" class="ce-error">{{ error }} <button type="button" class="ce-button" :disabled="busy" @click="load(!items.length)">重新读取</button></p>
+    <p v-if="error" role="alert" class="ce-error">{{ error }} <Button class="ce-button" variant="outline" :disabled="busy" @click="load(!items.length)">重新读取</Button></p>
     <p v-if="busy && !items.length" role="status" class="ce-empty">正在读取已有{{ label }}…</p>
     <p v-else-if="!items.length && !error" class="ce-empty">还没有{{ label }}。可以先{{ kind === 'diaries' ? '写下一篇日记' : `保存${label}` }}，再从这里继续。</p>
     <ul v-if="items.length" class="ce-items">
@@ -65,7 +66,7 @@ onScopeDispose(() => controller?.abort());
         </div>
       </li>
     </ul>
-    <button v-if="more" class="ce-button" type="button" :disabled="busy" @click="load()">{{ busy ? '正在读取…' : `加载更多${label}` }}</button>
+    <Button v-if="more" class="ce-button" variant="outline" :disabled="busy" @click="load()">{{ busy ? '正在读取…' : `加载更多${label}` }}</Button>
     <p v-if="items.length" role="status" class="ce-muted ce-list-status">已载入 {{ items.length }} 条{{ label }}</p>
   </section>
 </template>

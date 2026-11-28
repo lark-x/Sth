@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import { href, recordHref, sourceHref } from './api.ts';
 import type { Scene, SourcePin, StartContext } from './api.ts';
 import { retain, savedText, useSubmission } from './useSubmission.ts';
@@ -69,8 +70,8 @@ function createScene() {
     </div>
     <template v-if="context.kind === 'source'">
       <label for="ce-source-text">选择一段原文作为场景依据</label>
-      <textarea id="ce-source-text" ref="sourceText" class="ce-source-text" :value="body" readonly rows="9" />
-      <button class="ce-button" type="button" :disabled="busy || !!pending" @click="selectExcerpt">引用选中文字</button>
+      <textarea id="ce-source-text" ref="sourceText" class="ui-input ce-source-text" :value="body" readonly rows="9" />
+      <Button class="ce-button" variant="outline" :disabled="busy || !!pending" @click="selectExcerpt">引用选中文字</Button>
       <p v-if="selectionError" role="alert" class="ce-error">{{ selectionError }}</p>
       <blockquote v-if="excerpt" class="ce-prose">{{ excerpt }}</blockquote>
       <p v-if="selectedRange" class="ce-muted">已选第 {{ selectedRange.start + 1 }} 至 {{ selectedRange.end }} 个字符，引用保留所选版本。</p>
@@ -94,13 +95,13 @@ function createScene() {
     <form v-else action="/api/web/invoke" method="post" aria-labelledby="ce-scene-heading" @submit.prevent="createScene">
       <h3 id="ce-scene-heading">从这里写一个场景</h3>
       <p class="ce-muted">{{ context.kind === 'character' ? '场景会引用这个角色的所选版本。' : '场景会引用上面选定的原文和位置。' }}保存后可安排进作品章节。</p>
-      <div class="ce-field">
+      <div class="field ce-field">
         <label for="ce-scene-title">场景标题（必填）</label>
         <input id="ce-scene-title" ref="input" v-model="title" name="title" maxlength="300" required enterkeyhint="done"
           :disabled="busy || !!pending" @input="input?.setCustomValidity('')">
       </div>
       <p v-if="error" role="alert" class="ce-error">{{ error }}</p>
-      <button class="ce-button ce-primary" type="submit" :disabled="busy">{{ busy ? '正在保存…' : pending ? '重试同一次提交' : '保存场景' }}</button>
+      <Button class="ce-button" type="submit" :disabled="busy">{{ busy ? '正在保存…' : pending ? '重试同一次提交' : '保存场景' }}</Button>
     </form>
   </section>
 </template>

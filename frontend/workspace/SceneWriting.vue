@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onScopeDispose, ref, shallowRef } from 'vue';
+import Button from '../ui/Button.vue';
 import { all, href, message, recordHref } from './api.ts';
 import type { Branch, Draft, Narrative, Scene } from './api.ts';
 
@@ -38,7 +39,7 @@ function toggle(event: Event) {
   <details class="ce-writing" @toggle="toggle">
     <summary>讲法、候选稿与 IF</summary>
     <p v-if="busy" role="status">正在读取这个场景的讲法…</p>
-    <p v-if="error" role="alert" class="ce-error">{{ error }} <button class="ce-button" type="button" @click="load">重新读取</button></p>
+    <p v-if="error" role="alert" class="ce-error">{{ error }} <Button class="ce-button" variant="outline" @click="load">重新读取</Button></p>
     <template v-if="loaded">
       <div class="ce-actions">
         <a :href="href('/drafts/new', { sceneId: scene.sceneId, revision: scene.revision })">写另一种讲法</a>

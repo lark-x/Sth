@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import type { Project } from './api.ts';
 import { retain, savedText, useSubmission } from './useSubmission.ts';
 
@@ -28,16 +29,16 @@ function create() {
     <h2 id="ce-new-title">给作品起个名字</h2>
     <p class="ce-muted" id="ce-title-help">先保存名称，之后再写场景、整理章节。</p>
     <form action="/api/web/invoke" method="post" aria-labelledby="ce-new-title" @submit.prevent="create">
-      <div class="ce-field">
+      <div class="field ce-field">
         <label for="ce-project-title">作品名称（必填）</label>
         <input id="ce-project-title" ref="titleInput" v-model="title" name="title" required maxlength="300"
           aria-describedby="ce-title-help" enterkeyhint="done" :disabled="busy || !!pending"
           @input="titleInput?.setCustomValidity('')">
       </div>
       <p v-if="error" role="alert" class="ce-error">{{ error }}</p>
-      <button class="ce-button ce-primary" type="submit" :disabled="busy">
+      <Button class="ce-button" type="submit" :disabled="busy">
         {{ busy ? '正在保存…' : pending ? '重试同一次提交' : '创建作品' }}
-      </button>
+      </Button>
     </form>
   </section>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import type { Generation, GenerationAuthorContextRef, GenerationStoryRef, Template } from '../../src/generation/contracts.ts';
 import type { ReferenceInput } from '../../src/generation/contracts.ts';
 import type { Scene } from '../../src/story/contracts.ts';
@@ -159,43 +160,43 @@ if (!prepared.value && !pending.value) void loadTemplates();
     <template v-if="prepared">
       <p role="status">已准备《{{ prepared.title }}》<template v-if="authorContext">，作者上下文固定在第 {{ authorContext.contextRevision }} 版</template>。本次依据已随组稿保存。</p>
       <div class="form-actions">
-        <a class="button primary" :href="`/generations/${encodeURIComponent(prepared.generationId)}/prompt`">查看提示词与出处</a>
+        <Button as="a" :href="`/generations/${encodeURIComponent(prepared.generationId)}/prompt`">查看提示词与出处</Button>
         <a :href="`/generations/${encodeURIComponent(prepared.generationId)}`">生成记录</a>
         <a :href="returnHref">查看本版决定与依据</a>
-        <button class="button quiet" type="button" @click="another">再准备一份</button>
+        <Button variant="ghost" @click="another">再准备一份</Button>
       </div>
     </template>
     <form v-else aria-labelledby="prepare-writing-heading" :aria-busy="busy" @submit.prevent="submit">
       <fieldset :disabled="busy || !!pending">
         <legend class="form-note">填写本次稿件</legend>
-        <label for="context-writing-title">稿件标题（必填）</label>
+        <div class="field"><label for="context-writing-title">稿件标题（必填）</label>
         <input id="context-writing-title" ref="titleInput" v-model="values.title" name="title" required maxlength="300"
           :aria-invalid="invalidField === 'title'" :aria-describedby="invalidField === 'title' ? 'context-writing-title-error' : undefined"
-          @invalid="invalidField ||= 'title'" @input="invalidField = ''">
+          @invalid="invalidField ||= 'title'" @input="invalidField = ''"></div>
         <p v-if="invalidField === 'title'" id="context-writing-title-error" role="alert">请填写稿件标题。</p>
-        <label for="context-writing-brief">写作要求（必填）</label>
+        <div class="field"><label for="context-writing-brief">写作要求（必填）</label>
         <textarea id="context-writing-brief" ref="briefInput" v-model="values.brief" name="brief" rows="4" required maxlength="20000"
           :aria-invalid="invalidField === 'brief'" :aria-describedby="invalidField === 'brief' ? 'context-writing-brief-error' : undefined"
-          @invalid="invalidField ||= 'brief'" @input="invalidField = ''" />
+          @invalid="invalidField ||= 'brief'" @input="invalidField = ''" /></div>
         <p v-if="invalidField === 'brief'" id="context-writing-brief-error" role="alert">请填写写作要求。</p>
-        <label for="context-writing-template">内容模板（必填）</label>
+        <div class="field"><label for="context-writing-template">内容模板（必填）</label>
         <select id="context-writing-template" v-model="values.templateId" name="templateId" required :disabled="templateLoading">
           <option disabled value="">选择可用模板</option>
           <option v-for="item in templates" :key="item.templateId" :value="item.templateId">{{ item.title }} · 第 {{ item.revision }} 版</option>
-        </select>
+        </select></div>
       </fieldset>
       <EvidencePicker v-model="references" :scene="scene" :disabled="busy || !!pending" />
       <p v-if="templateLoading" role="status">正在读取模板…</p>
       <p v-else-if="!templates.length && !templateFailure && !pending" role="status">暂无可用模板。可以先<a href="/templates/new">新建模板</a>，再重新读取。</p>
       <p v-if="templateFailure" role="alert">{{ templateFailure }}</p>
-      <button v-if="!pending && (templateFailure || !templates.length || moreTemplates)" class="button quiet" type="button" :disabled="templateLoading || busy" @click="loadTemplates">
+      <Button v-if="!pending && (templateFailure || !templates.length || moreTemplates)" variant="ghost" :disabled="templateLoading || busy" @click="loadTemplates">
         {{ moreTemplates && !templateFailure ? '读取更多模板' : '重新读取模板' }}
-      </button>
+      </Button>
       <p v-if="failure" role="alert">{{ failure }}</p>
       <p v-if="busy" role="status">正在准备本版写作…</p>
       <div class="form-actions">
-        <button v-if="pending" class="button primary" type="button" :disabled="busy" @click="submit">重试本次准备</button>
-        <button v-else class="button primary" type="submit" :disabled="busy || templateLoading || !templates.length">准备写作</button>
+        <Button v-if="pending" :disabled="busy" @click="submit">重试本次准备</Button>
+        <Button v-else type="submit" :disabled="busy || templateLoading || !templates.length">准备写作</Button>
         <a :href="returnHref">收起写作准备</a>
       </div>
     </form>
@@ -203,13 +204,11 @@ if (!prepared.value && !pending.value) void loadTemplates();
 </template>
 
 <style scoped>
-.prepare-writing { margin-block: 1.5rem 2rem; padding-block: 1.25rem; border-block: 1px solid var(--line-strong); }
+.prepare-writing { margin-block: 1.25rem 1.75rem; padding-block: 1.1rem; border-block: 1px solid var(--line); }
 h2 { font-size: 1.23rem; margin-block-end: .6rem; }
 p { margin-block: .5rem; line-height: 1.65; overflow-wrap: anywhere; }
 fieldset { min-inline-size: 0; margin: 1rem 0; padding: 0; border: 0; }
-label { display: block; margin-block: 1rem .35rem; }
-input, textarea, select { display: block; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; min-block-size: 3rem; padding: .6rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--sheet); font: inherit; }
-textarea { resize: vertical; }
+.field { margin-block: .85rem; }
 [aria-invalid="true"] { border-color: var(--danger); }
 [role="alert"] { color: var(--danger); }
 .form-actions { margin-block-start: 1rem; gap: .75rem 1rem; }
