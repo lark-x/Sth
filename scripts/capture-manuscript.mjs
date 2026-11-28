@@ -195,7 +195,7 @@ async function runCase(run, session, id, fixture, execute) {
   const clickControl = async (names, description = names.join(' / ')) => {
     if (!await firstVisible(controls(page, names))) {
       const navigation = await firstVisible(controls(page, ['打开资料库导航']));
-      if (navigation && names.some(name => ['文稿库', '资料库', '创作', '作品', '日记', '角色', '资料', '任务', '设置'].includes(name))) {
+      if (navigation && names.some(name => ['全部文稿', '文稿库', '资料库', '创作', '作品', '日记', '角色', '资料', '任务', '设置'].includes(name))) {
         await click(navigation, '打开手机资料库导航');
       }
     }
@@ -296,7 +296,7 @@ async function emptyCase(run, session) {
     await page.getByLabel('此刻想记下什么').waitFor();
     check((await run.workspace.invoke('diary.list')).items.length === 0, 'Empty workspace has no diary');
     await capture('first-writing-entry');
-    await clickControl(['文稿库', '资料库', '创作', '作品']);
+    await clickControl(['全部文稿', '文稿库', '资料库', '创作', '作品']);
     await capture('empty-library');
   });
 }
@@ -308,7 +308,7 @@ async function populatedCases(run, session, fixture) {
   const textField = page => page.getByRole('textbox', { name: /^正文/ });
   await makeCase('directory', async ({ page, goto, click, clickControl, clickHref, capture, check }) => {
     await goto('/');
-    await clickControl(['文稿库', '资料库', '创作', '作品']);
+    await clickControl(['全部文稿', '文稿库', '资料库', '创作', '作品']);
     const openLibrary = await firstVisible(controls(page, ['资料库']));
     if (openLibrary && !await page.locator('.manuscript-library').isVisible()) await click(openLibrary, '在平板上展开资料库');
     await capture('library');
