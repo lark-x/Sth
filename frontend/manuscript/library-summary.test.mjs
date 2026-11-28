@@ -94,7 +94,7 @@ test('real library summaries, collection scope and cold request costs', { timeou
   if (output) await mkdir(output, { recursive: true });
   const costs = {};
 
-  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 320, height: 640 }]) {
     const page = await openBrowser(t, origin, viewport);
     const takeCosts = track(page);
     await page.goto(project);
@@ -107,6 +107,7 @@ test('real library summaries, collection scope and cold request costs', { timeou
       assert.match(await row(page, fixture.scenes[0].title).innerText(), /采用稿 · 退潮以后初稿 · 第 1 版/);
       assert.match(await row(page, fixture.scenes[1].title).innerText(), /候选稿 · 守夜人视角 · 第 2 版/);
       assert.doesNotMatch(await row(page, fixture.scenes[19].title).innerText(), /堤岸上脚步很轻/);
+      assert.equal(await row(page, fixture.scenes[0].title).locator('.library-sheet-context').textContent(), '旧港来信');
     }
     await assertFitsViewport(page);
     if (output) await page.screenshot({ path: join(output, `library-${viewport.width}.png`), animations: 'disabled' });
@@ -137,6 +138,8 @@ test('real library summaries, collection scope and cold request costs', { timeou
       await ready(page);
       const candidateRow = row(page, fixture.scenes[1].title);
       await candidateRow.getByText(/守夜人视角 · 第 2 版/).waitFor();
+      assert.equal(await candidateRow.locator('.library-sheet-context').count(), 0);
+      assert.equal(await candidateRow.locator('.library-sheet-status').textContent(), '候选稿 · 守夜人视角 · 第 2 版');
       await candidateRow.click();
       await page.waitForURL(url => url.pathname === `/drafts/${fixture.candidate.draftId}` && url.searchParams.get('revision') === '2');
       await page.locator('#passage-body').getByText(fixture.candidate.body, { exact: true }).waitFor();
@@ -150,13 +153,14 @@ test('real library summaries, collection scope and cold request costs', { timeou
     assert.equal(await page.locator('.library-sheets-heading h2').textContent(), '全部文稿');
     if (!baseline && viewport.width === 1280) {
       await row(page, fixture.scenes[2].title).getByText('尚无稿件', { exact: true }).waitFor();
+      assert.equal(await row(page, fixture.scenes[0].title).locator('.library-sheet-context').textContent(), '第三声以后 · 旧港来信');
     }
     if (output) await page.screenshot({ path: join(output, `all-${viewport.width}.png`), animations: 'disabled' });
     if (!baseline) {
       await page.getByRole('link', { name: '全部文稿', exact: true }).waitFor();
       assert.equal(await page.locator('.manuscript-library [aria-current="page"]').allTextContents().then(text => text.map(value => value.trim()).join()), '全部文稿');
       assert.equal(await page.locator('.library-project-row[data-active]').count(), 0);
-      if (viewport.width === 390) {
+      if (viewport.width < 640) {
         await page.getByRole('link', { name: '全部文稿', exact: true }).click();
         await page.locator('.manuscript-frame[data-pane="sheets"]').waitFor();
         assert.equal(new URL(page.url()).pathname, '/create');

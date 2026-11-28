@@ -318,6 +318,14 @@ function currentContent(sheet: LibrarySheet) {
   return sheet.kind === 'scene' && sheet.id === context.value.sceneId ? currentDraftContent.value ?? sheet : sheet;
 }
 const sheetChapters = computed(() => new Map(chapters.value.map(chapter => [chapter.chapterId, chapter.title])));
+const sheetProjects = computed(() => new Map(projects.value.map(project => [project.projectId, project.title])));
+function sheetContext(sheet: LibrarySheet) {
+  if (sheet.kind === 'diary') return '';
+  const projectTitle = allScope.value && sheet.projectId ? sheetProjects.value.get(sheet.projectId) : undefined;
+  const chapterTitle = sheet.chapterId && sheet.chapterId !== context.value.chapterId
+    ? sheetChapters.value.get(sheet.chapterId) : undefined;
+  return [projectTitle, chapterTitle].filter(Boolean).join(' · ');
+}
 function sheetLinks() {
   return Array.from(sheetsPanel.value?.querySelectorAll<HTMLAnchorElement>('a.library-sheet') ?? []);
 }
@@ -496,8 +504,8 @@ onScopeDispose(() => {
             <span class="library-sheet-preview" :class="{ 'library-preview-empty': !currentContent(sheet).preview }">{{ currentContent(sheet).preview }}</span>
             <span class="library-sheet-meta">
               <time v-if="sheet.diaryDate" :datetime="sheet.diaryDate">{{ sheet.diaryDate }}</time>
-              <span v-else-if="sheet.chapterId">{{ sheetChapters.get(sheet.chapterId) }}</span>
-              <span v-if="!sheet.diaryDate" :class="{ 'library-sheet-status': sheet.chapterId }">{{ currentContent(sheet).status }}</span>
+              <span v-else-if="sheetContext(sheet)" class="library-sheet-context" :title="sheetContext(sheet)">{{ sheetContext(sheet) }}</span>
+              <span v-if="!sheet.diaryDate" class="library-sheet-status">{{ currentContent(sheet).status }}</span>
             </span>
           </a>
         </li>
