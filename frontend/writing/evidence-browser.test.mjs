@@ -109,13 +109,22 @@ test('ordinary drafts have an honest empty state and scene links never become ge
   await capture(page, 'quiet-trigger-desktop');
   await button(page, '本次依据').click();
   await panel(page).getByRole('heading', { name: '本次依据', exact: true }).waitFor();
+  await panel(page).getByText(`${fx.draft.title} · 修订 1`, { exact: true }).waitFor();
   await panel(page).getByText(emptyDraft, { exact: true }).waitFor();
+  assert.equal(await panel(page).locator('.evidence-empty').innerText(), `${emptyDraft}。场景可用资料不会自动成为本版依据。`);
   assert.equal(await panel(page).getByRole('region', { name: '组稿固定输入' }).count(), 0);
   assert.equal(await panel(page).getByLabel('组稿编号').isVisible(), false);
   assert.equal(await panel(page).getByText('钟响两次，渡船离港。', { exact: true }).isVisible(), false);
+  await panel(page).getByRole('heading', { name: '准备下一稿', exact: true }).waitFor();
+  await panel(page).getByText(`准备下一稿会建立新的写作上下文，不会改变正在阅读的《${fx.draft.title}》第 1 版依据。`, { exact: true }).waitFor();
+  await capture(page, 'evidence-empty-draft-desktop');
   await panel(page).getByText('查看场景资料', { exact: true }).click();
   await panel(page).getByText('钟响两次，渡船离港。', { exact: true }).waitFor();
   await panel(page).getByText('每次钟响都会抬头。', { exact: true }).waitFor();
+  assert.equal(await panel(page).getByRole('heading', { name: '场景可用资料', exact: true }).count(), 1);
+  assert.equal(await panel(page).getByRole('region', { name: '组稿固定输入' }).count(), 0,
+    'scene facts remain available without being presented as this draft evidence');
+  await capture(page, 'evidence-scene-available-desktop');
   assert.equal(await panel(page).getByRole('link', { name: '场景引用原文 1 · 第 1 版', exact: true }).getAttribute('href'),
     hrefWithReturn(`/sources/${fx.source.sourceId}?revision=1&start=4&end=14`, fx.path()));
   assert.equal(await panel(page).getByRole('link', { name: '守灯人 · 第 1 版', exact: true }).getAttribute('href'),
@@ -124,6 +133,31 @@ test('ordinary drafts have an honest empty state and scene links never become ge
   assert.equal(calls.filter(call => call.operationId === 'generations.get').length, 0);
   await assertFitsViewport(page);
   await capture(page, 'ordinary-draft-desktop');
+});
+
+test('failed evidence reads stay unknown and panel descriptions reference rendered nodes', async t => {
+  const fx = await fixture(t);
+  const page = await open(t, fx);
+  await page.route('**/api/web/invoke', async route => {
+    if (route.request().postDataJSON().operationId !== 'generations.evidence.list') return route.continue();
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary failure' }) });
+  });
+  await button(page, '本次依据').click();
+  const evidencePanel = panel(page);
+  const describedByTargets = () => evidencePanel.evaluate(node => (node.getAttribute('aria-describedby') ?? '')
+    .split(/\s+/u).filter(Boolean).map(id => ({ id, exists: Boolean(document.getElementById(id)) })));
+  await evidencePanel.getByRole('alert').getByText(/本次依据读取失败/).waitFor();
+  assert.equal(await evidencePanel.getByText(/这版没有已确认依据/).count(), 0);
+  assert.deepEqual(await describedByTargets(), [{ id: await evidencePanel.locator('.evidence-identity-line').getAttribute('id'), exists: true }]);
+
+  await page.unrouteAll();
+  await evidencePanel.getByRole('alert').getByRole('button', { name: '重新读取本次依据' }).click();
+  await evidencePanel.locator('.evidence-empty').waitFor();
+  const targetsAfterRetry = await describedByTargets();
+  assert.equal(targetsAfterRetry.length, 2);
+  assert.ok(targetsAfterRetry.every(target => target.exists));
+  const statusId = await evidencePanel.locator('.evidence-status').getAttribute('id');
+  assert.ok(targetsAfterRetry.some(target => target.id === statusId));
 });
 
 test('confirmed association shows pinned originals, characters and author decisions after later edits', async t => {
@@ -153,8 +187,12 @@ test('confirmed association shows pinned originals, characters and author decisi
     hrefWithReturn(`/sources/${fx.source.sourceId}?revision=1`, fx.path()));
   assert.equal(await fixed.getByRole('link', { name: '守灯人 · 第 1 版', exact: true }).getAttribute('href'),
     hrefWithReturn(`/characters/${fx.character.characterId}?revision=1`, fx.path()));
+  await panel(page).getByText('作者已确认关联到这版稿件。', { exact: true }).waitFor();
+  assert.equal(await panel(page).getByRole('heading', { name: '准备下一稿', exact: true }).count(), 1);
+  assert.equal(await panel(page).getByText(`准备下一稿会建立新的写作上下文，不会改变正在阅读的《${fx.draft.title}》第 1 版依据。`, { exact: true }).count(), 1);
   assert.match(await panel(page).getByRole('link', { name: '定位稿件片段 1 · 依据 1' }).getAttribute('href'), /revision=1&start=0&end=4$/);
   assert.equal(await fixed.getByRole('link', { name: '完整提示词与出处' }).count(), 0);
+  await capture(page, 'evidence-confirmed-phone');
   await fixed.getByText('查看来源记录', { exact: true }).click();
   assert.match(await fixed.getByRole('link', { name: '完整提示词与出处' }).getAttribute('href'), /\/generations\/.+\/prompt$/);
   await fixed.getByText('查看来源记录', { exact: true }).click();
@@ -197,7 +235,12 @@ test('new writing can add, remove, recover and persist this generation reference
   const fx = await fixture(t);
   const page = await open(t, fx, false, { width: 320, height: 800 });
   await button(page, '本次依据').click();
+  await panel(page).getByText('当前显示场景准备记录，尚未关联到具体稿件。', { exact: true }).waitFor();
+  assert.equal(await panel(page).getByText('此场景版本还没有保存的组稿。', { exact: true }).count(), 1);
+  await capture(page, 'evidence-scene-no-record');
   await button(page, '准备新稿').click();
+  await page.getByLabel('稿件标题（必填）').waitFor();
+  await capture(page, 'evidence-prepare-next-compact');
   await page.getByLabel('稿件标题（必填）').fill('钟声后的一幕');
   await page.getByLabel('写作要求（必填）').fill('只使用本次选定的资料。');
   await page.getByLabel('内容模板（必填）').selectOption('short-story');

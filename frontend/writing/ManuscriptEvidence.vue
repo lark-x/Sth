@@ -36,6 +36,18 @@ const compact = ref(compactQuery.matches);
 const scope = computed(() => `${props.scene.sceneId}@${props.scene.revision}:${props.draft?.draftId ?? ''}@${props.draft?.revision ?? ''}`);
 const mismatch = computed(() => props.draft && (props.draft.sceneId !== props.scene.sceneId || props.draft.sceneRevision !== props.scene.revision));
 const selectedItem = computed(() => items.value.find(item => item.generation.generationId === selected.value));
+const panelIdentity = computed(() => props.draft
+  ? `${props.draft.title} · 修订 ${props.draft.revision}`
+  : `${props.scene.title} · 场景第 ${props.scene.revision} 版`);
+const evidenceStatus = computed(() => {
+  if (!props.draft) return '当前显示场景准备记录，尚未关联到具体稿件。';
+  if (loading.value || failure.value || !loaded) return '';
+  if (selectedItem.value?.relation === 'author-confirmed') return '作者已确认关联到这版稿件。';
+  return '这版没有已确认依据，场景可用资料不会自动成为本版依据。';
+});
+const prepareNote = computed(() => props.draft
+  ? `准备下一稿会建立新的写作上下文，不会改变正在阅读的《${props.draft.title}》第 ${props.draft.revision} 版依据。`
+  : '准备下一稿会保存新的写作上下文，之后再明确关联到稿件。');
 let controller: AbortController | undefined;
 let recordController: AbortController | undefined;
 let prepareController: AbortController | undefined;
@@ -271,11 +283,12 @@ defineExpose({ open: openPanel, close: closePanel });
     <button ref="trigger" class="evidence-trigger" type="button" :aria-expanded="open" :aria-controls="`${uid}-panel`"
       @pointerdown="rememberEditor(); rememberSelection()" @click="open ? closePanel() : openPanel()"><AppIcon name="book" /><span>本次依据</span></button>
     <aside v-show="open" :id="`${uid}-panel`" ref="panel" class="evidence-panel" tabindex="-1" :aria-labelledby="`${uid}-heading`"
+      :aria-describedby="[`${uid}-identity`, evidenceStatus ? `${uid}-status` : ''].filter(Boolean).join(' ')"
       :role="compact ? 'dialog' : undefined" :aria-modal="compact && open ? true : undefined">
       <header>
         <div class="evidence-identity">
           <h2 :id="`${uid}-heading`">本次依据</h2>
-          <p><span>{{ draft?.title ?? scene.title }}</span><span> · 修订 {{ draft?.revision ?? scene.revision }}</span></p>
+          <p :id="`${uid}-identity`" class="evidence-identity-line"><span>{{ panelIdentity }}</span></p>
         </div>
         <button ref="closeButton" class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -283,11 +296,12 @@ defineExpose({ open: openPanel, close: closePanel });
           </svg>
         </button>
       </header>
+      <p v-if="evidenceStatus" :id="`${uid}-status`" class="evidence-status">{{ evidenceStatus }}</p>
       <p v-if="loading" role="status">正在读取本次依据…</p>
       <p v-if="failure" role="alert">{{ failure }} <button v-if="!mismatch" type="button" :disabled="loading" @click="load()">重新读取本次依据</button></p>
       <template v-if="!mismatch">
         <template v-if="loaded && !items.length">
-          <p v-if="draft" class="evidence-empty">这版稿件还没有已确认的来源记录</p>
+          <p v-if="draft" class="evidence-empty"><span>这版稿件还没有已确认的来源记录</span><span>。场景可用资料不会自动成为本版依据。</span></p>
           <p v-else>此场景版本还没有保存的组稿。</p>
         </template>
         <p v-if="!draft && record" class="evidence-caption">为此场景版本准备的组稿</p>
@@ -307,7 +321,9 @@ defineExpose({ open: openPanel, close: closePanel });
           <button v-if="more" type="button" :disabled="loading" @click="load(true)">读取更早组稿</button>
         </details>
         <div :key="scope" class="evidence-actions" role="group" aria-label="场景资料与写作操作">
-          <details class="evidence-scene-links">
+          <section class="evidence-scene-section" :aria-labelledby="`${uid}-scene-heading`">
+            <h3 :id="`${uid}-scene-heading`" class="evidence-scene-heading">场景可用资料</h3>
+          <details class="evidence-scene-links" :aria-labelledby="`${uid}-scene-heading`">
             <summary>查看场景资料</summary>
             <p class="evidence-caption">场景修订 {{ scene.revision }} 的可用资料</p>
             <p v-if="!scene.sources.length && !scene.characters.length">此版场景没有关联原文或人物。</p>
@@ -315,10 +331,15 @@ defineExpose({ open: openPanel, close: closePanel });
               <figcaption><a :href="evidenceHref('source', source.sourceId, source.revision, source.range, returnTo)">场景引用原文 {{ index + 1 }} · 第 {{ source.revision }} 版</a></figcaption></figure>
             <article v-for="character in scene.characters" :key="character.characterId"><h3><a :href="evidenceHref('character', character.characterId, character.revision, undefined, returnTo)">{{ character.name }} · 第 {{ character.revision }} 版</a></h3><p>{{ character.persona }}</p></article>
           </details>
-          <button v-if="!preparing" class="evidence-prepare" type="button" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '准备新稿' }}</button>
-          <p v-if="prepareFailure" role="alert">{{ prepareFailure }}</p>
-          <PrepareWriting v-if="preparing" :scene="scene" :author-context="authorContext"
-            :return-href="evidenceHref('scene', scene.sceneId, scene.revision)!" @prepared="!draft && load()" />
+          </section>
+          <section class="evidence-prepare-section" :aria-labelledby="`${uid}-prepare-heading`">
+            <h3 :id="`${uid}-prepare-heading`">准备下一稿</h3>
+            <p class="evidence-prepare-note">{{ prepareNote }}</p>
+            <button v-if="!preparing" class="evidence-prepare" type="button" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '准备新稿' }}</button>
+            <p v-if="prepareFailure" role="alert">{{ prepareFailure }}</p>
+            <PrepareWriting v-if="preparing" :scene="scene" :author-context="authorContext"
+              :return-href="evidenceHref('scene', scene.sceneId, scene.revision)!" @prepared="!draft && load()" />
+          </section>
           <EvidenceAttachment v-if="draft && loaded && !items.length" :draft="draft" :return-to="returnTo" @attached="load()" />
         </div>
       </template>
@@ -336,14 +357,14 @@ defineExpose({ open: openPanel, close: closePanel });
 header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 -1rem; padding: max(.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) .75rem max(1rem, env(safe-area-inset-left)); border-block-end: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); }
 h2 { margin: 0; font-size: 1rem; font-weight: 650; line-height: 1.5; }
 .evidence-identity { min-inline-size: 0; }
-.evidence-identity p { display: flex; margin: .2rem 0 0; color: var(--muted, #686868); font-size: .75rem; white-space: nowrap; }
-.evidence-identity span:first-child { overflow: hidden; text-overflow: ellipsis; }
-.evidence-identity span:last-child { flex: none; margin-inline-start: .25rem; }
+.evidence-identity-line { display: flex; flex-wrap: wrap; margin: .2rem 0 0; color: var(--muted, #686868); font-size: .8125rem; line-height: 1.5; }
+.evidence-identity-line span { min-inline-size: 0; overflow-wrap: anywhere; }
 .evidence-close { flex: none; background: var(--sidebar, #f2f2f2); }
 .evidence-close:hover { background: var(--selection, #e7e7e7); }
 h3 { font-size: 1rem; }
 p, blockquote { white-space: pre-wrap; line-height: 1.8; }
-.evidence-empty { margin-block: 1.25rem .75rem; }
+.evidence-status { margin-block: 1rem .25rem; color: var(--ink, #252525); }
+.evidence-empty { margin-block: 1rem .75rem; }
 .evidence-caption { color: var(--muted, #686868); }
 figure { margin: 1rem 0; }
 blockquote { margin: 0 0 .5rem; }
@@ -356,6 +377,9 @@ nav { display: grid; gap: .35rem; margin-block: .75rem; }
 .evidence-options { padding-block-end: .5rem; }
 .evidence-actions { margin-block-start: .5rem; color: var(--muted, #686868); }
 .evidence-actions :is(blockquote, article, figcaption) { color: var(--ink, #252525); }
+.evidence-prepare-section { margin-block-start: 1rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line, #e5e5e5); }
+.evidence-prepare-section h3 { margin: 0 0 .35rem; color: var(--ink, #252525); }
+.evidence-prepare-note { margin-block: 0 .35rem; }
 .evidence-prepare { padding: .5rem 0; border: 0; background: transparent; color: inherit; text-align: start; text-decoration: underline; text-underline-offset: .2em; }
 .evidence-prepare:hover:not(:disabled) { color: var(--ink, #252525); }
 [role="alert"] { color: var(--danger); }
