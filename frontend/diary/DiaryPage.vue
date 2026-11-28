@@ -82,8 +82,8 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
       <h1 ref="heading" tabindex="-1">页面暂时无法打开</h1>
       <p role="alert">{{ pageError }}</p>
       <div class="diary-actions">
-        <button type="button" class="diary-button diary-primary" @click="load">重试</button>
-        <a href="/diaries" class="diary-button diary-quiet" @click="navigate($event, '/diaries')">返回日记</a>
+        <button type="button" class="ui-button diary-button" data-variant="default" @click="load">重试</button>
+        <a href="/diaries" class="ui-button diary-button" data-variant="ghost" @click="navigate($event, '/diaries')">返回日记</a>
       </div>
     </div>
     <template v-else>
@@ -94,10 +94,10 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
         <span v-if="record" class="diary-toolbar-revision">第 {{ draft?.record?.revision ?? record.revision }} 版</span>
         <span class="diary-toolbar-count">{{ characters.toLocaleString('zh-CN') }} 字</span>
         <div class="diary-toolbar-actions">
-          <button ref="evidenceButton" type="button" class="diary-button diary-quiet" aria-controls="diary-supplement" :aria-expanded="evidenceOpen" @click="toggleEvidence">依据与修订</button>
-          <button v-if="draft && isEditing" ref="saveButton" form="editor" type="submit" class="diary-button diary-primary" :disabled="draft.busy || draft.conflict">{{ draft.busy ? '正在保存…' : draft.call ? '重试保存' : isNew ? '保存日记' : '保存修改' }}</button>
+          <button ref="evidenceButton" type="button" class="ui-button diary-button" data-variant="ghost" aria-controls="diary-supplement" :aria-expanded="evidenceOpen" @click="toggleEvidence">依据与修订</button>
+          <button v-if="draft && isEditing" ref="saveButton" form="editor" type="submit" class="ui-button diary-button" data-variant="default" :disabled="draft.busy || draft.conflict">{{ draft.busy ? '正在保存…' : draft.call ? '重试保存' : isNew ? '保存日记' : '保存修改' }}</button>
           <a v-else-if="record" :href="resourceHref('diaries', record.noteId) + (pinned ? '' : '?edit=1')"
-            class="diary-button diary-secondary" @click="navigate($event, resourceHref('diaries', record.noteId) + (pinned ? '' : '?edit=1'))">{{ pinned ? '查看当前版本' : '编辑' }}</a>
+            class="ui-button diary-button" data-variant="outline" @click="navigate($event, resourceHref('diaries', record.noteId) + (pinned ? '' : '?edit=1'))">{{ pinned ? '查看当前版本' : '编辑' }}</a>
         </div>
       </header>
 
@@ -115,37 +115,37 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
               <div class="diary-context-prose">{{ 'noteId' in latest ? latest.body : latest.persona }}</div>
             </details>
             <div class="diary-actions">
-              <button type="button" class="diary-button diary-secondary" @click="applyLatest(false)">{{ isNew ? '采用最新角色设定' : '保留我的修改并采用新版' }}</button>
-              <button v-if="!isNew" type="button" class="diary-button diary-quiet" @click="applyLatest(true)">改用最新版</button>
+              <button type="button" class="ui-button diary-button" data-variant="outline" @click="applyLatest(false)">{{ isNew ? '采用最新角色设定' : '保留我的修改并采用新版' }}</button>
+              <button v-if="!isNew" type="button" class="ui-button diary-button" data-variant="ghost" @click="applyLatest(true)">改用最新版</button>
             </div>
           </template>
           <template v-else-if="latestError"><p role="alert">{{ latestError }}</p>
-            <button type="button" class="diary-button diary-secondary" @click="showLatest">重新读取最新版</button>
+            <button type="button" class="ui-button diary-button" data-variant="outline" @click="showLatest">重新读取最新版</button>
           </template>
         </section>
         <fieldset class="diary-writing" :disabled="locked">
           <legend class="diary-sr-only">日记内容</legend>
           <div class="diary-top-fields">
-            <div class="diary-field diary-title-field">
+            <div class="ui-field diary-title-field">
               <label for="diary-title" class="diary-sr-only">标题<span aria-hidden="true"> *</span></label>
-              <input id="diary-title" v-model="draft.values.title" name="title" required :maxlength="properties?.title?.maxLength ?? 300" autocomplete="off" placeholder="为这篇日记起个标题">
+              <input id="diary-title" class="ui-input" v-model="draft.values.title" name="title" required :maxlength="properties?.title?.maxLength ?? 300" autocomplete="off" placeholder="为这篇日记起个标题">
             </div>
-            <div class="diary-field diary-date-field">
+            <div class="ui-field diary-date-field">
               <label for="diary-date">日期<span aria-hidden="true"> *</span></label>
-              <input id="diary-date" v-model="draft.values.diaryDate" name="diaryDate" type="date" min="0001-01-01" max="9999-12-31" required>
+              <input id="diary-date" class="ui-input" v-model="draft.values.diaryDate" name="diaryDate" type="date" min="0001-01-01" max="9999-12-31" required>
             </div>
           </div>
-          <div class="diary-field diary-body-field">
+          <div class="ui-field diary-body-field">
             <label for="diary-body" class="diary-sr-only">正文<span aria-hidden="true"> *</span></label>
-            <textarea id="diary-body" ref="bodyEditor" v-model="draft.values.body" name="body" rows="12" required :maxlength="properties?.body?.maxLength ?? 100000" placeholder="从这一刻写起。" :aria-describedby="draft.error ? 'save-error' : 'diary-save-status'" />
+            <textarea id="diary-body" ref="bodyEditor" class="ui-input" v-model="draft.values.body" name="body" rows="12" required :maxlength="properties?.body?.maxLength ?? 100000" placeholder="从这一刻写起。" :aria-describedby="draft.error ? 'save-error' : 'diary-save-status'" />
           </div>
         </fieldset>
 
         <div class="diary-save-bar">
           <p id="diary-save-status" class="diary-muted" role="status">{{ draft.busy ? '保存中' : draft.uncertain ? '正在等待保存结果，请重试同一次保存。' : changed ? '有未保存的修改' : '带 * 的字段为必填项。' }}</p>
           <div class="diary-actions">
-            <a :href="cancelHref" class="diary-button diary-quiet" @click="navigate($event, cancelHref)">{{ !isNew ? '返回日记' : url.searchParams.has('characterId') ? '返回角色' : '返回日记列表' }}</a>
-            <button v-if="changed && !locked" type="button" class="diary-button diary-quiet" @click="discard">清除草稿</button>
+            <a :href="cancelHref" class="ui-button diary-button" data-variant="ghost" @click="navigate($event, cancelHref)">{{ !isNew ? '返回日记' : url.searchParams.has('characterId') ? '返回角色' : '返回日记列表' }}</a>
+            <button v-if="changed && !locked" type="button" class="ui-button diary-button" data-variant="ghost" @click="discard">清除草稿</button>
           </div>
         </div>
 
@@ -154,17 +154,17 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
             <summary>写作上下文 · {{ narrator }} · {{ projectName }}</summary>
             <fieldset v-if="isNew" class="diary-context-fields" :disabled="locked">
               <legend class="diary-sr-only">写作上下文</legend>
-              <div class="diary-field">
+              <div class="ui-field">
                 <label for="diary-project">项目</label>
-                <select id="diary-project" v-model="draft.values.projectId" name="projectId" @change="selectProject">
+                <select id="diary-project" class="ui-input" v-model="draft.values.projectId" name="projectId" @change="selectProject">
                   <option value="">不归入项目</option>
                   <option v-if="draft.values.projectId && !projects.some(project => project.projectId === draft!.values.projectId)" :value="draft.values.projectId">当前项目</option>
                   <option v-for="project in projects" :key="project.projectId" :value="project.projectId">{{ project.title }}</option>
                 </select>
               </div>
-              <div class="diary-field">
+              <div class="ui-field">
                 <label for="diary-character">叙述者</label>
-                <select id="diary-character" v-model="draft.values.characterId" name="characterId" @change="selectCharacter">
+                <select id="diary-character" class="ui-input" v-model="draft.values.characterId" name="characterId" @change="selectCharacter">
                   <option value="">作为个人日记</option>
                   <option v-if="draft.values.characterId && !characterOptions.some(character => character.characterId === draft!.values.characterId)" :value="draft.values.characterId">当前叙述者</option>
                   <option v-for="character in characterOptions" :key="character.characterId" :value="character.characterId">{{ character.name }}</option>
@@ -194,7 +194,7 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
               <a :href="resourceHref('diaries', record.noteId, draft.record?.revision ?? record.revision)" @click="navigate($event, resourceHref('diaries', record!.noteId, draft!.record?.revision ?? record!.revision))">阅读本次修改前的版本</a>
             </div>
           </details>
-          <button v-if="evidenceOpen" type="button" class="diary-button diary-quiet diary-return" @click="returnToBody"><AppIcon name="back" />回到正文</button>
+          <button v-if="evidenceOpen" type="button" class="ui-button diary-button diary-return" data-variant="ghost" @click="returnToBody"><AppIcon name="back" />回到正文</button>
         </aside>
       </form>
 
@@ -238,7 +238,7 @@ onBeforeUnmount(() => bodyObserver?.disconnect());
               </nav>
             </div>
           </details>
-          <button v-if="evidenceOpen" type="button" class="diary-button diary-quiet diary-return" @click="returnToBody"><AppIcon name="back" />回到正文</button>
+          <button v-if="evidenceOpen" type="button" class="ui-button diary-button diary-return" data-variant="ghost" @click="returnToBody"><AppIcon name="back" />回到正文</button>
         </aside>
         <nav class="diary-legacy-navigation" aria-label="日记导航">
           <a :href="indexHref(record.projectId)" @click="navigate($event, indexHref(record!.projectId))">返回日记列表</a>

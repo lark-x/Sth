@@ -7,6 +7,7 @@ import type { RouteEvents } from './routes.ts';
 import { quickBody, quickCall } from './quick-note.ts';
 import { loadRecentManuscripts, recentManuscripts, rememberManuscript } from './manuscript/recent.ts';
 import type { RecentManuscript } from './manuscript/recent.ts';
+import './home.css';
 
 const emit = defineEmits<RouteEvents>();
 const diaries = ref<DiarySummary[]>([]);
@@ -18,6 +19,7 @@ const manuscripts = ref<ReturnType<typeof recentManuscripts>>([]);
 const manuscriptsLoading = ref(true);
 const manuscriptsError = ref('');
 const manuscriptsIncomplete = ref(false);
+const quickNote = ref<HTMLTextAreaElement>();
 let manuscriptRequest: AbortController | undefined;
 const manuscriptKinds = { draft: '候选稿', scene: '场景', diary: '日记' };
 const controller = new AbortController();
@@ -109,7 +111,16 @@ function diaryExcerpt(manuscript: RecentManuscript) {
   return diary ? excerpt(diary.body) : undefined;
 }
 
+function fitQuickNote() {
+  const textarea = quickNote.value;
+  if (!textarea || CSS.supports('field-sizing', 'content')) return;
+  textarea.style.height = 'auto';
+  const maximum = Number.parseFloat(getComputedStyle(textarea).maxHeight);
+  textarea.style.height = `${Math.min(textarea.scrollHeight, Number.isFinite(maximum) ? maximum : textarea.scrollHeight)}px`;
+}
+
 onMounted(() => {
+  fitQuickNote();
   document.title = '首页 · Sth';
   refreshManuscripts();
   void loadRecent();
@@ -134,13 +145,15 @@ onBeforeUnmount(() => {
     </header>
 
     <form class="sth-capture" @submit.prevent="save">
-      <label for="quick-note">此刻想记下什么</label>
-      <textarea id="quick-note" v-model="quickBody" name="body" rows="4" maxlength="100000" required :readonly="saving || Boolean(quickCall)" placeholder="一个念头，或者今天发生的小事。" :aria-describedby="saveError ? 'quick-note-error' : undefined" />
+      <div class="sth-capture-field ui-field">
+        <label for="quick-note">此刻想记下什么</label>
+        <textarea id="quick-note" ref="quickNote" class="ui-input sth-capture-input" v-model="quickBody" name="body" rows="2" maxlength="100000" required :readonly="saving || Boolean(quickCall)" placeholder="一个念头，或者今天发生的小事。" :aria-describedby="saveError ? 'quick-note-error' : undefined" @input="fitQuickNote" />
+      </div>
       <p v-if="saveError" id="quick-note-error" class="sth-error" role="alert">{{ saveError }}</p>
       <p v-else-if="quickCall && !saving" class="sth-error">上一次保存需要确认，内容已保留。请核对并重试。</p>
       <div class="sth-capture-footer">
         <a href="/diaries/new" class="sth-text-link">写日记<AppIcon name="arrow" /></a>
-        <button class="button primary" type="submit" :disabled="saving || !quickBody.trim()">
+        <button class="ui-button" data-variant="default" type="submit" :disabled="saving || !quickBody.trim()">
           <AppIcon name="pen" />{{ saving ? '正在保存…' : quickCall ? '核对并重试' : '记下来' }}
         </button>
       </div>
@@ -149,7 +162,7 @@ onBeforeUnmount(() => {
     <section class="sth-recent" aria-labelledby="recent-manuscripts-title">
       <div class="sth-section-heading"><h2 id="recent-manuscripts-title">最近编辑</h2></div>
       <p v-if="manuscriptsLoading && !manuscripts.length" class="sth-list-state" role="status">正在读取最近编辑的文稿…</p>
-      <div v-else-if="manuscriptsError" class="sth-list-state"><p class="sth-error" role="alert">{{ manuscriptsError }}</p><button type="button" class="button secondary" @click="refreshManuscripts">重新读取最近编辑</button></div>
+      <div v-else-if="manuscriptsError" class="sth-list-state"><p class="sth-error" role="alert">{{ manuscriptsError }}</p><button type="button" class="ui-button" data-variant="outline" @click="refreshManuscripts">重新读取最近编辑</button></div>
       <ul v-else-if="manuscripts.length" class="sth-manuscript-list" role="list">
         <li v-for="manuscript in manuscripts.slice(0, 6)" :key="`${manuscript.kind}:${manuscript.id}`">
           <a :href="manuscript.href" class="sth-manuscript-link" :aria-label="`${opensEditor(manuscript) ? '继续编辑' : '打开'}${manuscriptKinds[manuscript.kind]} ${manuscript.title}`">
@@ -164,13 +177,13 @@ onBeforeUnmount(() => {
         </li>
       </ul>
       <p v-else class="sth-list-state">写下或打开的候选稿、场景和日记会留在这里。</p>
-      <div v-if="manuscriptsIncomplete && !manuscriptsError" class="sth-list-state" role="status"><p>跨设备的近期记录暂时无法读取，当前显示本机记录。</p><button type="button" class="button secondary" :disabled="manuscriptsLoading" @click="refreshManuscripts">重新读取最近编辑</button></div>
+      <div v-if="manuscriptsIncomplete && !manuscriptsError" class="sth-list-state" role="status"><p>跨设备的近期记录暂时无法读取，当前显示本机记录。</p><button type="button" class="ui-button" data-variant="outline" :disabled="manuscriptsLoading" @click="refreshManuscripts">重新读取最近编辑</button></div>
     </section>
 
     <section class="sth-recent" aria-labelledby="continue-diaries-title">
       <div class="sth-section-heading"><h2 id="continue-diaries-title">日记接续</h2><a href="/diaries" class="sth-text-link">全部日记<AppIcon name="arrow" /></a></div>
       <p v-if="loading" class="sth-list-state" role="status">正在读取最近的日记…</p>
-      <div v-else-if="recentError" class="sth-list-state"><p class="sth-error" role="alert">{{ recentError }}</p><button type="button" class="button secondary" @click="loadRecent">重新读取</button></div>
+      <div v-else-if="recentError" class="sth-list-state"><p class="sth-error" role="alert">{{ recentError }}</p><button type="button" class="ui-button" data-variant="outline" @click="loadRecent">重新读取</button></div>
       <div v-else-if="!diaries.length" class="sth-list-state sth-empty"><p>日记本还是空的</p><p>从上面的一句话开始。</p></div>
       <ul v-else id="diary-list" class="sth-recent-list" role="list">
         <li v-for="diary in diaries" :key="diary.noteId" class="sth-recent-entry">
@@ -190,23 +203,3 @@ onBeforeUnmount(() => {
     </nav>
   </div>
 </template>
-
-<style scoped>
-.sth-manuscript-list { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--line); }
-.sth-manuscript-list li { border-block-end: 1px solid var(--line); }
-.sth-manuscript-link { display: flex; align-items: center; gap: .9rem; min-block-size: 4.75rem; padding-block: .85rem; color: var(--ink); text-decoration: none; }
-.sth-manuscript-link > .icon { inline-size: 1.15rem; block-size: 1.15rem; flex: 0 0 auto; color: var(--muted); }
-.sth-manuscript-copy { flex: 1; min-inline-size: 0; }
-.sth-manuscript-copy h3 { overflow-wrap: anywhere; margin: 0; }
-.sth-manuscript-copy p { margin-block: .2rem 0; color: var(--muted); font-size: .8rem; }
-.sth-manuscript-copy .sth-manuscript-excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
-.sth-manuscript-copy time { font-variant-numeric: tabular-nums; }
-.sth-manuscript-continue { display: inline-flex; align-items: center; gap: .5rem; color: var(--accent); font-size: .85rem; white-space: nowrap; }
-.sth-manuscript-continue .icon { inline-size: 1rem; block-size: 1rem; }
-.sth-manuscript-link:hover h3 { text-decoration: underline; text-underline-offset: .2em; color: var(--accent); }
-@media (width <= 30rem) {
-  .sth-manuscript-link { gap: .6rem; }
-  .sth-manuscript-continue { font-size: .8rem; }
-  .sth-manuscript-continue .icon { display: none; }
-}
-</style>

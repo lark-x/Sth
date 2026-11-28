@@ -95,18 +95,18 @@ onBeforeUnmount(() => controller?.abort());
   <section class="diary-route" aria-label="日记" :aria-busy="loading">
     <p v-if="loading" class="diary-loading" role="status">正在读取日记…</p>
     <div v-else-if="pageError" class="diary-error-page"><h1>页面暂时无法打开</h1><p role="alert">{{ pageError }}</p>
-      <button type="button" class="diary-button diary-primary" @click="load">重试</button>
+      <button type="button" class="ui-button diary-button" data-variant="default" @click="load">重试</button>
     </div>
     <template v-else>
       <header class="diary-heading"><div><h1 tabindex="-1">我的日记</h1><p class="diary-meta"><time :datetime="today()">{{ dateLabel(today()) }}</time></p></div>
         <div class="diary-actions">
-          <a v-if="projectId && chapters" :href="chaptersHref" class="diary-button diary-secondary" @click="navigate($event, chaptersHref)">查看项目章节</a>
-          <a :href="newHref" class="diary-button diary-primary" @click="navigate($event, newHref)">写日记</a>
+          <a v-if="projectId && chapters" :href="chaptersHref" class="ui-button diary-button" data-variant="outline" @click="navigate($event, chaptersHref)">查看项目章节</a>
+          <a :href="newHref" class="ui-button diary-button" data-variant="default" @click="navigate($event, newHref)">写日记</a>
         </div>
       </header>
       <div class="diary-list-bar"><p class="diary-muted" role="status">{{ more ? '已加载 ' : '' }}{{ records.length }} 篇日记</p>
-        <div v-if="projects.length" class="diary-field"><label for="diary-project-filter">项目</label>
-          <select id="diary-project-filter" :value="projectId" @change="emit('navigate', indexHref(($event.target as HTMLSelectElement).value))">
+        <div v-if="projects.length" class="diary-filter-field ui-field"><label for="diary-project-filter">项目</label>
+          <select id="diary-project-filter" class="ui-input" :value="projectId" @change="emit('navigate', indexHref(($event.target as HTMLSelectElement).value))">
             <option value="">全部项目</option><option v-for="project in projects" :key="project.projectId" :value="project.projectId">{{ project.title }}</option>
           </select>
         </div>
@@ -120,7 +120,7 @@ onBeforeUnmount(() => controller?.abort());
           </div>
         </a></li></ul>
       </section>
-      <div v-if="more" class="diary-actions"><button type="button" class="diary-button diary-secondary" :disabled="busy" @click="loadMore()">{{ busy ? '正在读取…' : '加载更多' }}</button></div>
+      <div v-if="more" class="diary-actions"><button type="button" class="ui-button diary-button" data-variant="outline" :disabled="busy" @click="loadMore()">{{ busy ? '正在读取…' : '加载更多' }}</button></div>
       <p v-if="error" class="diary-notice" role="alert">{{ error }}</p>
     </template>
   </section>
