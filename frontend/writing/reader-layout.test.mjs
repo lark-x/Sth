@@ -146,9 +146,15 @@ test('the compact reader preserves manuscript identity across layout, edit and e
 
           await page.goto(fixture.links.oldDraft);
           await ready(page, body(page));
-          await page.getByRole('navigation', { name: '文稿位置', exact: true }).getByText(fixture.chapters[1].title, { exact: true }).waitFor();
-          await page.getByRole('navigation', { name: '文稿位置', exact: true }).getByText(fixture.project.title, { exact: true }).waitFor();
+          const path = page.getByRole('navigation', { name: '文稿位置', exact: true });
+          if (mobile) {
+            assert.equal(await path.isVisible(), false);
+          } else {
+            await path.getByText(fixture.chapters[1].title, { exact: true }).waitFor();
+            await path.getByText(fixture.project.title, { exact: true }).waitFor();
+          }
           assert.equal(await page.getByRole('heading', { level: 1, name: fixture.drafts[0].title, exact: true }).count(), 1);
+          assert.equal(await page.locator('.wr-toolbar-label').textContent(), '稿件与版本');
           assert.match(await status.innerText(), /第 1 版\s+采用稿\s+旧版 · 最新第 2 版/);
           assert.equal(await revision.inputValue(), '1');
           assert.equal(await revision.isVisible(), false);
@@ -185,7 +191,14 @@ test('the compact reader preserves manuscript identity across layout, edit and e
             assert.equal(await page.getByRole('combobox', { name: '切换稿件', exact: true }).evaluate(element => element === document.activeElement), true);
           }
           await revision.waitFor();
+          assert.equal(await page.locator('.wr-version-title').textContent(), fixture.drafts[0].title);
           assert.match(await revision.locator('option[value="1"]').innerText(), /采用稿/);
+          if (mobile) {
+            assert.equal(await page.locator('.wr-reader-path').isVisible(), false);
+            assert.equal(await page.locator('.wr-version-path').isVisible(), true);
+            assert.deepEqual(await page.locator('.wr-version-path a').allTextContents(), [fixture.project.title, fixture.chapters[1].title]);
+            assert.equal(await page.locator('.wr-version-path > span:last-child').textContent(), fixture.scene.title);
+          }
           await shot('versions-open');
           await revision.selectOption('2');
           await page.waitForURL(fixture.links.newDraft);

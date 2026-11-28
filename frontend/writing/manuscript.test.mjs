@@ -117,17 +117,21 @@ test('manuscript reading and revision through the real shell and isolated API', 
       assert.equal(await page.locator('#passage-body script').count(), 0);
       const typography = await page.locator('#passage-body').evaluate(element => {
         const rect = element.getBoundingClientRect();
-        const toolbarTitle = document.querySelector('.wr-toolbar-title').getBoundingClientRect();
-        return { left: rect.left, right: innerWidth - rect.right, width: rect.width, font: parseFloat(getComputedStyle(element).fontSize), titleWidth: toolbarTitle.width };
+        const picker = document.querySelector('.wr-toolbar-picker').getBoundingClientRect();
+        return { left: rect.left, right: innerWidth - rect.right, width: rect.width, font: parseFloat(getComputedStyle(element).fontSize), pickerWidth: picker.width };
       });
       if (viewport.width <= 390) {
         assert.ok(typography.left >= 18 && typography.left <= 22, JSON.stringify(typography));
         assert.ok(typography.right >= 18 && typography.right <= 22, JSON.stringify(typography));
       }
       assert.ok(typography.width <= typography.font * 38, JSON.stringify(typography));
-      assert.ok(typography.titleWidth >= 28, JSON.stringify(typography));
       const toolbar = page.getByRole('navigation', { name: '读写工具', exact: true });
-      assert.equal(await toolbar.locator('.wr-toolbar-title').innerText(), draft.title);
+      assert.equal(await toolbar.locator('.wr-toolbar-label').innerText(), '稿件与版本');
+      assert.ok(typography.pickerWidth >= 28, JSON.stringify(typography));
+      await button(page, '稿件与版本').click();
+      assert.equal(await page.locator('.wr-version-title').innerText(), draft.title);
+      assert.match(await toolbar.locator('.wr-toolbar-meta').innerText(), /第 1 版/);
+      await page.keyboard.press('Escape');
       assert.ok((await toolbar.boundingBox()).height < viewport.height * .12);
       if (viewport.width <= 390) assert.equal(await page.getByRole('button', { name: '返回文稿列表', exact: true }).count(), 1);
       await assertFitsViewport(page);
@@ -192,7 +196,7 @@ test('manuscript reading and revision through the real shell and isolated API', 
     assert.equal(await menu.isVisible(), false);
     assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
     await trigger.click();
-    await page.locator('.wr-toolbar-title').click();
+    await page.locator('.wr-toolbar-label').click();
     assert.equal(await menu.isVisible(), false);
     await trigger.click();
     await menu.getByRole('link').first().click();
@@ -213,7 +217,7 @@ test('manuscript reading and revision through the real shell and isolated API', 
       const input = document.querySelector('textarea[name="body"]');
       return input && input.clientHeight >= input.scrollHeight - 2;
     });
-    assert.ok((await page.locator('.wr-toolbar-title').boundingBox()).width >= 28);
+    assert.ok((await page.locator('.wr-toolbar-picker').boundingBox()).width >= 28);
     await assertFitsViewport(page);
     await button(page, '阅读').click();
     await firstScreenMark(page);

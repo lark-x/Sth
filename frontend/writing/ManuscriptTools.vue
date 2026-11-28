@@ -108,13 +108,13 @@ onScopeDispose(() => {
         type="button"
         class="wr-toolbar-picker"
         aria-label="稿件与版本"
-        :aria-describedby="`${id}-title ${id}-identity`"
+        :aria-describedby="`${id}-identity`"
         :popovertarget="nativePopover ? `${id}-versions` : undefined"
         :aria-expanded="nativePopover ? undefined : fallbackPanel === 'versions'"
         :aria-controls="`${id}-versions`"
         @click="toggleFallback('versions')"
       >
-        <span :id="`${id}-title`" class="wr-toolbar-title" :title="title">{{ title }}</span>
+        <span class="wr-toolbar-label">稿件与版本</span>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
       </button>
       <div
@@ -127,6 +127,15 @@ onScopeDispose(() => {
         @click="($event.target as Element).closest('a') && close(versions)"
       >
         <p class="wr-version-title">{{ title }}</p>
+        <nav v-if="placement || sceneTitle" class="wr-version-path" aria-label="完整文稿位置">
+          <template v-if="placement">
+            <a :href="recordHref('projects', placement.projectId)">{{ path?.project ?? '作品' }}</a>
+            <span aria-hidden="true">/</span>
+            <a :href="recordHref('chapters', placement.chapterId)">{{ chapterTitle ?? path?.chapter ?? '章节' }}</a>
+            <span v-if="sceneTitle" aria-hidden="true">/</span>
+          </template>
+          <span v-if="sceneTitle">{{ sceneTitle }}</span>
+        </nav>
         <div class="wr-version-bar"><slot name="versions" /></div>
       </div>
     </div>

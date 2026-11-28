@@ -70,7 +70,12 @@ test('author reading, inline revision and comparison keep manuscript identity an
         await page.getByRole('heading', { name: '登船之前的一封信', exact: true, level: 1 }).waitFor();
         await page.locator('#passage-body').waitFor();
         assert.equal(await selectedTitle(page), '登船之前的一封信');
-        assert.equal(await page.locator('.wr-toolbar-title').textContent(), '登船之前的一封信');
+        assert.equal(await page.getByRole('heading', { level: 1, name: '登船之前的一封信', exact: true }).count(), 1);
+        assert.equal(await page.locator('.wr-toolbar-label').textContent(), '稿件与版本');
+        await button(page, '稿件与版本').click();
+        assert.equal(await page.locator('.wr-version-title').textContent(), '登船之前的一封信');
+        assert.equal(await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).inputValue(), '2');
+        await page.keyboard.press('Escape');
         assert.equal((await invoke('draft.read', { draftId: draft.draftId })).body, revised);
         assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted.revision, 1);
         await button(page, '编辑').click();

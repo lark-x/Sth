@@ -122,7 +122,12 @@ test('real WebKit manuscript layouts fit 320px and 390px before and after intera
               await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(`${fixture.drafts[1].draftId}@1`);
               await page.waitForURL(url => url.pathname === `/drafts/${fixture.drafts[1].draftId}`);
               await page.locator('#passage-body').waitFor();
-              assert.equal(await page.locator('.wr-toolbar-title').innerText(), fixture.drafts[1].title);
+              assert.equal(await page.getByRole('heading', { level: 1, name: fixture.drafts[1].title, exact: true }).count(), 1);
+              assert.equal(await page.locator('.wr-toolbar-label').innerText(), '稿件与版本');
+              await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              assert.equal(await page.locator('.wr-version-title').innerText(), fixture.drafts[1].title);
+              assert.match(await page.locator('.wr-toolbar-meta').innerText(), /第 1 版/);
+              await page.keyboard.press('Escape');
               await check('draft-selected');
             } else if (name === 'draft') {
               await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
