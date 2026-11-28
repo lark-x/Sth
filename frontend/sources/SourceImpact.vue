@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { errorText, href, integer, localHref, rangeFrom, read, resourceHref, resourceNames } from './api';
 import type { Impact, Source } from './api';
 
@@ -72,26 +73,26 @@ onBeforeUnmount(() => controller.abort());
 <template>
   <section aria-label="资料影响" :aria-busy="loading">
     <form id="impact-filter" class="sources-filter" @submit.prevent="emit('navigate', pageHref())">
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="impact-kind">资源类型</label
-        ><select id="impact-kind" v-model="kind" name="kind">
+        ><select id="impact-kind" class="ui-input" v-model="kind" name="kind">
           <option value="">全部资源</option>
           <option v-for="(label, value) in resourceNames" :key="value" :value="value">{{ label }}</option>
         </select>
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="impact-current">版本范围</label
-        ><select id="impact-current" v-model="currentOnly" name="currentOnly">
+        ><select id="impact-current" class="ui-input" v-model="currentOnly" name="currentOnly">
           <option value="">全部版本和快照</option>
           <option value="1">当前版本</option>
         </select>
       </div>
-      <button class="sources-button" type="submit">筛选</button>
+      <Button class="sources-button" variant="outline" type="submit">筛选</Button>
     </form>
     <p v-if="loading" role="status">正在读取资料影响…</p>
     <div v-else-if="error">
       <p role="alert">{{ error }}</p>
-      <button class="sources-button" type="button" @click="load">重试</button>
+      <Button class="sources-button" variant="outline" type="button" @click="load">重试</Button>
     </div>
     <template v-else>
       <ul v-if="items.length" class="sources-list">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { errorText, href, kinds, read, step } from './api';
 import type { Project, Source } from './api';
 import { copy, dirty, forgetDraft, getDraft, persistDraft, valuesFor } from './drafts';
@@ -119,16 +120,17 @@ onBeforeUnmount(() => controller.abort());
     </p>
     <fieldset :disabled="locked">
       <legend class="sources-sr-only">资料内容</legend>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="source-kind">类型</label
-        ><select id="source-kind" v-model="draft.values.kind" name="kind" required>
+        ><select id="source-kind" class="ui-input" v-model="draft.values.kind" name="kind" required>
           <option v-for="(label, value) in kinds" :key="value" :value="value">{{ label }}</option>
         </select>
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="source-title">标题</label
         ><input
           id="source-title"
+          class="ui-input"
           v-model="draft.values.title"
           name="title"
           maxlength="300"
@@ -136,10 +138,11 @@ onBeforeUnmount(() => controller.abort());
           autocomplete="off"
         />
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="source-body">正文</label
         ><textarea
           id="source-body"
+          class="ui-input"
           v-model="draft.values.body"
           name="body"
           maxlength="100000"
@@ -147,9 +150,9 @@ onBeforeUnmount(() => controller.abort());
           required
         />
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="source-origin">出处</label
-        ><textarea id="source-origin" v-model="draft.values.origin" name="origin" maxlength="4000" rows="2" />
+        ><textarea id="source-origin" class="ui-input" v-model="draft.values.origin" name="origin" maxlength="4000" rows="2" />
       </div>
       <fieldset class="sources-projects">
         <legend>关联项目</legend>
@@ -164,7 +167,7 @@ onBeforeUnmount(() => controller.abort());
         >
       </fieldset>
     </fieldset>
-    <p v-if="draft.error" id="save-error" role="alert">{{ draft.error }}</p>
+    <p v-if="draft.error" id="save-error" class="ui-field-error" role="alert">{{ draft.error }}</p>
     <section v-if="draft.conflict" class="sources-conflict" aria-label="版本冲突">
       <h2>这条资料已有新版</h2>
       <p>本地草稿基于第 {{ draft.base?.revision }} 版。请核对最新内容后继续。</p>
@@ -181,26 +184,26 @@ onBeforeUnmount(() => controller.abort());
           }}
         </p>
         <div class="sources-actions">
-          <button class="sources-button" type="button" @click="applyLatest(false)">
+          <Button class="sources-button" variant="outline" type="button" @click="applyLatest(false)">
             保留我的修改并采用新版</button
-          ><button class="sources-button" type="button" @click="applyLatest(true)">改用最新版</button>
+          ><Button class="sources-button" variant="outline" type="button" @click="applyLatest(true)">改用最新版</Button>
         </div>
       </template>
       <div v-else>
         <p role="alert">{{ latestError }}</p>
-        <button class="sources-button" type="button" @click="showLatest">重新读取最新版</button>
+        <Button class="sources-button" variant="outline" type="button" @click="showLatest">重新读取最新版</Button>
       </div>
     </section>
     <div class="sources-actions">
-      <button class="sources-button sources-primary" type="submit" :disabled="draft.busy || draft.conflict">
+      <Button class="sources-button sources-primary" variant="default" type="submit" :disabled="draft.busy || draft.conflict">
         {{ draft.busy ? '正在保存…' : draft.call ? '重试同一次提交' : source ? '保存修订' : '新建资料' }}
-      </button>
+      </Button>
       <a :href="contextualHref(source ? href(source.sourceId) : '/sources')">返回</a
-      ><button v-if="changed && !locked" class="sources-button" type="button" @click="discard">
+      ><Button v-if="changed && !locked" class="sources-button" variant="outline" type="button" @click="discard">
         清除草稿
-      </button>
+      </Button>
     </div>
-    <p class="sources-muted" role="status">
+    <p class="sources-muted ui-field-note" role="status">
       {{
         draft.call
           ? '正在确认同一次提交的结果，内容已保留。'

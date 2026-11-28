@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { href, query } from './api';
 import type { Operation, Range, Source } from './api';
 
@@ -73,15 +74,16 @@ onMounted(() => {
       ><template v-else>{{ source.body }}</template>
     </div>
     <div class="sources-actions">
-      <button
+      <Button
         v-for="action in actions"
         :key="action.operation"
         class="sources-button"
+        variant="outline"
         type="button"
         @click="choose(action.target)"
       >
         {{ action.label }}
-      </button>
+      </Button>
     </div>
     <p id="passage-status" class="sources-muted" role="status">{{ status }}</p>
   </section>

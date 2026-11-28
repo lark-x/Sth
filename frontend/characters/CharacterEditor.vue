@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onScopeDispose, ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { errorText, href, listAll, readCharacter, resources } from './api';
 import type { AuthorEntry, Character, Choices, Operation, Project, Resource } from './api';
 
@@ -71,6 +72,14 @@ async function renderForm() {
         <div class="character-entry-list"></div>${ui.button('add-character-entry', '添加条目', 'plus', 'secondary')}</fieldset>
         <input type="hidden" name="entries" value="${ui.esc(values.entries)}">` : '');
     host.value.innerHTML = shared.editor(fields, { label, cancel: props.cancel, required: !extended });
+    for (const field of host.value.querySelectorAll<HTMLElement>('.field')) {
+      field.classList.add('ui-field');
+      for (const control of field.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'input:not([type="checkbox"]), select, textarea',
+      )) control.classList.add('ui-input');
+    }
+    host.value.querySelector('.form-note')?.classList.add('ui-field-note');
+    host.value.querySelector('#save-error')?.classList.add('ui-field-error');
     const entryRegion = host.value.querySelector<HTMLElement>('#character-entries');
     const entryValue = host.value.querySelector<HTMLInputElement>('input[name="entries"]');
     let entries: { get(): AuthorEntry[]; render(value: AuthorEntry[]): void } | undefined;
@@ -123,7 +132,7 @@ onScopeDispose(() => controller.abort());
 <template>
   <section class="characters-editor" :aria-busy="busy" aria-label="角色编辑表单">
     <p v-if="busy" role="status">正在读取编辑选项…</p>
-    <div v-if="error"><p role="alert">{{ error }}</p><button type="button" class="characters-button" @click="renderForm">重试</button></div>
+    <div v-if="error"><p role="alert">{{ error }}</p><Button type="button" class="characters-button" variant="outline" @click="renderForm">重试</Button></div>
     <div ref="host" v-show="!busy && !error" />
   </section>
 </template>

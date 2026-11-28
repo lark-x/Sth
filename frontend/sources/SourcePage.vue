@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
+import Button from '../ui/Button.vue';
 import SourceEditor from './SourceEditor.vue';
 import SourcePassage from './SourcePassage.vue';
 import SourceAdoption from './SourceAdoption.vue';
@@ -234,7 +235,7 @@ onBeforeUnmount(() => controller.abort());
       ><h1 tabindex="-1">页面暂时无法打开</h1>
       <p role="alert">{{ error }}</p>
       <div class="sources-actions">
-        <button class="sources-button" type="button" @click="load">重试</button
+        <Button class="sources-button" variant="outline" type="button" @click="load">重试</Button
         ><a :href="returnTo || '/sources'">{{ returnTo ? '返回原稿' : '返回资料' }}</a>
       </div></template
     >
@@ -265,7 +266,7 @@ onBeforeUnmount(() => controller.abort());
       </header>
       <div v-if="contextErrors.length" class="sources-notice">
         <p v-for="message in contextErrors" :key="message" role="alert">{{ message }}</p>
-        <button class="sources-button" type="button" @click="load">重新读取关联信息</button>
+        <Button class="sources-button" variant="outline" type="button" @click="load">重新读取关联信息</Button>
       </div>
       <SourceEditor
         v-if="isEditing"

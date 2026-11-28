@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { forgetDraft, getDraft } from './drafts';
 import { resourceHref, step } from './api';
 import type { Character, Range, Source } from './api';
@@ -61,19 +62,20 @@ function submit() {
   >
     <fieldset :disabled="locked">
       <legend class="sources-sr-only">角色条目</legend>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="adopt-character">采纳到角色</label
-        ><select id="adopt-character" v-model="draft.values.characterId" name="characterId" required>
+        ><select id="adopt-character" class="ui-input" v-model="draft.values.characterId" name="characterId" required>
           <option value="">请选择</option>
           <option v-for="character in characters" :key="character.characterId" :value="character.characterId">
             {{ character.name }}
           </option>
         </select>
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="adopt-label">条目名称</label
         ><input
           id="adopt-label"
+          class="ui-input"
           v-model="draft.values.label"
           name="label"
           required
@@ -81,15 +83,15 @@ function submit() {
           @input="($event.target as HTMLInputElement).setCustomValidity('')"
         />
       </div>
-      <div class="sources-field">
+      <div class="sources-field ui-field">
         <label for="adopt-text">条目补充文字</label
-        ><textarea id="adopt-text" v-model="draft.values.text" name="text" maxlength="100000" rows="4" />
+        ><textarea id="adopt-text" class="ui-input" v-model="draft.values.text" name="text" maxlength="100000" rows="4" />
       </div>
     </fieldset>
-    <p v-if="draft.error" role="alert">{{ draft.error }}</p>
-    <button class="sources-button sources-primary" type="submit" :disabled="draft.busy">
+    <p v-if="draft.error" class="ui-field-error" role="alert">{{ draft.error }}</p>
+    <Button class="sources-button sources-primary" variant="default" type="submit" :disabled="draft.busy">
       {{ draft.busy ? '正在采纳…' : draft.call ? '重试同一次提交' : '采纳条目' }}
-    </button>
+    </Button>
   </form>
   <p v-else>还没有可采纳此条目的角色。<a href="/characters/new">新建角色</a></p>
 </template>

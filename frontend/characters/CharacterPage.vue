@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import Button from '../ui/Button.vue';
 import CharacterEntries from './CharacterEntries.vue';
 import CharacterEditor from './CharacterEditor.vue';
 import { ApiError, catalog, errorText, href, listAll, query, readCharacter } from './api';
@@ -94,7 +95,7 @@ onScopeDispose(() => controller?.abort());
   <section :aria-busy="busy" aria-label="角色详情" @click="retainReturn">
     <p v-if="busy" role="status" class="characters-state">正在读取角色…</p>
     <div v-else-if="error" class="characters-state"><h1 tabindex="-1">页面暂时无法打开</h1>
-      <p role="alert">{{ error }}</p><div class="characters-actions"><button type="button" class="characters-button" @click="load">重试</button><a :href="returnTo || '/characters'">{{ returnTo ? '返回原稿' : '返回角色' }}</a></div>
+      <p role="alert">{{ error }}</p><div class="characters-actions"><Button type="button" class="characters-button" variant="outline" @click="load">重试</Button><a :href="returnTo || '/characters'">{{ returnTo ? '返回原稿' : '返回角色' }}</a></div>
     </div>
     <template v-else>
       <header class="characters-heading characters-toolbar">
@@ -121,7 +122,7 @@ onScopeDispose(() => controller?.abort());
         <CharacterEntries :entries="record.entries" :contextual-href="contextual" />
         <details v-if="operations.get('character.read')?.inputSchema.properties?.revision" class="characters-section characters-disclosure" aria-label="版本历史">
           <summary>版本历史</summary>
-          <p v-if="historyError" role="alert">{{ historyError }} <button type="button" class="characters-button" @click="load">重新读取</button></p>
+          <p v-if="historyError" role="alert">{{ historyError }} <Button type="button" class="characters-button" variant="outline" @click="load">重新读取</Button></p>
           <ol class="characters-history"><li v-for="number in versions" :key="number"><a :href="contextual(href(record.characterId, number))" :aria-current="number === record.revision ? 'page' : undefined">第 {{ number }} 版</a><span v-if="number === record.revision" class="characters-muted">正在阅读</span></li></ol>
         </details>
       </template>
