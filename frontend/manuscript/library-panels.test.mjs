@@ -109,14 +109,84 @@ async function fixture(t, { actualShell = false } = {}) {
   return { origin, invoke };
 }
 
-async function settled(page) {
-  await page.waitForFunction(() => (window.setLibraryUrl || document.querySelector('.manuscript-frame'))
+function librarySettled({ workbench = false } = {}) {
+  const frame = document.querySelector('.manuscript-frame');
+  return Boolean((window.setLibraryUrl || frame)
+    && (!workbench || (frame && !frame.classList.contains('ms-auxiliary')))
     && document.querySelector('.library-sheet-scroll')?.getAttribute('aria-busy') === 'false'
     && document.querySelector('nav[aria-label="作品与章节"]')?.getAttribute('aria-busy') === 'false');
+}
+async function settled(page, options = {}) {
+  await page.waitForFunction(librarySettled, options);
 }
 async function setUrl(page, href) {
   await page.evaluate(href => window.setLibraryUrl(href), href);
   await settled(page);
+}
+
+async function diagnoseLibraryBack(page, group, action) {
+  const calls = new Map();
+  const requested = request => {
+    if (!request.url().endsWith('/api/web/invoke')) return;
+    const call = request.postDataJSON();
+    calls.set(request, { operationId: call.operationId, input: call.input, state: 'pending' });
+  };
+  const responded = response => {
+    const call = calls.get(response.request());
+    if (!call) return;
+    call.status = response.status();
+    call.state = 'reading-response';
+    void response.json().then(data => {
+      call.state = 'response-read';
+      if (Array.isArray(data?.result?.items)) call.resultCount = data.result.items.length;
+      if (data?.error || data?.code) call.error = data.code ?? data.error?.code ?? data.error;
+    }).catch(error => { call.state = 'response-unreadable'; call.error = error.message; });
+  };
+  const failed = request => {
+    const call = calls.get(request);
+    if (call) { call.state = 'request-failed'; call.error = request.failure()?.errorText; }
+  };
+  page.on('request', requested);
+  page.on('response', responded);
+  page.on('requestfailed', failed);
+  try {
+    return await diagnoseRoute(page, async () => {
+      try { return await action(); }
+      catch (cause) {
+        let deadline;
+        const document = await Promise.race([
+          page.evaluate(() => {
+            const frame = window.document.querySelector('.manuscript-frame');
+            const sheets = window.document.querySelector('.manuscript-sheets');
+            const rows = [...window.document.querySelectorAll('.library-sheet')];
+            return {
+              url: location.href, frame: frame?.className, pane: frame?.getAttribute('data-pane'),
+              sheetDisplay: sheets && getComputedStyle(sheets).display,
+              sheetsBusy: window.document.querySelector('.library-sheet-scroll')?.getAttribute('aria-busy'),
+              treeBusy: window.document.querySelector('nav[aria-label="作品与章节"]')?.getAttribute('aria-busy'),
+              title: window.document.querySelector('.library-sheets-heading h2')?.textContent,
+              query: window.document.querySelector('.library-search input')?.value,
+              rowCount: rows.length,
+              rows: rows.map(row => ({ title: row.querySelector('.library-sheet-title')?.textContent,
+                href: row.getAttribute('href'), current: row.getAttribute('aria-current') })),
+              // Include hidden library errors while the overview still owns the Frame.
+              messages: [...window.document.querySelectorAll('.manuscript-library [role="alert"], .manuscript-sheets [role="alert"], .sth-route-error')]
+                .map(node => node.textContent?.trim()),
+            };
+          }).catch(error => ({ unavailable: error.message })),
+          new Promise(resolve => { deadline = setTimeout(() => resolve({ unavailable: 'snapshot timed out' }), 1000); }),
+        ]).finally(() => clearTimeout(deadline));
+        throw new Error(`Library Back failed: ${JSON.stringify({
+          group: { label: group.label, path: group.path, title: group.title, count: group.count, selected: group.target.title },
+          viewport: page.viewportSize(), document, calls: [...calls.values()],
+        })}`, { cause });
+      }
+    });
+  } finally {
+    page.off('request', requested);
+    page.off('response', responded);
+    page.off('requestfailed', failed);
+  }
 }
 
 test('library panels use real operations with stable manuscript rows and preview-only collection events', { timeout: 120_000 }, async t => {
@@ -151,7 +221,7 @@ test('library panels use real operations with stable manuscript rows and preview
       width: element.getBoundingClientRect().width, background: getComputedStyle(element).backgroundColor,
     }));
     assert.equal(mark.width, 28);
-    assert.equal(mark.background, 'rgba(0, 0, 0, 0)');
+    assert.equal(mark.background, 'rgb(255, 255, 255)');
     assert.equal(await rows(page).count(), 24);
     assert.deepEqual((await titles(page)).slice(0, 3), [second.title, first.title, third.title]);
     assert.match(await rows(page).nth(1).innerText(), /只在采用稿中出现的海盐/);
@@ -697,11 +767,13 @@ test('library preserves project navigation and exposes management through the re
     }
     await page.locator('.manuscript-frame[data-pane="sheets"]').waitFor();
   }
-  async function assertGroup(group) {
-    await settled(page);
-    assert.equal(await page.locator('.library-sheets-heading h2').textContent(), group.title);
-    assert.equal(await rows(page).count(), group.count);
-    assert.equal(await page.locator('.library-sheet[aria-current="page"] .library-sheet-title').textContent(), group.target.title);
+  async function assertGroup(group, targetPage = page) {
+    // Browser Back can expose the destination URL before App handles popstate.
+    // The overview retains a hidden, idle list; do not accept that old state.
+    await settled(targetPage, { workbench: true });
+    assert.equal(await targetPage.locator('.library-sheets-heading h2').textContent(), group.title);
+    assert.equal(await rows(targetPage).count(), group.count);
+    assert.equal(await targetPage.locator('.library-sheet[aria-current="page"] .library-sheet-title').textContent(), group.target.title);
   }
 
   for (const width of [1280, 820, 390, 320]) {
@@ -743,11 +815,13 @@ test('library preserves project navigation and exposes management through the re
         const overview = page.getByRole('navigation', { name: '作品内容', exact: true });
         assert.equal(await overview.getByRole('link', { name: '章节', exact: true }).getAttribute('href'), `/chapters?projectId=${project.projectId}`);
         assert.equal(await overview.getByRole('link', { name: '创作决定', exact: true }).getAttribute('href'), `/author-context?projectId=${project.projectId}`);
-        await page.goBack();
-        await page.waitForURL(url => url.pathname + url.search === manuscriptHref);
-        await assertGroup(group);
-        await showSheets();
-        await assertGroup(group);
+        await diagnoseLibraryBack(page, group, async () => {
+          await page.goBack();
+          await page.waitForURL(url => url.pathname + url.search === manuscriptHref);
+          await assertGroup(group);
+          await showSheets();
+          await assertGroup(group);
+        });
 
         if (process.env.STH_LIBRARY_SCREENSHOTS) {
           await page.screenshot({ path: join(process.env.STH_LIBRARY_SCREENSHOTS, `library-return-${width}-${group.label}.png`), animations: 'disabled' });
@@ -772,12 +846,111 @@ test('library preserves project navigation and exposes management through the re
         await status.waitFor();
         await targetRow.click();
         await page.waitForURL(url => url.pathname === draftPath);
-        await page.goBack();
-        await page.waitForURL(url => url.pathname + url.search === group.path);
-        await assertGroup(group);
+        await diagnoseLibraryBack(page, group, async () => {
+          await page.goBack();
+          await page.waitForURL(url => url.pathname + url.search === group.path);
+          await assertGroup(group);
+        });
       }
     });
   }
+
+  await t.test('browser Back waits for held popstate and scene responses before accepting either two-row group', async t => {
+    const page = await openBrowser(t, origin, { width: 1280, height: 900 });
+    // Window is the popstate target: register before App, not after mounting.
+    await page.addInitScript(() => {
+      let armed = false;
+      let pending;
+      const hold = event => {
+        if (!armed) return;
+        event.stopImmediatePropagation();
+        pending = event;
+      };
+      window.libraryBackGate = {
+        get held() { return Boolean(pending); },
+        arm() { armed = true; },
+        release() {
+          armed = false;
+          const event = pending;
+          pending = undefined;
+          if (event) window.dispatchEvent(new PopStateEvent('popstate', { state: event.state }));
+        },
+      };
+      window.addEventListener('popstate', hold);
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    for (const group of groups.slice(1)) {
+      const manuscriptHref = fromShelf(group.target.sceneId, group.path, {
+        path: `/drafts/${group.draft.draftId}`, revision: group.draft.revision,
+      });
+      await page.goto(manuscriptHref);
+      await assertGroup(group, page);
+      await page.getByRole('navigation', { name: '作品管理', exact: true }).getByRole('link', { name: '作品总览', exact: true }).click();
+      await page.waitForURL(url => url.pathname === projectPath && url.searchParams.get('view') === 'overview');
+      await page.getByRole('article', { name: project.title, exact: true }).waitFor();
+      await settled(page);
+
+      await page.evaluate(() => window.libraryBackGate.arm());
+      const responseGate = Promise.withResolvers();
+      const responseHeld = Promise.withResolvers();
+      const deliveries = [];
+      const matchesList = request => {
+        if (!request.url().endsWith('/api/web/invoke')) return false;
+        const call = request.postDataJSON();
+        return call.operationId === 'scene.list' && (group.label === '未编入'
+          ? call.input.chapterId === null
+          : call.input.projectId === project.projectId && call.input.chapterId === chapter.chapterId);
+      };
+      const holdResponse = route => {
+        if (!matchesList(route.request())) return route.continue();
+        const delivery = (async () => {
+          const response = await route.fetch({ timeout: 5000 });
+          const data = await response.json();
+          responseHeld.resolve({ status: response.status(), count: data.result?.items?.length });
+          await responseGate.promise;
+          await route.fulfill({ response });
+        })();
+        // Observe transport failures even if an earlier assertion starts cleanup.
+        const observed = delivery.then(() => undefined, error => {
+          responseHeld.resolve({ error: error.message });
+          return error;
+        });
+        deliveries.push(observed);
+        return observed;
+      };
+      try {
+        await page.route('**/api/web/invoke', holdResponse);
+        await diagnoseLibraryBack(page, group, async () => {
+          await page.goBack();
+          await page.waitForURL(url => url.pathname + url.search === manuscriptHref);
+          await page.waitForFunction(() => window.libraryBackGate.held);
+          assert.equal(await page.locator('.manuscript-frame').evaluate(frame => frame.classList.contains('ms-auxiliary')), true);
+          assert.equal(await page.evaluate(librarySettled), true, 'the old busy-only condition accepts the hidden overview list');
+          assert.equal(await page.evaluate(librarySettled, { workbench: true }), false, 'the URL alone cannot finish a return before popstate reaches App');
+
+          const listStarted = page.waitForRequest(matchesList);
+          await Promise.all([listStarted, page.evaluate(() => window.libraryBackGate.release())]);
+          assert.deepEqual(await responseHeld.promise, { status: 200, count: group.count }, 'the gate holds the real complete scene list');
+          await page.locator('.manuscript-frame:not(.ms-auxiliary)').waitFor({ state: 'attached' });
+          await page.waitForFunction(() => document.querySelector('.library-sheet-scroll')?.getAttribute('aria-busy') === 'true');
+          assert.equal(await rows(page).count(), group.count, 'same-group rows remain present while their fresh response is held');
+          assert.equal(await page.evaluate(librarySettled, { workbench: true }), false, 'restored Frame and retained rows cannot finish a pending list read');
+
+          responseGate.resolve();
+          const failures = (await Promise.all(deliveries)).filter(Boolean);
+          assert.deepEqual(failures, [], 'the gate delivers real scene responses without transport errors');
+          await assertGroup(group, page);
+          assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, manuscriptHref);
+          assert.equal(await page.locator('.library-sheet[aria-current="page"]').getAttribute('href'), manuscriptHref);
+        });
+      } finally {
+        responseGate.resolve();
+        await page.unroute('**/api/web/invoke', holdResponse);
+        await Promise.all(deliveries);
+        await page.evaluate(() => { window.libraryBackGate?.release(); delete window.libraryBackGate; });
+      }
+    }
+  });
 
   await t.test('chapter arrangement and author decisions open from a manuscript and return to its group', async () => {
     const group = groups[0];
@@ -792,9 +965,11 @@ test('library preserves project navigation and exposes management through the re
         await page.waitForURL(url => url.pathname === path && url.searchParams.get('projectId') === project.projectId);
         await page.getByRole('heading', { level: 1, name: title, exact: true }).waitFor();
         assert.equal(new URL(page.url()).searchParams.get('returnTo'), source);
-        await page.goBack();
-        await page.waitForURL(url => url.pathname + url.search === source);
-        await assertGroup(group);
+        await diagnoseLibraryBack(page, group, async () => {
+          await page.goBack();
+          await page.waitForURL(url => url.pathname + url.search === source);
+          await assertGroup(group);
+        });
       }
     }
   });
@@ -825,10 +1000,12 @@ test('library preserves project navigation and exposes management through the re
     assert.equal(new URL(await overview.getAttribute('href'), origin).searchParams.get('returnTo'), permalink);
     await overview.click();
     await page.getByRole('article', { name: project.title, exact: true }).waitFor();
-    await page.goBack();
-    await page.waitForURL(url => url.pathname + url.search === permalink);
-    await settled(page);
-    assert.equal(await page.locator('.library-sheet[aria-current="page"]').getAttribute('href'), permalink);
+    await diagnoseLibraryBack(page, groups[1], async () => {
+      await page.goBack();
+      await page.waitForURL(url => url.pathname + url.search === permalink);
+      await settled(page, { workbench: true });
+      assert.equal(await page.locator('.library-sheet[aria-current="page"]').getAttribute('href'), permalink);
+    });
 
     const wrongSources = [
       `https://other.invalid${projectPath}`,
