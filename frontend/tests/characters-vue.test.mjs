@@ -8,6 +8,7 @@ import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { assertFitsViewport, openBrowser, startService } from '../../tests/browser/harness.mjs';
 import { characterRoute, matchCharactersRoute } from '../characters/routes.ts';
+import { diagnoseRoute } from './route-diagnostics.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const phone = { width: 390, height: 844 };
@@ -64,7 +65,8 @@ async function fixture(t) {
   const entry = '/__characters_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
-    optimizeDeps: { include: ['vue', 'reka-ui', '@lucide/vue'] },
+    // Scan the delivered app, not archived HTML under the repository's artifacts.
+    optimizeDeps: { entries: ['frontend/main.ts'], include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'characters-route-test',
@@ -159,7 +161,7 @@ async function ready(page) {
 }
 async function open(t, origin, href = '/characters', viewport = phone) {
   const page = await openBrowser(t, origin, viewport);
-  assert.equal((await page.goto(href)).status(), 200);
+  assert.equal((await diagnoseRoute(page, () => page.goto(href))).status(), 200);
   await ready(page);
   return page;
 }

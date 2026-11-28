@@ -51,8 +51,13 @@ test('real reader menus keep evidence bound to the displayed manuscript revision
       assert.equal(reference.searchParams.getAll('returnTo').length, 1);
       assert.equal(reference.searchParams.get('returnTo'), manuscript.pathname + manuscript.search + manuscript.hash);
       await button('关闭依据').click();
-      assert.equal(await page.locator('[inert]').count(), 0);
+      assert.equal(await page.locator('[inert]:not(.evidence-panel)').count(), 0, 'the reader is interactive immediately while the panel leaves');
       assert.deepEqual(await bodyStyles(), originalBodyStyles, 'all body scroll-lock styles are restored');
+      assert.equal(await button('来源与依据').evaluate(node => node === document.activeElement), true);
+      assert.equal(await panel.getAttribute('aria-hidden'), 'true');
+      assert.equal(await panel.evaluate(node => node.inert), true, 'the leaving and hidden panel cannot receive interaction');
+      await panel.waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('[inert]:not(.evidence-panel)').count(), 0);
       assert.deepEqual(errors, []);
     });
   }

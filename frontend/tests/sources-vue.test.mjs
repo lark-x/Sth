@@ -8,6 +8,7 @@ import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { assertFitsViewport, openBrowser, startService } from '../../tests/browser/harness.mjs';
 import { matchSourcesRoute, sourceRoute } from '../sources/routes.ts';
+import { diagnoseRoute } from './route-diagnostics.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const phone = { width: 390, height: 844 };
@@ -52,6 +53,7 @@ async function fixture(t) {
   const entry = '/__sources_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
+    optimizeDeps: { entries: ['frontend/main.ts'], include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'sources-route-test',
@@ -135,7 +137,7 @@ async function ready(page) {
 }
 async function open(t, origin, href = '/sources/new', viewport = phone) {
   const page = await openBrowser(t, origin, viewport);
-  assert.equal((await page.goto(href)).status(), 200);
+  assert.equal((await diagnoseRoute(page, () => page.goto(href))).status(), 200);
   await ready(page);
   return page;
 }
@@ -526,12 +528,12 @@ test('Vue sources independent routes, retained drafts and exact public API refer
       await navigate(page, exact.pathname + exact.search);
     }
     await navigate(page, '/sources');
-    await expand(page, '资料工作区');
+    await expand(page, '工作区');
     await link(page, '外部检索').click();
     await expectHeading(page, '外部检索');
     assert.equal(await page.locator('.legacy-route').count(), 1);
     await navigate(page, '/sources');
-    await expand(page, '资料工作区');
+    await expand(page, '工作区');
     await link(page, '判断').click();
     await h1(page, '判断').waitFor();
     assert.equal(await page.locator('.legacy-route').count(), 1);

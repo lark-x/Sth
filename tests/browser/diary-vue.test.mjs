@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { assertFitsViewport, openBrowser, startService } from './harness.mjs';
+import { diagnoseRoute } from '../../frontend/tests/route-diagnostics.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const phone = { width: 390, height: 844 };
@@ -25,6 +26,7 @@ async function fixture(t) {
   const entry = '/__diary_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
+    optimizeDeps: { entries: ['frontend/main.ts'], include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'diary-route-test',
@@ -95,7 +97,7 @@ async function fixture(t) {
 
 async function open(t, origin, href = '/diaries/new', viewport = phone) {
   const page = await openBrowser(t, origin, viewport);
-  assert.equal((await page.goto(href)).status(), 200);
+  await diagnoseRoute(page, async () => assert.equal((await page.goto(href)).status(), 200));
   await page.locator('.diary-route[aria-busy="false"]').waitFor().catch(async error => {
     throw new Error(`Vue diary did not mount at ${href}. ${await page.locator('body').innerText()}`, { cause: error });
   });

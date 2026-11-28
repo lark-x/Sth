@@ -148,7 +148,6 @@ const branchHref = computed(() => data.value
               <span>{{ save.busy ? '正在采纳…' : save.pending ? '重试同一次提交' : '采纳候选稿' }}</span>
             </Button>
             <a class="wr-review-return" :href="draftHref">返回此稿</a>
-            <span class="wr-review-return-note">打开后可在读稿工具栏查看本版依据</span>
           </div>
         </form>
         <section

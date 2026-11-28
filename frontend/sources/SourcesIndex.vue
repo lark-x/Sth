@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue';
 import Button from '../ui/Button.vue';
 import { ApiError, catalog, errorText, href, kinds, listAll, query, read } from './api';
 import type { Project, SourceKind, Summary, Summary as SourceSummary } from './api';
@@ -15,6 +15,15 @@ function contextual(path: string) {
   return destination.pathname + destination.search;
 }
 const controller = new AbortController();
+const toolsRoot = ref<HTMLElement>();
+const toolsName = useId();
+function closeTools(event: KeyboardEvent) {
+  const disclosure = (event.target as Element).closest('details');
+  if (!(disclosure instanceof HTMLDetailsElement) || !disclosure.open) return;
+  event.preventDefault();
+  disclosure.open = false;
+  disclosure.querySelector('summary')?.focus();
+}
 const loading = ref(true);
 const error = ref('');
 const contextError = ref('');
@@ -102,6 +111,11 @@ function typeHref(value: string) {
 onMounted(() => {
   document.title = '资料 · Sth';
   void load();
+  document.addEventListener('pointerdown', event => {
+    for (const disclosure of toolsRoot.value?.querySelectorAll('details[open]') ?? []) {
+      if (!disclosure.contains(event.target as Node)) (disclosure as HTMLDetailsElement).open = false;
+    }
+  }, { signal: controller.signal });
 });
 onBeforeUnmount(() => controller.abort());
 </script>
@@ -125,8 +139,8 @@ onBeforeUnmount(() => controller.abort());
         <span v-if="projectId">· {{ projects.find(item => item.projectId === projectId)?.title ?? '当前项目' }}</span>
         <span v-if="!loading && !error" id="workspace-count" class="sources-list-count" role="status">{{ items.length }} 条记录</span>
       </div>
-      <div class="sources-list-tools">
-        <details class="sources-disclosure sources-toolbar-menu sources-filter-disclosure">
+      <div ref="toolsRoot" class="sources-list-tools" @keydown.esc="closeTools">
+        <details :name="toolsName" class="sources-disclosure sources-toolbar-menu sources-filter-disclosure">
           <summary>筛选<span v-if="activeFilterCount" class="sources-filter-count">{{ activeFilterCount }}</span></summary>
           <form class="sources-filter sources-toolbar-panel" role="search" action="/sources" @submit.prevent="search">
             <div class="sources-field ui-field">
@@ -144,14 +158,14 @@ onBeforeUnmount(() => controller.abort());
             <Button class="sources-button" variant="outline" type="submit">搜索</Button>
           </form>
         </details>
-        <details class="sources-disclosure sources-toolbar-menu sources-type-menu">
+        <details :name="toolsName" class="sources-disclosure sources-toolbar-menu sources-type-menu">
           <summary>类型<span v-if="kind && kinds[kind as SourceKind]" class="sources-type-current">{{ kinds[kind as SourceKind] }}</span></summary>
           <nav class="sources-type-options sources-toolbar-panel" aria-label="资料类型">
             <a :href="typeHref('')" :aria-current="!kind ? 'page' : undefined">全部类型</a>
             <a v-for="(label, value) in kinds" :key="value" :href="typeHref(value)" :aria-current="kind === value ? 'page' : undefined">{{ label }}</a>
           </nav>
         </details>
-        <details class="sources-disclosure sources-toolbar-menu sources-workspace">
+        <details :name="toolsName" class="sources-disclosure sources-toolbar-menu sources-workspace">
           <summary>工作区</summary>
           <nav class="sources-tabs sources-toolbar-panel" aria-label="资料工作区">
             <a :href="contextual('/sources')" aria-current="page">已归档资料</a>

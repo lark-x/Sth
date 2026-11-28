@@ -407,7 +407,8 @@ function latestRevision(draft: DraftSummary) {
                   revision: data.compared[side].revision,
                   returnTo: url.pathname + url.search + url.hash,
                 })"
-                >打开稿件后查看依据</Button
+                title="打开此稿，核对本版依据"
+                >核对依据</Button
               >
               <Button
                 as="a"

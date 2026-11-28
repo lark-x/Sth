@@ -624,7 +624,7 @@ test('external research: choose a repeated passage and reopen the archive after 
   });
   const page = await openBrowser(t, service, narrow);
   await goto(page, '/sources', '资料');
-  await expand(page, '资料工作区');
+  await expand(page, '工作区');
   await clickLink(page, '外部检索');
   await fill(page, '检索词', '渡船');
   await click(page, '搜索外部资料');

@@ -108,7 +108,7 @@ async function metrics(page) {
       projectTitle: main.querySelector('.ce-book-heading h2') ? style(main.querySelector('.ce-book-heading h2')) : null,
       prose: main.querySelector('.ce-prose') ? style(main.querySelector('.ce-prose')) : null,
       controls: content.map(element => ({ text: (element.getAttribute('aria-label') || element.textContent || element.id).trim().slice(0, 70),
-        tag: element.tagName, box: rect(element), ...style(element) })),
+        tag: element.tagName, shared: element.matches('[data-slot="button"]'), box: rect(element), ...style(element) })),
       overflow: [...main.querySelectorAll('*')].filter(visible).filter(element => {
         const box = element.getBoundingClientRect();
         return box.right > innerWidth + 1 || box.left < -1;
@@ -240,16 +240,23 @@ test('secondary business pages inherit the shared theme and remain usable at des
         pixels: await pixels(page, png, layout), renderedFonts: await renderedFonts(page, session), keyboard: stops };
       report.cases.push(result);
       if (layout.documentWidth > viewport.width + 1 || layout.overflow.length) report.violations.push(`${name}: horizontal overflow`);
-      if (layout.body.color !== 'rgb(37, 37, 37)' || layout.library.background !== 'rgb(242, 242, 242)') report.violations.push(`${name}: shared neutral theme missing`);
+      if (layout.body.color !== 'rgb(37, 37, 37)' || layout.library.background !== 'rgb(244, 244, 243)') report.violations.push(`${name}: shared neutral theme missing`);
       if (!stops.length || !stops.every(stop => stop.focusVisible && stop.outline !== 'none' && parseFloat(stop.outlineWidth) >= 2)) report.violations.push(`${name}: missing keyboard focus`);
       if (stops.some(stop => stop.x < -1 || stop.right > viewport.width + 1 || stop.bottom <= 0 || stop.y >= viewport.height)) report.violations.push(`${name}: keyboard focus outside the viewport`);
       if (layout.projectTitle && layout.projectTitle.font !== layout.body.font) report.violations.push(`${name}: project title overrides the shared UI font`);
       if (layout.prose && (layout.prose.font !== layout.body.font || layout.prose.size !== '18px' || layout.prose.lineHeight !== '32.4px')) report.violations.push(`${name}: summary overrides shared manuscript typography`);
-      if (target.name.startsWith('project-') && layout.controls.find(control => control.text === '新建作品')?.size !== '14px') report.violations.push(`${name}: project action overrides shared control size`);
+      if (target.name.startsWith('project-') && layout.controls.find(control => control.text === '新建作品')?.size !== '13px') report.violations.push(`${name}: project action overrides shared control size`);
       await writeJson(join(artifacts, 'manifest.json'), report);
     }
     const atWidth = report.cases.filter(item => item.viewport.width === viewport.width);
     const sharedHeading = atWidth.find(item => item.name.endsWith('-tasks')).heading;
+    const sharedButton = atWidth.find(item => item.name.endsWith('-tasks')).controls.find(control => control.shared && control.text === '刷新状态');
+    if (sharedButton?.size !== '13px') report.violations.push(`${viewport.width}-tasks: shared button size differs from approved controls`);
+    for (const item of atWidth.filter(item => /-project-(overview|empty)$/.test(item.name))) {
+      const projectAction = item.controls.find(control => control.text === '新建作品');
+      if (!projectAction || !sharedButton || projectAction.size !== sharedButton.size || projectAction.font !== sharedButton.font)
+        report.violations.push(`${item.name}: project action typography differs from the shared task button`);
+    }
     for (const item of atWidth.filter(item => /-(project-overview|project-empty|settings|connections)$/.test(item.name))) {
       if (item.heading.size !== sharedHeading.size || item.heading.lineHeight !== sharedHeading.lineHeight) report.violations.push(`${item.name}: heading differs from shared business pages`);
     }

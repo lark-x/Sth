@@ -7,6 +7,21 @@ import { createManuscriptFixture, startManuscriptWorkspace } from '../../scripts
 
 const artifacts = resolve(process.env.STH_WRITING_WEBKIT_ARTIFACTS ?? 'frontend/.artifacts/writing-reader/webkit-layout-final');
 
+async function assertVersionState(page, expected) {
+  const state = page.locator('.wr-version-state');
+  await state.waitFor();
+  assert.equal(await state.isVisible(), true);
+  const labels = state.locator(':scope > span');
+  assert.deepEqual((await labels.allTextContents()).map(value => value.trim()), expected);
+  for (let index = 0; index < expected.length; index++)
+    assert.equal(await labels.nth(index).isVisible(), true, expected[index]);
+}
+
+async function closeVersions(page) {
+  await page.keyboard.press('Escape');
+  await page.locator('.wr-versions-menu').waitFor({ state: 'hidden' });
+}
+
 function geometry() {
   const describe = element => {
     const rect = element.getBoundingClientRect();
@@ -118,26 +133,38 @@ test('real WebKit manuscript layouts fit 320px and 390px before and after intera
               await check('versions-selected');
             } else if (name === 'scene') {
               await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 2 版']);
               await check('versions-open');
               await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(`${fixture.drafts[1].draftId}@1`);
               await page.waitForURL(url => url.pathname === `/drafts/${fixture.drafts[1].draftId}`);
               await page.locator('#passage-body').waitFor();
               assert.equal(await page.getByRole('heading', { level: 1, name: fixture.drafts[1].title, exact: true }).count(), 1);
-              assert.equal(await page.locator('.wr-toolbar-label').innerText(), '稿件与版本');
+              const picker = page.getByRole('button', { name: '稿件与版本', exact: true });
+              assert.equal(await picker.isVisible(), true);
+              assert.equal(await picker.innerText(), '第 1 版');
+              assert.equal(await picker.getAttribute('aria-describedby'), await page.locator('.wr-toolbar-meta').getAttribute('id'));
               await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
               assert.equal(await page.locator('.wr-version-title').innerText(), fixture.drafts[1].title);
-              assert.match(await page.locator('.wr-toolbar-meta').innerText(), /第 1 版/);
-              await page.keyboard.press('Escape');
+              assert.match(await page.locator('.wr-toolbar-meta').textContent(), /第 1 版/);
+              await assertVersionState(page, ['正在查看 · 第 1 版', '候选稿', '最新修订']);
+              await closeVersions(page);
               await check('draft-selected');
             } else if (name === 'draft') {
               await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 2 版']);
               await check('versions-open');
               await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption(String(fixture.revised.revision));
               await page.waitForURL(url => url.searchParams.get('revision') === String(fixture.revised.revision));
               await page.locator('#passage-body').waitFor();
               assert.equal(await page.locator('#passage-body').textContent(), fixture.bodies.latest);
+              await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await assertVersionState(page, ['正在查看 · 第 2 版', '候选稿', '最新修订']);
+              await closeVersions(page);
               await check('version-selected');
             } else {
+              await page.getByRole('button', { name: '稿件与版本', exact: true }).click();
+              await assertVersionState(page, ['正在查看 · 第 2 版', '候选稿', '最新修订']);
+              await closeVersions(page);
               const body = page.getByRole('textbox', { name: '正文', exact: true });
               const text = `${await body.inputValue()}\n${'中文长段落与连续英文LongUnbrokenManuscriptTitle'.repeat(12)}`;
               await page.getByRole('textbox', { name: '标题', exact: true }).fill('连续英文LongUnbrokenManuscriptTitle'.repeat(8));

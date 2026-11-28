@@ -119,8 +119,8 @@ onScopeDispose(() => {
         <span class="wr-toolbar-label">稿件与版本</span>
         <span class="wr-toolbar-current-version" aria-hidden="true">
           {{ revision ? `第 ${revision} 版` : '选择稿件' }}
-          <span v-if="status === '采用稿'"> · 采用</span>
           <span v-if="historical || sceneHistorical"> · 历史</span>
+          <span v-else-if="status === '采用稿'"> · 采用</span>
         </span>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
       </button>

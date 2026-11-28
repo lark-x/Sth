@@ -426,7 +426,9 @@ test('Vue long-form writing in the normal shell', { timeout: 180_000 }, async t 
     assert.equal(await page.getByRole('button', { name: '采纳候选稿', exact: true }).isDisabled(), true);
     assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted, undefined);
     await click(page, '读取最新场景后重新核对');
-    await page.locator('.wr-heading').getByText('已更新的场景 · 第 2 版', { exact: true }).waitFor();
+    const scope = page.locator('.wr-heading .wr-review-scope');
+    await scope.getByText('已更新的场景', { exact: true }).waitFor();
+    await scope.getByText('场景第 2 版 · 主线', { exact: true }).waitFor();
     await click(page, '采纳候选稿');
     await expectHeading(page, '已更新的场景');
     const saved = await invoke('scene.read', { sceneId: scene.sceneId });

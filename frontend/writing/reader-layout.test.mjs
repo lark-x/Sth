@@ -9,6 +9,21 @@ const output = resolve('frontend/.artifacts/reader-layout/verified');
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const body = page => page.locator('#passage-body');
 
+async function assertVersionState(page, expected) {
+  const state = page.locator('.wr-version-state');
+  await state.waitFor();
+  assert.equal(await state.isVisible(), true);
+  const labels = state.locator(':scope > span');
+  assert.deepEqual((await labels.allTextContents()).map(value => value.trim()), expected);
+  for (let index = 0; index < expected.length; index++)
+    assert.equal(await labels.nth(index).isVisible(), true, expected[index]);
+}
+
+async function closeVersions(page) {
+  await page.keyboard.press('Escape');
+  await page.locator('.wr-versions-menu').waitFor({ state: 'hidden' });
+}
+
 async function retryLayout(retry) {
   return retry.evaluate(element => {
     const rect = element.getBoundingClientRect();
@@ -154,8 +169,18 @@ test('the compact reader preserves manuscript identity across layout, edit and e
             await path.getByText(fixture.project.title, { exact: true }).waitFor();
           }
           assert.equal(await page.getByRole('heading', { level: 1, name: fixture.drafts[0].title, exact: true }).count(), 1);
-          assert.equal(await page.locator('.wr-toolbar-label').textContent(), '稿件与版本');
-          assert.match(await status.innerText(), /第 1 版\s+采用稿\s+旧版 · 最新第 2 版/);
+          assert.equal(await picker.isVisible(), true);
+          assert.equal(await picker.innerText(), '第 1 版 · 历史');
+          assert.equal(await picker.getAttribute('aria-describedby'), await status.getAttribute('id'));
+          assert.match(await status.textContent(), /第 1 版\s*采用稿\s*旧版 · 最新第 2 版/);
+          const toolbarLayout = await page.locator('.wr-reader-toolbar').evaluate(element => {
+            const centers = ['.ms-view-controls', '.wr-toolbar-identity', '.wr-toolbar-actions'].map(selector => {
+              const rect = element.querySelector(selector).getBoundingClientRect();
+              return rect.top + rect.height / 2;
+            });
+            return { height: element.getBoundingClientRect().height, rowSpread: Math.max(...centers) - Math.min(...centers) };
+          });
+          assert.ok(toolbarLayout.rowSpread <= 1 && toolbarLayout.height <= 64, `single toolbar row: ${JSON.stringify(toolbarLayout)}`);
           assert.equal(await revision.inputValue(), '1');
           assert.equal(await revision.isVisible(), false);
           const firstLine = await body(page).evaluate(element => {
@@ -192,7 +217,8 @@ test('the compact reader preserves manuscript identity across layout, edit and e
           }
           await revision.waitFor();
           assert.equal(await page.locator('.wr-version-title').textContent(), fixture.drafts[0].title);
-          assert.match(await revision.locator('option[value="1"]').innerText(), /采用稿/);
+          await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 2 版']);
+          assert.equal(await revision.locator('option[value="1"]').innerText(), '第 1 版 · 正在查看 · 章节采用');
           if (mobile) {
             assert.equal(await page.locator('.wr-reader-path').isVisible(), false);
             assert.equal(await page.locator('.wr-version-path').isVisible(), true);
@@ -203,7 +229,11 @@ test('the compact reader preserves manuscript identity across layout, edit and e
           await revision.selectOption('2');
           await page.waitForURL(fixture.links.newDraft);
           await ready(page, body(page));
-          assert.match(await status.innerText(), /第 2 版\s+候选稿\s+最新修订/);
+          assert.match(await status.textContent(), /第 2 版\s*候选稿\s*最新修订/);
+          assert.equal(await picker.innerText(), '第 2 版');
+          await picker.click();
+          await assertVersionState(page, ['正在查看 · 第 2 版', '候选稿', '最新修订']);
+          await closeVersions(page);
 
           await page.goto(fixture.links.oldPassage);
           const mark = body(page).locator('mark');
@@ -235,10 +265,13 @@ test('the compact reader preserves manuscript identity across layout, edit and e
           assert.equal(await evidence.getAttribute('aria-controls'), await panel.getAttribute('id'));
           await shot('evidence-open');
           await panel.press('Escape');
-          assert.equal(await panel.count(), 0);
           assert.equal(await evidence.getAttribute('aria-expanded'), 'false');
           assert.equal(await evidence.evaluate(element => document.activeElement === element), true);
           assert.ok(Math.abs(await page.evaluate(() => scrollY) - scrollBefore) <= 1);
+          assert.equal(await page.locator('[inert]:not(.evidence-panel)').count(), 0);
+          assert.equal(await page.locator('.evidence-panel').getAttribute('aria-hidden'), 'true');
+          await page.locator('.evidence-panel').waitFor({ state: 'hidden' });
+          assert.equal(await panel.count(), 0);
 
           await page.goto(fixture.links.compare);
           const left = page.getByRole('article', { name: '左稿', exact: true });
@@ -298,7 +331,10 @@ test('the compact reader preserves manuscript identity across layout, edit and e
     await body(page).waitFor();
     assert.equal(await body(page).textContent(), fixture.bodies.old);
     assert.equal((await workspace.invoke('draft.read', { draftId, revision: 1 })).body, fixture.bodies.old);
-    assert.match(await page.locator('.wr-toolbar-meta').innerText(), /第 1 版\s+采用稿\s+旧版 · 最新第 3 版/);
+    assert.match(await page.locator('.wr-toolbar-meta').textContent(), /第 1 版\s*采用稿\s*旧版 · 最新第 3 版/);
+    await button(page, '稿件与版本').click();
+    await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 3 版']);
+    await closeVersions(page);
   });
   const servedBundle = await workspace.inspectServedBundle();
   assert.equal(servedBundle.sha256, workspace.capturedBuild.bundle.sha256);
@@ -343,7 +379,11 @@ test('scene adoption labels follow the selected scene revision', { timeout: 45_0
   await body(page).waitFor();
   assert.equal(await body(page).textContent(), second.body);
   assert.equal(await region.getAttribute('aria-label'), '当前采用稿');
-  assert.equal(await toolbar.getByText('采用稿', { exact: true }).isVisible(), true);
+  assert.equal(await toolbar.getByText('采用稿', { exact: true }).count(), 1);
+  assert.equal(await button(page, '稿件与版本').innerText(), '第 1 版 · 采用');
+  await button(page, '稿件与版本').click();
+  await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订']);
+  await closeVersions(page);
   const currentComparison = await compareFromScene();
 
   await heading.getByRole('link', { name: `返回${scene.title}`, exact: true }).click();
@@ -354,12 +394,20 @@ test('scene adoption labels follow the selected scene revision', { timeout: 45_0
   assert.equal(await body(page).textContent(), first.body);
   const historicalLabel = `场景第 ${historical.revision} 版采用`;
   const historicalRegion = await region.getAttribute('aria-label');
-  const historicalToolbar = await toolbar.getByText(historicalLabel, { exact: true }).isVisible();
+  assert.equal(await toolbar.getByText(historicalLabel, { exact: true }).count(), 1);
+  assert.equal(await button(page, '稿件与版本').innerText(), '第 1 版 · 历史');
+  await button(page, '稿件与版本').click();
+  await assertVersionState(page, ['正在查看 · 第 1 版', historicalLabel, '最新修订']);
+  const historicalToolbar = await page.locator('.wr-version-state').getByText(historicalLabel, { exact: true }).isVisible();
+  await closeVersions(page);
   const historicalComparison = await compareFromScene();
 
   await left.getByRole('link', { name: `${first.title} · 第 ${first.revision} 版`, exact: true }).click();
   await body(page).waitFor();
-  assert.equal(await toolbar.getByText('候选稿', { exact: true }).isVisible(), true);
+  assert.equal(await toolbar.getByText('候选稿', { exact: true }).count(), 1);
+  await button(page, '稿件与版本').click();
+  await assertVersionState(page, ['正在查看 · 第 1 版', '候选稿', '最新修订']);
+  await closeVersions(page);
   assert.deepEqual({ currentComparison, historicalRegion, historicalToolbar, historicalComparison }, {
     currentComparison: { sceneRevision: null, scope: [`场景第 ${current.revision} 版 · 当前采用状态`], left: '候选稿', right: '采用稿' },
     historicalRegion: historicalLabel,

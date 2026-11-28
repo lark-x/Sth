@@ -11,6 +11,19 @@ const artifacts = resolve('frontend/.artifacts/writing-reader');
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const heading = (page, title) => page.getByRole('heading', { level: 1, name: title, exact: true });
 const body = page => page.getByRole('textbox', { name: '正文', exact: true });
+async function assertVersionState(page, expected) {
+  const state = page.locator('.wr-version-state');
+  await state.waitFor();
+  assert.equal(await state.isVisible(), true);
+  const labels = state.locator(':scope > span');
+  assert.deepEqual((await labels.allTextContents()).map(value => value.trim()), expected);
+  for (let index = 0; index < expected.length; index++)
+    assert.equal(await labels.nth(index).isVisible(), true, expected[index]);
+}
+async function closeVersions(page) {
+  await page.keyboard.press('Escape');
+  await page.locator('.wr-versions-menu').waitFor({ state: 'hidden' });
+}
 async function open(t, origin, path, viewport = { width: 390, height: 844 }) {
   const page = await openBrowser(t, origin, viewport);
   await page.goto(path);
@@ -126,12 +139,17 @@ test('manuscript reading and revision through the real shell and isolated API', 
       }
       assert.ok(typography.width <= typography.font * 38, JSON.stringify(typography));
       const toolbar = page.getByRole('navigation', { name: '读写工具', exact: true });
-      assert.equal(await toolbar.locator('.wr-toolbar-label').innerText(), '稿件与版本');
+      const picker = toolbar.getByRole('button', { name: '稿件与版本', exact: true });
+      assert.equal(await picker.isVisible(), true);
+      assert.equal(await picker.innerText(), '第 1 版 · 采用');
+      assert.equal(await picker.getAttribute('aria-describedby'), await toolbar.locator('.wr-toolbar-meta').getAttribute('id'));
       assert.ok(typography.pickerWidth >= 28, JSON.stringify(typography));
       await button(page, '稿件与版本').click();
       assert.equal(await page.locator('.wr-version-title').innerText(), draft.title);
-      assert.match(await toolbar.locator('.wr-toolbar-meta').innerText(), /第 1 版/);
-      await page.keyboard.press('Escape');
+      assert.match(await toolbar.locator('.wr-toolbar-meta').textContent(), /第 1 版/);
+      await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订']);
+      await closeVersions(page);
+      await firstScreenMark(page);
       assert.ok((await toolbar.boundingBox()).height < viewport.height * .12);
       if (viewport.width <= 390) assert.equal(await page.getByRole('button', { name: '返回文稿列表', exact: true }).count(), 1);
       await assertFitsViewport(page);
@@ -196,8 +214,10 @@ test('manuscript reading and revision through the real shell and isolated API', 
     assert.equal(await menu.isVisible(), false);
     assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
     await trigger.click();
-    await page.locator('.wr-toolbar-label').click();
+    await button(page, '稿件与版本').click();
     assert.equal(await menu.isVisible(), false);
+    await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订']);
+    await closeVersions(page);
     await trigger.click();
     await menu.getByRole('link').first().click();
     await heading(page, scene.title).waitFor();
@@ -229,15 +249,21 @@ test('manuscript reading and revision through the real shell and isolated API', 
     await invoke('draft.revise', { draftId: candidate.draftId, expectedRevision: 1, body: '第二版，她仍留在北岸。' });
     const page = await open(t, origin, `/drafts/${candidate.draftId}?revision=1`);
     await button(page, '稿件与版本').click();
+    await assertVersionState(page, ['正在查看 · 第 1 版', '候选稿', '最新修订 · 第 2 版']);
     await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption('2');
     await page.waitForFunction(() => document.querySelector('#passage-body')?.textContent === '第二版，她仍留在北岸。');
     await button(page, '稿件与版本').click();
+    await assertVersionState(page, ['正在查看 · 第 2 版', '候选稿', '最新修订']);
     await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).selectOption('1');
+    await page.locator('.wr-versions-menu').waitFor({ state: 'hidden' });
     await more(page, '采纳此版本');
     await heading(page, '采纳候选稿').waitFor();
     await button(page, '采纳候选稿').click();
     await heading(page, sourceScene.title).waitFor();
     assert.equal((await invoke('scene.read', { sceneId: sourceScene.sceneId })).adopted.revision, 1);
+    await button(page, '稿件与版本').click();
+    await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 2 版']);
+    await closeVersions(page);
     await more(page, '建立 IF 分支');
     await heading(page, '建立 IF 分支').waitFor();
     await page.getByRole('textbox', { name: '分歧点', exact: true }).fill('在离岸前转身。');

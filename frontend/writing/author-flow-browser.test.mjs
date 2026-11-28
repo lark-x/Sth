@@ -17,6 +17,21 @@ async function selectedTitle(page) {
   return page.locator('[aria-label="切换稿件"]').evaluate(select => select.selectedOptions[0]?.textContent.trim());
 }
 
+async function assertVersionState(page, expected) {
+  const state = page.locator('.wr-version-state');
+  await state.waitFor();
+  assert.equal(await state.isVisible(), true);
+  const labels = state.locator(':scope > span');
+  assert.deepEqual((await labels.allTextContents()).map(value => value.trim()), expected);
+  for (let index = 0; index < expected.length; index++)
+    assert.equal(await labels.nth(index).isVisible(), true, expected[index]);
+}
+
+async function closeVersions(page) {
+  await page.keyboard.press('Escape');
+  await page.locator('.wr-versions-menu').waitFor({ state: 'hidden' });
+}
+
 test('author reading, inline revision and comparison keep manuscript identity and navigation', { timeout: 240_000 }, async t => {
   const workspace = await startManuscriptWorkspace();
   t.after(workspace.close);
@@ -73,11 +88,15 @@ test('author reading, inline revision and comparison keep manuscript identity an
         await page.locator('#passage-body').waitFor();
         assert.equal(await selectedTitle(page), '登船之前的一封信');
         assert.equal(await page.getByRole('heading', { level: 1, name: '登船之前的一封信', exact: true }).count(), 1);
-        assert.equal(await page.locator('.wr-toolbar-label').textContent(), '稿件与版本');
+        const picker = button(page, '稿件与版本');
+        assert.equal(await picker.isVisible(), true);
+        assert.equal(await picker.innerText(), '第 2 版');
+        assert.equal(await picker.getAttribute('aria-describedby'), await page.locator('.wr-toolbar-meta').getAttribute('id'));
         await button(page, '稿件与版本').click();
         assert.equal(await page.locator('.wr-version-title').textContent(), '登船之前的一封信');
         assert.equal(await page.getByRole('combobox', { name: '切换稿件版本', exact: true }).inputValue(), '2');
-        await page.keyboard.press('Escape');
+        await assertVersionState(page, ['正在查看 · 第 2 版', '候选稿', '最新修订']);
+        await closeVersions(page);
         assert.equal((await invoke('draft.read', { draftId: draft.draftId })).body, revised);
         assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted.revision, 1);
         await button(page, '编辑').click();
@@ -118,6 +137,7 @@ test('author reading, inline revision and comparison keep manuscript identity an
         const { scene, draft, chapterHref, sceneHref } = await fixture(true);
         const page = await open(t, sceneHref);
         await button(page, '稿件与版本').click();
+        await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 2 版']);
         await page.getByRole('combobox', { name: '切换场景版本', exact: true }).selectOption('1');
         await page.locator('#passage-body').waitFor();
         assert.equal(address(page).searchParams.get('returnTo'), chapterHref);
@@ -166,6 +186,9 @@ test('author reading, inline revision and comparison keep manuscript identity an
         await page.getByRole('combobox', { name: '切换稿件', exact: true }).selectOption(`${draft.draftId}@1`);
         await page.locator('#passage-body').waitFor();
         assert.equal(address(page).searchParams.get('returnTo'), sceneHref);
+        await button(page, '稿件与版本').click();
+        await assertVersionState(page, ['正在查看 · 第 1 版', '采用稿', '最新修订 · 第 3 版']);
+        await closeVersions(page);
         await button(page, '更多').click();
         assert.equal(await page.locator('.wr-more-menu a').first().getAttribute('href'), sceneHref);
         assert.equal((await invoke('scene.read', { sceneId: scene.sceneId })).adopted.revision, 1);

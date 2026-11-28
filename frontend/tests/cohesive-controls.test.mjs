@@ -38,6 +38,16 @@ test('shared controls keep readable actions and writing typography across lazy-l
           await page.getByRole('link', { name: '查看资料', exact: true }).click();
           await page.locator('.sources-route:not([aria-busy=true])').waitFor();
           const action = page.getByRole('link', { name: '新建资料', exact: true });
+          for (const name of ['sources-filter-disclosure', 'sources-type-menu', 'sources-workspace']) {
+            const trigger = page.locator(`.${name}>summary`);
+            await trigger.click();
+            const panel = page.locator(`.${name}>.sources-toolbar-panel`);
+            const box = await panel.boundingBox();
+            assert.ok(box && box.x >= 0 && box.x + box.width <= 320, JSON.stringify({ name, box }));
+            await page.keyboard.press('Escape');
+            assert.equal(await trigger.evaluate(node => node.parentElement.open), false);
+            assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
+          }
           const contrast = await action.evaluate(node => {
             const css = getComputedStyle(node);
             const lum = rgb => rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)

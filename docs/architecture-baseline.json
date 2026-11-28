@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "1321c7da9424e0e0b055c709d611fad44c2ea9b08bb9c41ba455eca5e94d9c05",
+  "inputSha256": "5182caaa82ff8ac8ac12743e4b9e7c4358cc59637cec3f08b6c9c15955334d67",
   "inputs": [
     {
       "file": "package.json",
@@ -84,11 +84,11 @@
         "files": 3
       },
       "frontend/source/css": {
-        "bytes": 81651,
+        "bytes": 93084,
         "complexity": 0,
         "dependencies": 0,
         "duplicates": 0,
-        "files": 10
+        "files": 11
       },
       "frontend/source/js": {
         "bytes": 427,
@@ -119,25 +119,25 @@
         "files": 33
       },
       "frontend/source/vue": {
-        "bytes": 408243,
+        "bytes": 428093,
         "complexity": 58,
         "dependencies": 58,
         "duplicates": 58,
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 635029,
-        "complexity": 33,
-        "dependencies": 33,
-        "duplicates": 33,
-        "files": 33
+        "bytes": 683239,
+        "complexity": 36,
+        "dependencies": 36,
+        "duplicates": 36,
+        "files": 36
       },
       "scripts/source/mjs": {
-        "bytes": 189044,
-        "complexity": 10,
-        "dependencies": 10,
-        "duplicates": 10,
-        "files": 10
+        "bytes": 201797,
+        "complexity": 11,
+        "dependencies": 11,
+        "duplicates": 11,
+        "files": 11
       },
       "scripts/source/py": {
         "bytes": 47017,
@@ -168,7 +168,7 @@
         "files": 61
       },
       "tests/test/mjs": {
-        "bytes": 173943,
+        "bytes": 174149,
         "complexity": 10,
         "dependencies": 10,
         "duplicates": 10,
@@ -182,11 +182,11 @@
         "files": 24
       },
       "web/source/css": {
-        "bytes": 17816,
+        "bytes": 27149,
         "complexity": 0,
         "dependencies": 0,
         "duplicates": 0,
-        "files": 1
+        "files": 3
       },
       "web/source/html": {
         "bytes": 564,
@@ -983,21 +983,21 @@
       "file": "frontend/HomePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 12206,
-      "sha256": "a1ff9b4c1f1beca082068661b30cf066e56d906a8096baecc316df57e9668e4e",
+      "bytes": 11428,
+      "sha256": "abd207f2a5ce395d2a4eb45e658f8ee2dd337275153d5e5074e42460096183a2",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 11,
-        "total": 38,
+        "functions": 12,
+        "total": 41,
         "max": 15,
         "hotspots": [
           {
             "name": "save",
-            "line": 39,
+            "line": 41,
             "score": 15
           }
         ]
@@ -1085,8 +1085,8 @@
       "file": "frontend/characters/CharacterEditor.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 7799,
-      "sha256": "8967a706f4bd01500c13e185da9fbed2ebb7058108c26c0aeb7ce9c981a1e3db",
+      "bytes": 8347,
+      "sha256": "b1172302ce833e0a1756629642c3533e8ebb2745786bb2887ef8a5bee8d532c0",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1094,13 +1094,13 @@
       ],
       "complexity": {
         "functions": 21,
-        "total": 44,
-        "max": 25,
+        "total": 47,
+        "max": 28,
         "hotspots": [
           {
             "name": "renderForm",
-            "line": 38,
-            "score": 25
+            "line": 39,
+            "score": 28
           }
         ]
       }
@@ -1127,8 +1127,8 @@
       "file": "frontend/characters/CharacterIndex.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 4249,
-      "sha256": "369d9b881792e284bbdadeaf0f3a06a9323823abb945bf63333cf827f08371e3",
+      "bytes": 4363,
+      "sha256": "ffaac93482adbbea6b9e901e385edd6b5d1bee0a2616fe2cbbc2439fd6508d1b",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1145,8 +1145,8 @@
       "file": "frontend/characters/CharacterPage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 8426,
-      "sha256": "af0155bf8735325057b66ba5bff7007aaa2c5dcfba4885340fe6914490b77f0d",
+      "bytes": 8501,
+      "sha256": "77d2435ef59723ac8875d6d557a6a89f82309b76d137f91ece6a1e4c0a909bba",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1159,7 +1159,7 @@
         "hotspots": [
           {
             "name": "load",
-            "line": 51,
+            "line": 52,
             "score": 22
           }
         ]
@@ -1211,8 +1211,8 @@
       "file": "frontend/characters/characters.css",
       "kind": "source",
       "format": "css",
-      "bytes": 7411,
-      "sha256": "52e5bb90c05b222eec6b1f3724fd20207ec2a17732e6136f705ff339411b7354",
+      "bytes": 7965,
+      "sha256": "947e2ecc780bc5aeb353c00f2391773836147dfcfa5df9b6c70d5cb5dc361c82",
       "analysis": []
     },
     {
@@ -1237,8 +1237,8 @@
       "file": "frontend/connections/ConnectionsRoute.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 12503,
-      "sha256": "be9758030a3602e088cec60a76a1535a12e0d37ebbafdc95436812060d15bb4f",
+      "bytes": 13247,
+      "sha256": "c15676b52b1e17c3639e5fa083402e5af8738e79c6c1ad135d512bee9c882fd2",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1255,8 +1255,8 @@
       "file": "frontend/connections/CopyCommand.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 2749,
-      "sha256": "4c362420a81ea2211e415735dfaca5f61fc7c0e8e98265a1e3f5b46667959bb0",
+      "bytes": 2750,
+      "sha256": "d8a9ebde20a7424c514e0492c3909010c3258e9cd30c48bbefbe29ef6b785cbe",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1269,7 +1269,7 @@
         "hotspots": [
           {
             "name": "copy",
-            "line": 26,
+            "line": 27,
             "score": 12
           }
         ]
@@ -1279,8 +1279,8 @@
       "file": "frontend/connections/InstallGuide.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 9936,
-      "sha256": "fd639a93793b1528c744554c58516312037463e7d4d365807314b4429e0121ed",
+      "bytes": 9854,
+      "sha256": "7a7a54f4397ca809959b872eb3bc8a49c5339e3a8ce83bcfb0a9c16b950d4c47",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1363,8 +1363,8 @@
       "file": "frontend/context/ContextRoute.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 13203,
-      "sha256": "13ea73bb358ecf32f289c6054764aebac64b643bd4bc0b5f97952125576b07ce",
+      "bytes": 14271,
+      "sha256": "e8bdcaa38d03e24e5fdf3d1251f1d9341a6428fdc121fd57c3a5a6a8d75d2423",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1377,22 +1377,22 @@
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 49,
+            "line": 50,
             "score": 12
           },
           {
             "name": "load",
-            "line": 64,
+            "line": 65,
             "score": 15
           },
           {
             "name": "inspect",
-            "line": 87,
+            "line": 88,
             "score": 13
           },
           {
             "name": "write",
-            "line": 106,
+            "line": 107,
             "score": 15
           }
         ]
@@ -1402,8 +1402,8 @@
       "file": "frontend/context/PrepareWriting.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 13841,
-      "sha256": "3a9568c6ab7ead541faad45699a4bf1ba530e05810f8cdfa232d610cde30504f",
+      "bytes": 13553,
+      "sha256": "6106ef93cebb6054c0a03018bc6ff2948e94d5be420d2dad95ec2d2970e472cc",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1421,12 +1421,12 @@
           },
           {
             "name": "prepareError",
-            "line": 86,
+            "line": 87,
             "score": 15
           },
           {
             "name": "submit",
-            "line": 98,
+            "line": 99,
             "score": 45
           }
         ]
@@ -1436,8 +1436,8 @@
       "file": "frontend/diary/DiaryIndex.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 6514,
-      "sha256": "f130327f0c0ecd17c4d287665b7391d075205ac18306fd0e679a477907765759",
+      "bytes": 6619,
+      "sha256": "e16fd473d43ba84bad6ebe6677a6c576f2028ca5603fb1fd137fddd568cfb8b3",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1460,8 +1460,8 @@
       "file": "frontend/diary/DiaryPage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 17904,
-      "sha256": "647089cc9f2fdec08902a29ec289405e8133d8e70629ffff68127e58f276df10",
+      "bytes": 18196,
+      "sha256": "adc6a2a492838235401d3e4713352854a24012bac2b75b654dbbb6f44cb93228",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1496,8 +1496,8 @@
       "file": "frontend/diary/SourcePins.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 3481,
-      "sha256": "db53cbc66232d1450301a5e7d8db7632e6f61570b20736f0fb9357bd7eb858e6",
+      "bytes": 3587,
+      "sha256": "b6222b3bc56b75fdb4037043f56fa0918bdcea136017ccace255778dfbf7ab6a",
       "analysis": [
         "complexity",
         "dependencies",
@@ -1543,8 +1543,8 @@
       "file": "frontend/diary/diary.css",
       "kind": "source",
       "format": "css",
-      "bytes": 14108,
-      "sha256": "cc65b19d3c2fc906b8095abee3e57b708de80ad2f70ccbfb4c85e4c788dd4da4",
+      "bytes": 12226,
+      "sha256": "c1b5eddb7349d312cb6eada947b5feb5254dfc6c66e008482ce9e7a9ff1a6af6",
       "analysis": []
     },
     {
@@ -1629,6 +1629,14 @@
       }
     },
     {
+      "file": "frontend/home.css",
+      "kind": "source",
+      "format": "css",
+      "bytes": 7043,
+      "sha256": "d69dc831021a44a57e9d03792a61d6436dc9e57ee5fb2e2ae6ac1dd62049f471",
+      "analysis": []
+    },
+    {
       "file": "frontend/main.ts",
       "kind": "source",
       "format": "ts",
@@ -1694,21 +1702,21 @@
       "file": "frontend/manuscript/ManuscriptFrame.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 8556,
-      "sha256": "4f820aba5b83abdf48f148cbffb60e3885d86759ae6137852251bc41989f34eb",
+      "bytes": 10061,
+      "sha256": "de488c205942e87625e50b0c7cccd06626241a829f1f38fb25763887c1e5214b",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 23,
-        "total": 55,
+        "functions": 27,
+        "total": 65,
         "max": 16,
         "hotspots": [
           {
             "name": "handleLinks",
-            "line": 139,
+            "line": 165,
             "score": 16
           }
         ]
@@ -1736,8 +1744,8 @@
       "file": "frontend/manuscript/frame.css",
       "kind": "source",
       "format": "css",
-      "bytes": 5747,
-      "sha256": "db76a1ce19850a8c5bca1659c30c43339ba9a46d9872502a83a4ce1494e63b0c",
+      "bytes": 5963,
+      "sha256": "83f5455f190a11436a115180472b053b1f16ec5afa56dc4f31fa6b539ce33858",
       "analysis": []
     },
     {
@@ -1783,24 +1791,24 @@
       "file": "frontend/manuscript/library-panels.css",
       "kind": "source",
       "format": "css",
-      "bytes": 10766,
-      "sha256": "5439bc6de25147d7c7113701d6f0d102b79ef7d1ce892b8bf74b77962ff13c53",
+      "bytes": 11355,
+      "sha256": "9b6899a806ae56811287a279fee67cabb354caa93a69e15f0601f0bcbfd1d739",
       "analysis": []
     },
     {
       "file": "frontend/manuscript/library-panels.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 53024,
-      "sha256": "e7eb4e536c3d485c1575c890277770eaa68b809959008fbd4a79765b08b75ac4",
+      "bytes": 62514,
+      "sha256": "b5573a5196df7f2145cb6dde3fdd55b7de28611f23955656581ad0176ba1097c",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 132,
-        "total": 81,
+        "functions": 170,
+        "total": 103,
         "max": 11,
         "hotspots": []
       }
@@ -2011,8 +2019,8 @@
       "file": "frontend/sources/SourceAdoption.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 3699,
-      "sha256": "56cb8d83714b3e2ff6505d099d554ff5f59745faa2b394e9437138663124db5b",
+      "bytes": 3867,
+      "sha256": "0294c58644b42a3fe3f347271b9b30c1c620fb3e36577873e6157c081941781e",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2029,8 +2037,8 @@
       "file": "frontend/sources/SourceEditor.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 8054,
-      "sha256": "0a828b6c1e5e2fe221c697d34ae0a03db7e6ecdac8a34a9bb8f9e01d4f4bbe88",
+      "bytes": 8344,
+      "sha256": "37045e7020db72936388bd3396841b38abf53532c1c27d51872c93b6725eb6e3",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2047,8 +2055,8 @@
       "file": "frontend/sources/SourceImpact.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 5049,
-      "sha256": "74c10f772e3be79f69646ab783fe4107b181fd6d633745ab6ee759bd581af454",
+      "bytes": 5176,
+      "sha256": "e67a9cc8bd09122a7695f80a62c93d90f0dcada8bfbd5c2affa1ee55a2d9031e",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2065,8 +2073,8 @@
       "file": "frontend/sources/SourcePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 16857,
-      "sha256": "36e555d5cc3a325938323c87217041fea3ebb162b64540fc8f032de52188db35",
+      "bytes": 16932,
+      "sha256": "12cac38157f3fcc2a531a800bb8f3c5f0dd87041687ef9e7421089eabcadb6c1",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2079,7 +2087,7 @@
         "hotspots": [
           {
             "name": "load",
-            "line": 89,
+            "line": 90,
             "score": 71
           }
         ]
@@ -2089,8 +2097,8 @@
       "file": "frontend/sources/SourcePassage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 3256,
-      "sha256": "cfc0ed97350fbea4e583a14e8ed60dcf714a3009d255e5d899b233e40f086c92",
+      "bytes": 3321,
+      "sha256": "4a4b7d7dc0e4008b5f71c423b0389fb4c9e34ce0e1e2e732e023510cc379f601",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2103,7 +2111,7 @@
         "hotspots": [
           {
             "name": "choose",
-            "line": 19,
+            "line": 20,
             "score": 12
           }
         ]
@@ -2113,16 +2121,16 @@
       "file": "frontend/sources/SourcesIndex.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 7137,
-      "sha256": "e142f9ed9cd02292404d383a79f1e8abce7781258f6bafa0951f57b843868ffe",
+      "bytes": 10160,
+      "sha256": "5e3be85fbc488ac5ccfd79a1dd17ee1cf6ac79a082e903c50a0db232e798eece",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 8,
-        "total": 18,
+        "functions": 14,
+        "total": 30,
         "max": 7,
         "hotspots": []
       }
@@ -2221,8 +2229,8 @@
       "file": "frontend/sources/sources.css",
       "kind": "source",
       "format": "css",
-      "bytes": 7617,
-      "sha256": "0073e3cb0b59717d3dd34bdc560f7bd502bdbc43f3d46c41e52a1e24e7caf5a7",
+      "bytes": 12103,
+      "sha256": "b4f2a3985b34eac449bae48d95f38ccfd8a58f1b6842ffdc56645a9c62dd8beb",
       "analysis": []
     },
     {
@@ -2253,16 +2261,16 @@
       "file": "frontend/styles.css",
       "kind": "source",
       "format": "css",
-      "bytes": 6673,
-      "sha256": "9c0ea1ebe806082d112b99a8aaa3ad2078f76be5cf3decc262ebc242ae353c88",
+      "bytes": 2056,
+      "sha256": "50cec13eb5aace0ff3958890234b60863c0cc77a89e7eec3b6519376e3069b38",
       "analysis": []
     },
     {
       "file": "frontend/tasks/AttemptDetails.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 1208,
-      "sha256": "5d4a3ef26fae3c8b1bd829c53204f2a51184c8c7c438e960d2faa6221898ec4c",
+      "bytes": 1415,
+      "sha256": "fa3af689aeeb92ff23f6fd639ef480f8ace60393c77ecc1a02983a03c058dfa3",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2279,8 +2287,8 @@
       "file": "frontend/tasks/JobAction.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 1293,
-      "sha256": "b4601f6173d103c27e070810fdb86596f7b0d1322f986ebe22a4a11fb82dcd8c",
+      "bytes": 1231,
+      "sha256": "bd4356511259b329b39881b3e383951b42b42ffb02baccaaa858ff4a35b7199f",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2297,8 +2305,8 @@
       "file": "frontend/tasks/TasksRoute.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 15950,
-      "sha256": "48091970eca572d75be21d861a2f981ccc72c6335c6c33af3c84990d58d58b93",
+      "bytes": 16466,
+      "sha256": "133a16ccd8fe922b05e05d9908fd984bb0088735e1efce92f94f9b527d809f2b",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2311,7 +2319,7 @@
         "hotspots": [
           {
             "name": "load",
-            "line": 45,
+            "line": 46,
             "score": 16
           }
         ]
@@ -2417,17 +2425,53 @@
       "file": "frontend/tests/characters-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 36549,
-      "sha256": "3ee8082557b123379c42e80790cfd094ac773b0df9335d5a49b4213661a74fe3",
+      "bytes": 36747,
+      "sha256": "a933212a89856152c0dad7c58abe30c0e176edb4fe85a82f984b167115b87087",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 69,
+        "functions": 70,
         "total": 30,
         "max": 7,
+        "hotspots": []
+      }
+    },
+    {
+      "file": "frontend/tests/cohesive-controls.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 4903,
+      "sha256": "31914767540cb7b9b06537c6dfe63457912012340c1fbfc7f5ea516b4b63f6ce",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 16,
+        "total": 5,
+        "max": 3,
+        "hotspots": []
+      }
+    },
+    {
+      "file": "frontend/tests/cohesive-motion.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 5049,
+      "sha256": "9903944166f2837b57350ae1a16c469d9f9cf0b9e5aecd19fad2f9b391318969",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 16,
+        "total": 5,
+        "max": 3,
         "hotspots": []
       }
     },
@@ -2603,22 +2647,22 @@
       "file": "frontend/tests/secondary-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 16265,
-      "sha256": "a3380003f8ae773619e5c296177394d099afd678e071b049e1b1fbc2f6b910cc",
+      "bytes": 17043,
+      "sha256": "3442ca636aa64090e7c9d747f46ec39f3b1d724641d7a2f7f0201a9e8e024ac1",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 43,
-        "total": 74,
-        "max": 38,
+        "functions": 47,
+        "total": 85,
+        "max": 48,
         "hotspots": [
           {
             "name": "<anonymous>",
             "line": 172,
-            "score": 38
+            "score": 48
           }
         ]
       }
@@ -2651,15 +2695,15 @@
       "file": "frontend/tests/sources-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 33384,
-      "sha256": "0f58a542abed5fabb712c9cdc343021eeb43303d78744fccf1b874c505889e8e",
+      "bytes": 33553,
+      "sha256": "a2f3a6db0b101d890c3587bf75738b3692fb40f765ca4f7bde13b07cb8cc3a42",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 64,
+        "functions": 65,
         "total": 37,
         "max": 10,
         "hotspots": []
@@ -2705,8 +2749,8 @@
       "file": "frontend/tests/writing-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 39666,
-      "sha256": "257d40565128a0ebd405ce5a59f6f6a5261c5046944b125f46d6d10344adf417",
+      "bytes": 39778,
+      "sha256": "85da96bd25da3dc78e13d74aa95fffdbb0a4225ed343f24bfc767c1c112535be",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2719,7 +2763,7 @@
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 522,
+            "line": 524,
             "score": 17
           }
         ]
@@ -2737,8 +2781,8 @@
       "file": "frontend/ui/Button.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 651,
-      "sha256": "a6a73a28ed0d20ac445147c0945bb64422df8c6ed2fdcc6efcfd0bc55a0c163c",
+      "bytes": 758,
+      "sha256": "ba8e4a9a9fa355b34aaf607611d7a40ffff8bf5a1d7335f90478d2e61780e459",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2755,16 +2799,16 @@
       "file": "frontend/ui/CreateMenu.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 1950,
-      "sha256": "957528dbb7a0fb91fe2d22ac527d078a63f26237c37cc5b713ffc3bfa37d6bfe",
+      "bytes": 2561,
+      "sha256": "d6559d7d34bee234b882e9bd76f91d1bc37b4ebe83065e5c86b4222e64eea2f3",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 3,
-        "total": 5,
+        "functions": 4,
+        "total": 10,
         "max": 5,
         "hotspots": []
       }
@@ -2773,16 +2817,16 @@
       "file": "frontend/ui/ui.css",
       "kind": "source",
       "format": "css",
-      "bytes": 2471,
-      "sha256": "82ba170a20393c6507b10055b61355f1d8528a32b9f4579b962bde07afb4b903",
+      "bytes": 1779,
+      "sha256": "3b1afccbd21f67deb1eec57d992cea3eb2ada3067feb1756648b912c22d948ac",
       "analysis": []
     },
     {
       "file": "frontend/workspace/ContinueShelf.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 4114,
-      "sha256": "0ec1ab2df7d5a525a49d1be475c8e9cd5f7b7569e0db9641d7874222a1d83e64",
+      "bytes": 4161,
+      "sha256": "d4eaa0d2bd9ece7984a1fe164e58c76df40caebcd0c842ce681cb39732db3216",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2799,8 +2843,8 @@
       "file": "frontend/workspace/ProjectBook.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 8687,
-      "sha256": "e4f7b57f4d9f8808eba34eee95ea65ff0d347e9e49ba44a24e9d551a3276a2c0",
+      "bytes": 8779,
+      "sha256": "2f7627bfe1b8deae35c400013eb96ca1b4ebc4e692b4ff2e4a91d02f4ee68af0",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2817,8 +2861,8 @@
       "file": "frontend/workspace/ProjectCreate.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 1955,
-      "sha256": "8387e0de9f7e696575f49458f3a76f01763720414435beef31bbaec8ecbfd7d7",
+      "bytes": 1989,
+      "sha256": "2b7338e90b375fe2fd8e8c1b251309704a0eb61584190e344897d3d721fc343b",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2853,8 +2897,8 @@
       "file": "frontend/workspace/SceneIndex.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 3958,
-      "sha256": "22758d33e6ba3cc23485f23c76b6a65d14f4980653162ceb6debfa7d4ca3dc7e",
+      "bytes": 4035,
+      "sha256": "30cace0059add3938c433ca21e5da9ecc0d86443452414025c114d300559fab6",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2867,7 +2911,7 @@
         "hotspots": [
           {
             "name": "load",
-            "line": 17,
+            "line": 18,
             "score": 13
           }
         ]
@@ -2877,8 +2921,8 @@
       "file": "frontend/workspace/SceneWriting.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 3704,
-      "sha256": "a5835884cec9d4089633f90ba6b2d83509996daf74f0f0196a6fc1348f541d7d",
+      "bytes": 3747,
+      "sha256": "0f98e0f5f2dffab2a273a9b0aa9229050d58bea4f22f784ae139fecf214b13d0",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2895,8 +2939,8 @@
       "file": "frontend/workspace/StartFrom.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 6373,
-      "sha256": "eaea78597db343292af44100a16a29e5392cd51177dee04c162043830fba2207",
+      "bytes": 6420,
+      "sha256": "75e978aa9ea1342a652e19ef3fe954831dc7746c20dee2c9308a78590e1c573c",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2913,8 +2957,8 @@
       "file": "frontend/workspace/WorkspaceRoute.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 10364,
-      "sha256": "a1cd866732f67bf3ee72279b5c57fe8ad6b07552caa6931e15852f775e2ffbb9",
+      "bytes": 10506,
+      "sha256": "2ba359d09b592e817775d2b39e074dadee01bbe6dcbd1e1c4b059855b9274769",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2927,12 +2971,12 @@
         "hotspots": [
           {
             "name": "linkClick",
-            "line": 51,
+            "line": 52,
             "score": 12
           },
           {
             "name": "load",
-            "line": 61,
+            "line": 62,
             "score": 46
           }
         ]
@@ -2960,8 +3004,8 @@
       "file": "frontend/workspace/creative-entry.css",
       "kind": "source",
       "format": "css",
-      "bytes": 7429,
-      "sha256": "21cdec8755a3e2df829fc9c6ae9d463ca3932125d84a1aff96746da0dc029038",
+      "bytes": 7306,
+      "sha256": "3cb253cd40556c24501e9b77b663dc6e024761133a69c14c1f8d3e22ae25602c",
       "analysis": []
     },
     {
@@ -2992,16 +3036,16 @@
       "file": "frontend/writing/AdoptPage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 5902,
-      "sha256": "693d59238fc30cc5a3402a1de3c251f678c5e474a7c427b32060a4e10f138407",
+      "bytes": 8464,
+      "sha256": "3e792d13ee6f2734bcd6e6e656d234dbe33672c267176e38e8ce728c59d58419",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 8,
-        "total": 15,
+        "functions": 12,
+        "total": 17,
         "max": 7,
         "hotspots": []
       }
@@ -3028,8 +3072,8 @@
       "file": "frontend/writing/ComparePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 16227,
-      "sha256": "11356cd9dc702243cb0ec17995d28a1e1471a4f72ff1ffea9198f92b9c647e31",
+      "bytes": 17119,
+      "sha256": "d68b7ba516fdd261d5515a10d88063aac1d63b34d0e09bc8ef91091036e6f17b",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3042,7 +3086,7 @@
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 40,
+            "line": 41,
             "score": 16
           }
         ]
@@ -3052,15 +3096,15 @@
       "file": "frontend/writing/DraftEditor.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 13942,
-      "sha256": "4f46791a9d902d13dc5da9da223e38a7f7d71c3de02dc5c5534151fc613c07fb",
+      "bytes": 14078,
+      "sha256": "bd238d6787b929a330150402a75f6a4ef362bbba7bdabd318f563e1777e912bf",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 18,
+        "functions": 19,
         "total": 82,
         "max": 29,
         "hotspots": [
@@ -3081,8 +3125,8 @@
       "file": "frontend/writing/DraftPage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 11411,
-      "sha256": "44c95691bd03cc805c0bde8f9d8eb069925a0f875a4b1cab7113631ca9aa3bb4",
+      "bytes": 11586,
+      "sha256": "959e8f14a0944ad3b2735bb5f02af9906545a908a4fe5fb5a8b995aa1aa8b7f3",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3135,46 +3179,51 @@
       "file": "frontend/writing/ManuscriptEvidence.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 24624,
-      "sha256": "43f00bae231e2a1f13f6f5b7b9708dfac68c5ca9d54ee22f644fdcd172e65250",
+      "bytes": 26911,
+      "sha256": "89966b947eea9ed47cc68cf36191035c97f106dd83778af04ac59de46200f18e",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 25,
-        "total": 141,
-        "max": 21,
+        "functions": 27,
+        "total": 157,
+        "max": 20,
         "hotspots": [
           {
             "name": "updateBackground",
-            "line": 82,
+            "line": 86,
             "score": 13
           },
           {
             "name": "keyboard",
-            "line": 114,
+            "line": 118,
             "score": 15
           },
           {
             "name": "rememberEditor",
-            "line": 133,
+            "line": 137,
             "score": 13
           },
           {
-            "name": "closePanel",
-            "line": 176,
-            "score": 21
+            "name": "openPanel",
+            "line": 159,
+            "score": 17
+          },
+          {
+            "name": "restoreEditor",
+            "line": 200,
+            "score": 20
           },
           {
             "name": "load",
-            "line": 198,
+            "line": 218,
             "score": 13
           },
           {
             "name": "prepare",
-            "line": 233,
+            "line": 253,
             "score": 13
           }
         ]
@@ -3184,8 +3233,8 @@
       "file": "frontend/writing/ManuscriptTools.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 9468,
-      "sha256": "323e7df001a74b994bf82a2f42c53f323d0f467c470cb6c255d21d8c549ece87",
+      "bytes": 10770,
+      "sha256": "cf6298e00d9bc35a198a58f5cd6122de958626376779f43fa5a714f1dcef03b2",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3202,8 +3251,8 @@
       "file": "frontend/writing/ReadState.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 435,
-      "sha256": "d8cb827b38027bb7ba7273bd8c816c003bebd021876e278649a5bc5e3a1dd55a",
+      "bytes": 521,
+      "sha256": "4e741d324f47a8fc67f45637f92b8cbec52e2e068b22bd9308c3502df5ac45af",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3238,8 +3287,8 @@
       "file": "frontend/writing/ScenePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 17990,
-      "sha256": "1d83150bd9c27caf05d3a96b367bb938af039765c7a078c23b55c4f0fe07af2f",
+      "bytes": 18446,
+      "sha256": "eca50efb618a17acc8b633c8e8ccd38ee55d575f63eefaacffd586bf47d4a907",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3292,16 +3341,16 @@
       "file": "frontend/writing/author-flow-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 11007,
-      "sha256": "8c6f7fcf065d813287189be2c6519d567729afee732e0eca670d3123b9e0a76c",
+      "bytes": 12219,
+      "sha256": "f81537aadeae963ade5bddd9ddfeda5ae938808ea10e7dae90e7472ea8e3704b",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 21,
-        "total": 6,
+        "functions": 24,
+        "total": 7,
         "max": 3,
         "hotspots": []
       }
@@ -3334,8 +3383,8 @@
       "file": "frontend/writing/evidence-attachment.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 4295,
-      "sha256": "022d73efdf5ffed402d6544c60431fdec3dbe0367afdf58b98d0e400e5439da4",
+      "bytes": 5332,
+      "sha256": "8fd562eeddf1329cda4d0ade938f3b5be731eb4474ab0fc3f21630ace7353bfe",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3394,8 +3443,8 @@
       "file": "frontend/writing/evidence-content.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 6431,
-      "sha256": "f9cb6a8cbdd24f1df1e50a62cd60ae97a6060320aa03ea69f9c90dc144f20ceb",
+      "bytes": 7148,
+      "sha256": "263ef6b65cdeb90879ebca79eb5f52aca0b2681db2bd140f07a772f66d7100fa",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3412,15 +3461,15 @@
       "file": "frontend/writing/evidence-frame.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 11813,
-      "sha256": "e9126e0107ccbe41ad672aa0693d575f0c1cbe0972089fcb67c5d0ca87b55394",
+      "bytes": 12228,
+      "sha256": "d04cde3b4e0db80cfd5f26c06c927223ac1d97419004b66b04678f3004f35af4",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 25,
+        "functions": 26,
         "total": 51,
         "max": 47,
         "hotspots": [
@@ -3462,11 +3511,29 @@
       }
     },
     {
+      "file": "frontend/writing/evidence-motion.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 17722,
+      "sha256": "0a27e1d02f21adec1408c1faa13e119238c0970a7a84ce9bdf7ab8b6f4791b40",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 59,
+        "total": 18,
+        "max": 8,
+        "hotspots": []
+      }
+    },
+    {
       "file": "frontend/writing/evidence-picker.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 9238,
-      "sha256": "aebd78d2b67f70087221bc6faafc1cd481949f3348f8c77311b968b7a70d48d6",
+      "bytes": 10419,
+      "sha256": "a7c076022e195b3e42414e22f98b858bd2e0ef5858e455ab7f886465cd5baa7d",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3479,7 +3546,7 @@
         "hotspots": [
           {
             "name": "addSelection",
-            "line": 60,
+            "line": 61,
             "score": 20
           }
         ]
@@ -3489,21 +3556,21 @@
       "file": "frontend/writing/manuscript.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 30842,
-      "sha256": "8b0246c0653517de1b7bb3d43b33a2fa016fd667c99002212d6fa5081310482e",
+      "bytes": 32410,
+      "sha256": "47ae5eba744db974f391aa9331aefd55fe760e34b8f90db257d67984509cc311",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 67,
-        "total": 49,
+        "functions": 70,
+        "total": 50,
         "max": 12,
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 75,
+            "line": 88,
             "score": 12
           }
         ]
@@ -3531,15 +3598,15 @@
       "file": "frontend/writing/reader-evidence-integration.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 3597,
-      "sha256": "929eb5a6240f3d3f34b9a5f57f47623d77493c861864caebab1fd290d4dba3df",
+      "bytes": 4118,
+      "sha256": "a5e12e3ad39cd4d259a996026196c660722244bfd3c7a0a78c65b41c32e26769",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 11,
+        "functions": 13,
         "total": 4,
         "max": 2,
         "hotspots": []
@@ -3549,17 +3616,17 @@
       "file": "frontend/writing/reader-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 22201,
-      "sha256": "587e74014e87ac99c8c64dc2ce880b3b0c14351580dfc308e94da482794936f8",
+      "bytes": 25216,
+      "sha256": "d6e9482c5d0833ea8b1227fab454aba5295455f53523b2d0420354c6dfdcc63e",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 44,
-        "total": 19,
-        "max": 8,
+        "functions": 49,
+        "total": 21,
+        "max": 9,
         "hotspots": []
       }
     },
@@ -3567,17 +3634,17 @@
       "file": "frontend/writing/reader-style.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 3556,
-      "sha256": "49293600a6974260c3c60023760a499e28b567fb0d16d80d44c477077ffc86de",
+      "bytes": 4931,
+      "sha256": "8bb4efc262f76f526384acf5c3081bcb1ca9684f3ed25c8dca4fd68b4c2758b2",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 4,
-        "total": 0,
-        "max": 0,
+        "functions": 7,
+        "total": 1,
+        "max": 1,
         "hotspots": []
       }
     },
@@ -3650,8 +3717,8 @@
       "file": "frontend/writing/review.css",
       "kind": "source",
       "format": "css",
-      "bytes": 2556,
-      "sha256": "8555286887d59e621d3805c1dec4a6efc8c96b0127192d10a5bd6264d34e7525",
+      "bytes": 6537,
+      "sha256": "c443b2df53d5be55e8dc38628a8a4bf1cfdb2757be17a846f18367ff34a17d45",
       "analysis": []
     },
     {
@@ -3706,16 +3773,16 @@
       "file": "frontend/writing/webkit-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 10610,
-      "sha256": "7f57d2888e276e650c334553d45d93ea8a57870191660578cbbdb52d8c6ef7d5",
+      "bytes": 12293,
+      "sha256": "d19a8252afb93855659773d39b2b2845dda77435385187847a1e08f4ab4c604d",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 22,
-        "total": 20,
+        "functions": 25,
+        "total": 21,
         "max": 10,
         "hotspots": []
       }
@@ -3724,8 +3791,8 @@
       "file": "frontend/writing/writing.css",
       "kind": "source",
       "format": "css",
-      "bytes": 16873,
-      "sha256": "119339715fa2c584ce214d0b0e9f83cd126b3b60fd20375e62759785e0ea77dd",
+      "bytes": 18751,
+      "sha256": "8b6a94c39dbb78538972154690688d2cc328eb586634de22dbe20fde0fd4a009",
       "analysis": []
     },
     {
@@ -3889,11 +3956,35 @@
       }
     },
     {
+      "file": "scripts/capture-cohesive-ui.mjs",
+      "kind": "source",
+      "format": "mjs",
+      "bytes": 11917,
+      "sha256": "997072b87a471aa80ec47022be74acea67020e4f3c6f89261415bb9a847c675b",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 28,
+        "total": 47,
+        "max": 34,
+        "hotspots": [
+          {
+            "name": "<module>",
+            "line": 1,
+            "score": 34
+          }
+        ]
+      }
+    },
+    {
       "file": "scripts/capture-manuscript.mjs",
       "kind": "source",
       "format": "mjs",
-      "bytes": 74696,
-      "sha256": "6079956d0980c243d789144fbe9d432c25ff733ba19c0aeee16b8181c9d460d1",
+      "bytes": 75532,
+      "sha256": "5ca88f606110e67d3870c799b35fc94d3397adf8e546d3c9ec3a3b06e5be363e",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3901,22 +3992,22 @@
       ],
       "complexity": {
         "functions": 162,
-        "total": 223,
-        "max": 36,
+        "total": 235,
+        "max": 45,
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 395,
+            "line": 396,
             "score": 18
           },
           {
             "name": "captureManuscripts",
-            "line": 716,
-            "score": 35
+            "line": 717,
+            "score": 45
           },
           {
             "name": "generateManuscriptGallery",
-            "line": 978,
+            "line": 988,
             "score": 36
           }
         ]
@@ -5564,15 +5655,15 @@
       "file": "tests/browser/diary-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 47800,
-      "sha256": "ed616a2a508080f236773917e7bf9265e7c05df216790e058a3a40988181d261",
+      "bytes": 48012,
+      "sha256": "663b3b99b4b5ae37fddb965a6fddca670dc7b88483496afedf578b1a4fa56688",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 99,
+        "functions": 100,
         "total": 36,
         "max": 4,
         "hotspots": []
@@ -5624,8 +5715,8 @@
       "file": "tests/browser/workspace.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 39309,
-      "sha256": "29d01d627be350eac759920ee587b90c218d5689f5a87d2311f313e8618b1629",
+      "bytes": 39303,
+      "sha256": "070c807265bcffbdc5206f0752485d38cb821d250e557d72bd149a8f1b34833a",
       "analysis": [
         "complexity",
         "dependencies",
@@ -6204,6 +6295,14 @@
       }
     },
     {
+      "file": "web/assets/cohesive-legacy.css",
+      "kind": "source",
+      "format": "css",
+      "bytes": 4170,
+      "sha256": "45bcfa50062220c7d17297ea19d6afa1d8ed9af7ee410dedea9b65ce7834c2ad",
+      "analysis": []
+    },
+    {
       "file": "web/assets/connections.js",
       "kind": "source",
       "format": "js",
@@ -6220,6 +6319,14 @@
         "max": 9,
         "hotspots": []
       }
+    },
+    {
+      "file": "web/assets/controls.css",
+      "kind": "source",
+      "format": "css",
+      "bytes": 5397,
+      "sha256": "4f7be21edd07bffab0f41c49a9a317c6bc0bfeeedd423c34fcaf8bf12b932d82",
+      "analysis": []
     },
     {
       "file": "web/assets/diaries.js",
@@ -6327,8 +6434,8 @@
       "file": "web/assets/notebook.css",
       "kind": "source",
       "format": "css",
-      "bytes": 17816,
-      "sha256": "007bff4445e6bb9cf168657f35b62342ba35386e877572f794a0ee0d7534a799",
+      "bytes": 17582,
+      "sha256": "1f5af65c7f5db72b9e5024937c10a9385633f2f47680d85be01c7f15c4fc45e8",
       "analysis": []
     },
     {
@@ -7127,6 +7234,13 @@
       },
       {
         "from": "frontend/HomePage.vue",
+        "to": "frontend/home.css",
+        "type": "static",
+        "line": 10,
+        "column": 1
+      },
+      {
+        "from": "frontend/HomePage.vue",
         "to": "frontend/manuscript/recent.ts",
         "type": "static",
         "line": 8,
@@ -7185,14 +7299,21 @@
         "from": "frontend/characters/CharacterEditor.vue",
         "to": "frontend/characters/api.ts",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterEditor.vue",
         "to": "frontend/characters/api.ts",
         "type": "type",
-        "line": 4,
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/characters/CharacterEditor.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
@@ -7213,56 +7334,70 @@
         "from": "frontend/characters/CharacterIndex.vue",
         "to": "frontend/characters/api.ts",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterIndex.vue",
         "to": "frontend/characters/api.ts",
         "type": "type",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterIndex.vue",
         "to": "frontend/manuscript/return-link.ts",
         "type": "static",
-        "line": 5,
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/characters/CharacterIndex.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterPage.vue",
         "to": "frontend/characters/CharacterEditor.vue",
         "type": "static",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterPage.vue",
         "to": "frontend/characters/CharacterEntries.vue",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterPage.vue",
         "to": "frontend/characters/api.ts",
         "type": "static",
-        "line": 5,
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterPage.vue",
         "to": "frontend/characters/api.ts",
         "type": "type",
-        "line": 6,
+        "line": 7,
         "column": 1
       },
       {
         "from": "frontend/characters/CharacterPage.vue",
         "to": "frontend/manuscript/return-link.ts",
         "type": "static",
-        "line": 7,
+        "line": 8,
+        "column": 1
+      },
+      {
+        "from": "frontend/characters/CharacterPage.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
@@ -7339,35 +7474,49 @@
         "from": "frontend/connections/ConnectionsRoute.vue",
         "to": "frontend/connections/CopyCommand.vue",
         "type": "static",
-        "line": 6,
+        "line": 7,
         "column": 1
       },
       {
         "from": "frontend/connections/ConnectionsRoute.vue",
         "to": "frontend/connections/InstallGuide.vue",
         "type": "static",
-        "line": 7,
+        "line": 8,
         "column": 1
       },
       {
         "from": "frontend/connections/ConnectionsRoute.vue",
         "to": "frontend/connections/api.ts",
         "type": "static",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/connections/ConnectionsRoute.vue",
         "to": "frontend/connections/api.ts",
         "type": "type",
-        "line": 5,
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/connections/ConnectionsRoute.vue",
         "to": "frontend/connections/routes.ts",
         "type": "static",
-        "line": 8,
+        "line": 9,
+        "column": 1
+      },
+      {
+        "from": "frontend/connections/ConnectionsRoute.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/connections/CopyCommand.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
@@ -7409,6 +7558,13 @@
         "from": "frontend/context/ContextRoute.vue",
         "to": "frontend/context/PrepareWriting.vue",
         "type": "static",
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/context/ContextRoute.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
         "line": 6,
         "column": 1
       },
@@ -7430,42 +7586,42 @@
         "from": "frontend/context/PrepareWriting.vue",
         "to": "frontend/api.ts",
         "type": "static",
-        "line": 6,
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/context/PrepareWriting.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/context/PrepareWriting.vue",
         "to": "frontend/workspace/api.ts",
         "type": "static",
-        "line": 7,
+        "line": 8,
         "column": 1
       },
       {
         "from": "frontend/context/PrepareWriting.vue",
         "to": "frontend/workspace/useSubmission.ts",
         "type": "static",
-        "line": 8,
+        "line": 9,
         "column": 1
       },
       {
         "from": "frontend/context/PrepareWriting.vue",
         "to": "frontend/writing/evidence-model.ts",
         "type": "static",
-        "line": 10,
+        "line": 11,
         "column": 1
       },
       {
         "from": "frontend/context/PrepareWriting.vue",
         "to": "frontend/writing/evidence-picker.vue",
         "type": "static",
-        "line": 9,
-        "column": 1
-      },
-      {
-        "from": "frontend/context/PrepareWriting.vue",
-        "to": "src/generation/contracts.ts",
-        "type": "type",
-        "line": 3,
+        "line": 10,
         "column": 1
       },
       {
@@ -7477,9 +7633,16 @@
       },
       {
         "from": "frontend/context/PrepareWriting.vue",
-        "to": "src/story/contracts.ts",
+        "to": "src/generation/contracts.ts",
         "type": "type",
         "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/context/PrepareWriting.vue",
+        "to": "src/story/contracts.ts",
+        "type": "type",
+        "line": 6,
         "column": 1
       },
       {
@@ -7948,68 +8111,75 @@
         "from": "frontend/sources/SourceAdoption.vue",
         "to": "frontend/sources/api.ts",
         "type": "static",
-        "line": 4,
-        "column": 1
-      },
-      {
-        "from": "frontend/sources/SourceAdoption.vue",
-        "to": "frontend/sources/api.ts",
-        "type": "type",
         "line": 5,
         "column": 1
       },
       {
         "from": "frontend/sources/SourceAdoption.vue",
-        "to": "frontend/sources/drafts.ts",
-        "type": "static",
-        "line": 3,
+        "to": "frontend/sources/api.ts",
+        "type": "type",
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/sources/SourceAdoption.vue",
-        "to": "frontend/sources/useDraftWrite.ts",
+        "to": "frontend/sources/drafts.ts",
         "type": "static",
-        "line": 6,
-        "column": 1
-      },
-      {
-        "from": "frontend/sources/SourceEditor.vue",
-        "to": "frontend/sources/api.ts",
-        "type": "static",
-        "line": 3,
-        "column": 1
-      },
-      {
-        "from": "frontend/sources/SourceEditor.vue",
-        "to": "frontend/sources/api.ts",
-        "type": "type",
         "line": 4,
         "column": 1
       },
       {
-        "from": "frontend/sources/SourceEditor.vue",
-        "to": "frontend/sources/drafts.ts",
-        "type": "static",
-        "line": 5,
-        "column": 1
-      },
-      {
-        "from": "frontend/sources/SourceEditor.vue",
-        "to": "frontend/sources/drafts.ts",
-        "type": "type",
-        "line": 6,
-        "column": 1
-      },
-      {
-        "from": "frontend/sources/SourceEditor.vue",
+        "from": "frontend/sources/SourceAdoption.vue",
         "to": "frontend/sources/useDraftWrite.ts",
         "type": "static",
         "line": 7,
         "column": 1
       },
       {
-        "from": "frontend/sources/SourceImpact.vue",
+        "from": "frontend/sources/SourceAdoption.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
         "to": "frontend/sources/api.ts",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
+        "to": "frontend/sources/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
+        "to": "frontend/sources/drafts.ts",
+        "type": "static",
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
+        "to": "frontend/sources/drafts.ts",
+        "type": "type",
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
+        "to": "frontend/sources/useDraftWrite.ts",
+        "type": "static",
+        "line": 8,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceEditor.vue",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8017,69 +8187,83 @@
       {
         "from": "frontend/sources/SourceImpact.vue",
         "to": "frontend/sources/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceImpact.vue",
+        "to": "frontend/sources/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourceImpact.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/manuscript/return-link.ts",
         "type": "static",
-        "line": 23,
+        "line": 24,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/SourceAdoption.vue",
         "type": "static",
-        "line": 5,
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/SourceEditor.vue",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/SourceImpact.vue",
         "type": "static",
-        "line": 6,
+        "line": 7,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/SourcePassage.vue",
         "type": "static",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/api.ts",
         "type": "static",
-        "line": 7,
+        "line": 8,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/api.ts",
         "type": "type",
-        "line": 21,
+        "line": 22,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcePage.vue",
         "to": "frontend/sources/routes.ts",
         "type": "type",
-        "line": 22,
+        "line": 23,
         "column": 1
       },
       {
-        "from": "frontend/sources/SourcePassage.vue",
-        "to": "frontend/sources/api.ts",
+        "from": "frontend/sources/SourcePage.vue",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8087,29 +8271,50 @@
       {
         "from": "frontend/sources/SourcePassage.vue",
         "to": "frontend/sources/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourcePassage.vue",
+        "to": "frontend/sources/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourcePassage.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcesIndex.vue",
         "to": "frontend/manuscript/return-link.ts",
         "type": "static",
-        "line": 5,
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcesIndex.vue",
         "to": "frontend/sources/api.ts",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/sources/SourcesIndex.vue",
         "to": "frontend/sources/api.ts",
         "type": "type",
-        "line": 4,
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/sources/SourcesIndex.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
@@ -8214,14 +8419,21 @@
         "from": "frontend/tasks/JobAction.vue",
         "to": "frontend/tasks/legacy.js",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/tasks/JobAction.vue",
         "to": "frontend/tasks/legacy.js",
         "type": "type",
-        "line": 4,
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/tasks/JobAction.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
@@ -8235,19 +8447,12 @@
         "from": "frontend/tasks/TasksRoute.vue",
         "to": "frontend/tasks/AttemptDetails.vue",
         "type": "static",
-        "line": 4,
-        "column": 1
-      },
-      {
-        "from": "frontend/tasks/TasksRoute.vue",
-        "to": "frontend/tasks/JobAction.vue",
-        "type": "static",
         "line": 5,
         "column": 1
       },
       {
         "from": "frontend/tasks/TasksRoute.vue",
-        "to": "frontend/tasks/legacy.js",
+        "to": "frontend/tasks/JobAction.vue",
         "type": "static",
         "line": 6,
         "column": 1
@@ -8255,29 +8460,43 @@
       {
         "from": "frontend/tasks/TasksRoute.vue",
         "to": "frontend/tasks/legacy.js",
-        "type": "type",
+        "type": "static",
         "line": 7,
         "column": 1
       },
       {
         "from": "frontend/tasks/TasksRoute.vue",
-        "to": "frontend/tasks/model.ts",
-        "type": "static",
+        "to": "frontend/tasks/legacy.js",
+        "type": "type",
         "line": 8,
         "column": 1
       },
       {
         "from": "frontend/tasks/TasksRoute.vue",
         "to": "frontend/tasks/model.ts",
-        "type": "type",
+        "type": "static",
         "line": 9,
+        "column": 1
+      },
+      {
+        "from": "frontend/tasks/TasksRoute.vue",
+        "to": "frontend/tasks/model.ts",
+        "type": "type",
+        "line": 10,
         "column": 1
       },
       {
         "from": "frontend/tasks/TasksRoute.vue",
         "to": "frontend/tasks/routes.ts",
         "type": "static",
-        "line": 10,
+        "line": 11,
+        "column": 1
+      },
+      {
+        "from": "frontend/tasks/TasksRoute.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 4,
         "column": 1
       },
       {
@@ -8338,9 +8557,30 @@
       },
       {
         "from": "frontend/tests/characters-vue.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 11,
+        "column": 1
+      },
+      {
+        "from": "frontend/tests/characters-vue.test.mjs",
         "to": "tests/browser/harness.mjs",
         "type": "static",
         "line": 9,
+        "column": 1
+      },
+      {
+        "from": "frontend/tests/cohesive-controls.test.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/tests/cohesive-motion.test.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 6,
         "column": 1
       },
       {
@@ -8499,6 +8739,13 @@
       },
       {
         "from": "frontend/tests/sources-vue.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 11,
+        "column": 1
+      },
+      {
+        "from": "frontend/tests/sources-vue.test.mjs",
         "to": "tests/browser/harness.mjs",
         "type": "static",
         "line": 9,
@@ -8590,7 +8837,7 @@
       },
       {
         "from": "frontend/workspace/ContinueShelf.vue",
-        "to": "frontend/workspace/api.ts",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8598,43 +8845,64 @@
       {
         "from": "frontend/workspace/ContinueShelf.vue",
         "to": "frontend/workspace/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/ContinueShelf.vue",
+        "to": "frontend/workspace/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/ProjectBook.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/workspace/ProjectBook.vue",
         "to": "frontend/workspace/SceneWriting.vue",
         "type": "static",
-        "line": 5,
+        "line": 6,
         "column": 1
       },
       {
         "from": "frontend/workspace/ProjectBook.vue",
         "to": "frontend/workspace/api.ts",
         "type": "static",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/workspace/ProjectBook.vue",
         "to": "frontend/workspace/api.ts",
         "type": "type",
-        "line": 4,
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/ProjectCreate.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 3,
         "column": 1
       },
       {
         "from": "frontend/workspace/ProjectCreate.vue",
         "to": "frontend/workspace/api.ts",
         "type": "type",
-        "line": 3,
+        "line": 4,
         "column": 1
       },
       {
         "from": "frontend/workspace/ProjectCreate.vue",
         "to": "frontend/workspace/useSubmission.ts",
         "type": "static",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
@@ -8646,7 +8914,7 @@
       },
       {
         "from": "frontend/workspace/SceneIndex.vue",
-        "to": "frontend/workspace/api.ts",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8654,13 +8922,20 @@
       {
         "from": "frontend/workspace/SceneIndex.vue",
         "to": "frontend/workspace/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
         "column": 1
       },
       {
-        "from": "frontend/workspace/SceneWriting.vue",
+        "from": "frontend/workspace/SceneIndex.vue",
         "to": "frontend/workspace/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/SceneWriting.vue",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8668,13 +8943,20 @@
       {
         "from": "frontend/workspace/SceneWriting.vue",
         "to": "frontend/workspace/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
         "column": 1
       },
       {
-        "from": "frontend/workspace/StartFrom.vue",
+        "from": "frontend/workspace/SceneWriting.vue",
         "to": "frontend/workspace/api.ts",
+        "type": "type",
+        "line": 5,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/StartFrom.vue",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
@@ -8682,71 +8964,85 @@
       {
         "from": "frontend/workspace/StartFrom.vue",
         "to": "frontend/workspace/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/StartFrom.vue",
+        "to": "frontend/workspace/api.ts",
+        "type": "type",
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/workspace/StartFrom.vue",
         "to": "frontend/workspace/useSubmission.ts",
         "type": "static",
-        "line": 5,
-        "column": 1
-      },
-      {
-        "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/ContinueShelf.vue",
-        "type": "static",
-        "line": 5,
-        "column": 1
-      },
-      {
-        "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/ProjectBook.vue",
-        "type": "static",
         "line": 6,
         "column": 1
       },
       {
         "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/ProjectCreate.vue",
-        "type": "static",
-        "line": 7,
-        "column": 1
-      },
-      {
-        "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/SceneIndex.vue",
-        "type": "static",
-        "line": 9,
-        "column": 1
-      },
-      {
-        "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/StartFrom.vue",
-        "type": "static",
-        "line": 8,
-        "column": 1
-      },
-      {
-        "from": "frontend/workspace/WorkspaceRoute.vue",
-        "to": "frontend/workspace/api.ts",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 3,
         "column": 1
       },
       {
         "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/ContinueShelf.vue",
+        "type": "static",
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/ProjectBook.vue",
+        "type": "static",
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/ProjectCreate.vue",
+        "type": "static",
+        "line": 8,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/SceneIndex.vue",
+        "type": "static",
+        "line": 10,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/StartFrom.vue",
+        "type": "static",
+        "line": 9,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
+        "to": "frontend/workspace/api.ts",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/workspace/WorkspaceRoute.vue",
         "to": "frontend/workspace/api.ts",
         "type": "type",
-        "line": 4,
+        "line": 5,
         "column": 1
       },
       {
         "from": "frontend/workspace/WorkspaceRoute.vue",
         "to": "frontend/workspace/creative-entry.css",
         "type": "static",
-        "line": 10,
+        "line": 11,
         "column": 1
       },
       {
@@ -8782,6 +9078,13 @@
         "to": "frontend/workspace/api.ts",
         "type": "static",
         "line": 4,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/AdoptPage.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 10,
         "column": 1
       },
       {
@@ -8823,7 +9126,7 @@
         "from": "frontend/writing/AdoptPage.vue",
         "to": "frontend/writing/review.css",
         "type": "static",
-        "line": 10,
+        "line": 11,
         "column": 1
       },
       {
@@ -8880,6 +9183,13 @@
         "to": "frontend/writing/state.ts",
         "type": "static",
         "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/ComparePage.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 27,
         "column": 1
       },
       {
@@ -8928,7 +9238,7 @@
         "from": "frontend/writing/ComparePage.vue",
         "to": "frontend/writing/review.css",
         "type": "static",
-        "line": 27,
+        "line": 28,
         "column": 1
       },
       {
@@ -9152,6 +9462,13 @@
         "from": "frontend/writing/ManuscriptEvidence.vue",
         "to": "frontend/context/PrepareWriting.vue",
         "type": "static",
+        "line": 10,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/ManuscriptEvidence.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
         "line": 9,
         "column": 1
       },
@@ -9159,21 +9476,21 @@
         "from": "frontend/writing/ManuscriptEvidence.vue",
         "to": "frontend/writing/evidence-attachment.vue",
         "type": "static",
-        "line": 10,
+        "line": 11,
         "column": 1
       },
       {
         "from": "frontend/writing/ManuscriptEvidence.vue",
         "to": "frontend/writing/evidence-content.vue",
         "type": "static",
-        "line": 11,
+        "line": 12,
         "column": 1
       },
       {
         "from": "frontend/writing/ManuscriptEvidence.vue",
         "to": "frontend/writing/evidence-model.ts",
         "type": "static",
-        "line": 12,
+        "line": 13,
         "column": 1
       },
       {
@@ -9220,7 +9537,7 @@
       },
       {
         "from": "frontend/writing/ManuscriptTools.vue",
-        "to": "frontend/writing/api.ts",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 5,
         "column": 1
@@ -9228,15 +9545,29 @@
       {
         "from": "frontend/writing/ManuscriptTools.vue",
         "to": "frontend/writing/api.ts",
-        "type": "type",
+        "type": "static",
         "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/ManuscriptTools.vue",
+        "to": "frontend/writing/api.ts",
+        "type": "type",
+        "line": 7,
         "column": 1
       },
       {
         "from": "frontend/writing/ManuscriptTools.vue",
         "to": "frontend/writing/state.ts",
         "type": "static",
-        "line": 7,
+        "line": 8,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/ReadState.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 2,
         "column": 1
       },
       {
@@ -9458,6 +9789,13 @@
       },
       {
         "from": "frontend/writing/evidence-attachment.vue",
+        "to": "frontend/ui/Button.vue",
+        "type": "static",
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/evidence-attachment.vue",
         "to": "frontend/workspace/useSubmission.ts",
         "type": "static",
         "line": 6,
@@ -9467,7 +9805,7 @@
         "from": "frontend/writing/evidence-attachment.vue",
         "to": "frontend/writing/evidence-content.vue",
         "type": "static",
-        "line": 7,
+        "line": 8,
         "column": 1
       },
       {
@@ -9584,9 +9922,16 @@
       },
       {
         "from": "frontend/writing/evidence-picker.vue",
-        "to": "frontend/writing/evidence-model.ts",
+        "to": "frontend/ui/Button.vue",
         "type": "static",
         "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/evidence-picker.vue",
+        "to": "frontend/writing/evidence-model.ts",
+        "type": "static",
+        "line": 7,
         "column": 1
       },
       {
@@ -9734,6 +10079,13 @@
         "to": "src/database.ts",
         "type": "static",
         "line": 6,
+        "column": 1
+      },
+      {
+        "from": "scripts/capture-cohesive-ui.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 10,
         "column": 1
       },
       {
@@ -11861,15 +12213,22 @@
         "from": "tests/browser/diary-vue.test.mjs",
         "to": "frontend/diary/api.ts",
         "type": "dynamic",
-        "line": 707,
+        "line": 709,
         "column": 27
       },
       {
         "from": "tests/browser/diary-vue.test.mjs",
         "to": "frontend/diary/drafts.ts",
         "type": "dynamic",
-        "line": 681,
+        "line": 683,
         "column": 29
+      },
+      {
+        "from": "tests/browser/diary-vue.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 10,
+        "column": 1
       },
       {
         "from": "tests/browser/diary-vue.test.mjs",
@@ -13411,24 +13770,8 @@
         "file": "frontend/characters/CharacterEditor.vue",
         "type": "dynamic",
         "specifier": null,
-        "line": 47,
+        "line": 48,
         "column": 41,
-        "reason": "computed"
-      },
-      {
-        "file": "frontend/characters/CharacterEditor.vue",
-        "type": "dynamic",
-        "specifier": null,
-        "line": 47,
-        "column": 7,
-        "reason": "computed"
-      },
-      {
-        "file": "frontend/characters/CharacterEditor.vue",
-        "type": "dynamic",
-        "specifier": null,
-        "line": 47,
-        "column": 79,
         "reason": "computed"
       },
       {
@@ -13440,10 +13783,26 @@
         "reason": "computed"
       },
       {
+        "file": "frontend/characters/CharacterEditor.vue",
+        "type": "dynamic",
+        "specifier": null,
+        "line": 48,
+        "column": 79,
+        "reason": "computed"
+      },
+      {
+        "file": "frontend/characters/CharacterEditor.vue",
+        "type": "dynamic",
+        "specifier": null,
+        "line": 49,
+        "column": 7,
+        "reason": "computed"
+      },
+      {
         "file": "tests/browser/diary-vue.test.mjs",
         "type": "dynamic",
         "specifier": "/frontend/diary/drafts.ts?newer-copy",
-        "line": 706,
+        "line": 708,
         "column": 29,
         "reason": "unresolved-local"
       }
@@ -13452,9 +13811,9 @@
       "adapters -> adapters (python)": 18,
       "adapters -> adapters (static)": 29,
       "adapters -> src (static)": 2,
-      "frontend -> frontend (static)": 239,
+      "frontend -> frontend (static)": 271,
       "frontend -> frontend (type)": 68,
-      "frontend -> scripts (static)": 17,
+      "frontend -> scripts (static)": 19,
       "frontend -> src (static)": 6,
       "frontend -> src/core (static)": 1,
       "frontend -> src/generation (static)": 1,
@@ -13469,7 +13828,7 @@
       "frontend -> tests (static)": 22,
       "frontend -> web (static)": 5,
       "scripts -> frontend (dynamic)": 1,
-      "scripts -> scripts (static)": 8,
+      "scripts -> scripts (static)": 9,
       "scripts -> src (dynamic)": 3,
       "scripts -> src (static)": 2,
       "scripts -> src/core (static)": 2,
@@ -13525,6 +13884,7 @@
       "src/story -> src/story (type)": 6,
       "tests -> adapters (static)": 1,
       "tests -> frontend (dynamic)": 2,
+      "tests -> frontend (static)": 1,
       "tests -> src (static)": 31,
       "tests -> src/assets (static)": 3,
       "tests -> src/core (static)": 20,
@@ -13566,13 +13926,13 @@
       "spans": [
         [
           "frontend/characters/CharacterPage.vue",
-          19,
-          38
+          20,
+          39
         ],
         [
           "frontend/sources/SourcePage.vue",
-          26,
-          45
+          27,
+          46
         ]
       ]
     },
@@ -13597,6 +13957,204 @@
     {
       "kind": "test",
       "family": "javascript",
+      "tokens": 157,
+      "sha256": "7502b40a33f0db5ea7b118c9f1cdafad65457ec20142720ccdd7376f60dbaf98",
+      "spans": [
+        [
+          "frontend/writing/manuscript.test.mjs",
+          13,
+          27
+        ],
+        [
+          "frontend/writing/reader-layout.test.mjs",
+          10,
+          27
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 155,
+      "sha256": "461101615ddebf87bbe70a2b8bc0f8dfd16b35360cde6d80b1c9c6e57a93b6c5",
+      "spans": [
+        [
+          "frontend/tests/characters-vue.test.mjs",
+          10,
+          19
+        ],
+        [
+          "frontend/tests/sources-vue.test.mjs",
+          10,
+          19
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 155,
+      "sha256": "abb271bed2f34fd075e01f354440237e88dc46ee66528ca4b8a885563166fe91",
+      "spans": [
+        [
+          "frontend/writing/author-flow-browser.test.mjs",
+          20,
+          35
+        ],
+        [
+          "frontend/writing/reader-style.test.mjs",
+          7,
+          22
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 155,
+      "sha256": "7a5d8451751cbfb4da006fdf95fc5781e2999d67436e15645b9f9a4a0a7be7ec",
+      "spans": [
+        [
+          "frontend/writing/manuscript.test.mjs",
+          13,
+          26
+        ],
+        [
+          "frontend/writing/webkit-layout.test.mjs",
+          8,
+          23
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 155,
+      "sha256": "7a5d8451751cbfb4da006fdf95fc5781e2999d67436e15645b9f9a4a0a7be7ec",
+      "spans": [
+        [
+          "frontend/writing/reader-layout.test.mjs",
+          10,
+          25
+        ],
+        [
+          "frontend/writing/webkit-layout.test.mjs",
+          8,
+          23
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 154,
+      "sha256": "b1da454d8ed84e7491dedd0460bf909cea5d38dc097e6fdf869e1d267684a59c",
+      "spans": [
+        [
+          "frontend/writing/manuscript.test.mjs",
+          13,
+          26
+        ],
+        [
+          "frontend/writing/reader-style.test.mjs",
+          5,
+          20
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 154,
+      "sha256": "b1da454d8ed84e7491dedd0460bf909cea5d38dc097e6fdf869e1d267684a59c",
+      "spans": [
+        [
+          "frontend/writing/reader-layout.test.mjs",
+          10,
+          25
+        ],
+        [
+          "frontend/writing/reader-style.test.mjs",
+          5,
+          20
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 154,
+      "sha256": "b1da454d8ed84e7491dedd0460bf909cea5d38dc097e6fdf869e1d267684a59c",
+      "spans": [
+        [
+          "frontend/writing/reader-style.test.mjs",
+          5,
+          20
+        ],
+        [
+          "frontend/writing/webkit-layout.test.mjs",
+          8,
+          23
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 153,
+      "sha256": "2cb333b9409b491e1defb9a9bd2cd15cbff289116b56ebd262ca1dc31f918426",
+      "spans": [
+        [
+          "frontend/writing/author-flow-browser.test.mjs",
+          20,
+          33
+        ],
+        [
+          "frontend/writing/manuscript.test.mjs",
+          14,
+          26
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 153,
+      "sha256": "2cb333b9409b491e1defb9a9bd2cd15cbff289116b56ebd262ca1dc31f918426",
+      "spans": [
+        [
+          "frontend/writing/author-flow-browser.test.mjs",
+          20,
+          33
+        ],
+        [
+          "frontend/writing/reader-layout.test.mjs",
+          12,
+          25
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
+      "tokens": 153,
+      "sha256": "2cb333b9409b491e1defb9a9bd2cd15cbff289116b56ebd262ca1dc31f918426",
+      "spans": [
+        [
+          "frontend/writing/author-flow-browser.test.mjs",
+          20,
+          33
+        ],
+        [
+          "frontend/writing/webkit-layout.test.mjs",
+          10,
+          23
+        ]
+      ]
+    },
+    {
+      "kind": "test",
+      "family": "javascript",
       "tokens": 151,
       "sha256": "2aee0a770cc6515eb62cf0dc76c1721aefa4e78b00676075b13628ac1513e165",
       "spans": [
@@ -13609,24 +14167,6 @@
           "frontend/tests/tasks-vue.test.mjs",
           52,
           63
-        ]
-      ]
-    },
-    {
-      "kind": "test",
-      "family": "javascript",
-      "tokens": 148,
-      "sha256": "4f26b0a62d24f4c9a44221536db6f3e6033a3581d60051bdb0c3a719c6df0821",
-      "spans": [
-        [
-          "frontend/tests/characters-vue.test.mjs",
-          10,
-          18
-        ],
-        [
-          "frontend/tests/sources-vue.test.mjs",
-          10,
-          18
         ]
       ]
     },
@@ -13692,13 +14232,13 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          139,
-          147
+          141,
+          149
         ],
         [
           "frontend/tests/sources-vue.test.mjs",
-          116,
-          124
+          118,
+          126
         ]
       ]
     },
@@ -13710,13 +14250,13 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          139,
-          147
+          141,
+          149
         ],
         [
           "tests/browser/diary-vue.test.mjs",
-          79,
-          87
+          81,
+          89
         ]
       ]
     },
@@ -13728,13 +14268,13 @@
       "spans": [
         [
           "frontend/tests/sources-vue.test.mjs",
-          116,
-          124
+          118,
+          126
         ],
         [
           "tests/browser/diary-vue.test.mjs",
-          79,
-          87
+          81,
+          89
         ]
       ]
     },
@@ -13746,13 +14286,13 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          131,
-          139
+          133,
+          141
         ],
         [
           "tests/browser/diary-vue.test.mjs",
-          71,
-          79
+          73,
+          81
         ]
       ]
     },
@@ -13764,8 +14304,8 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          140,
-          147
+          142,
+          149
         ],
         [
           "frontend/writing/evidence-browser.test.mjs",
@@ -13782,8 +14322,8 @@
       "spans": [
         [
           "frontend/tests/sources-vue.test.mjs",
-          117,
-          124
+          119,
+          126
         ],
         [
           "frontend/writing/evidence-browser.test.mjs",
@@ -13805,8 +14345,8 @@
         ],
         [
           "tests/browser/diary-vue.test.mjs",
-          80,
-          87
+          82,
+          89
         ]
       ]
     },
@@ -13818,13 +14358,13 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          132,
-          139
+          134,
+          141
         ],
         [
           "frontend/tests/sources-vue.test.mjs",
-          109,
-          116
+          111,
+          118
         ]
       ]
     },
@@ -13836,13 +14376,13 @@
       "spans": [
         [
           "frontend/tests/sources-vue.test.mjs",
-          109,
-          116
+          111,
+          118
         ],
         [
           "tests/browser/diary-vue.test.mjs",
-          72,
-          79
+          74,
+          81
         ]
       ]
     },
@@ -13908,8 +14448,8 @@
       "spans": [
         [
           "frontend/tests/characters-vue.test.mjs",
-          343,
-          348
+          345,
+          350
         ],
         [
           "tests/browser/character-prompt.test.mjs",
@@ -15491,112 +16031,117 @@
       "platform": "win32/x64",
       "nodeEnv": null
     },
-    "bytes": 646465,
+    "bytes": 686415,
     "files": [
       {
         "file": "index.html",
         "bytes": 602,
-        "sha256": "65abad24588c5378c57f9208c7e20fcb4307d04b7f705fad98be5fbd192b405b"
+        "sha256": "3ca13fe1ba9afa537d940f5a9bc410e8f816dc8508d5b836259180d1ec2ca474"
       },
       {
-        "file": "vue/CharacterRoute-BMFUXsrP.css",
-        "bytes": 6612,
-        "sha256": "0f64444cb676ad71391a3d6cdec6800e66135cbddce28a579aacdf9605454ea4"
+        "file": "vue/CharacterRoute-6umFOaDx.css",
+        "bytes": 6988,
+        "sha256": "5e14f0219e77d443f18f2e9a32ddf08951557ec65e62479e2d47c075f43975c4"
       },
       {
-        "file": "vue/CharacterRoute-DOrIkgqg.js",
-        "bytes": 16913,
-        "sha256": "36bf11a142ff7003e83b2b41430eda2b56cf7ffffcca7ae9c17f2642b8ccf812"
+        "file": "vue/CharacterRoute-DLw797eM.js",
+        "bytes": 17586,
+        "sha256": "a9bcbdc2a88cbb8a50843ff6f86bd7606ab572e18ae0596636e1720fa0c5eb2e"
       },
       {
-        "file": "vue/ConnectionsRoute-CCicNLPO.js",
-        "bytes": 22334,
-        "sha256": "3f2b7cc976b047373697f29767d8a6fe2343b6e6e9bfd5b2b90449a0bf97e70d"
+        "file": "vue/ConnectionsRoute-DrPgPf7W.js",
+        "bytes": 22415,
+        "sha256": "258195ac080cec096ada580113dc675ac8224b990f20fe387bd36c2a4dd2ab86"
       },
       {
-        "file": "vue/ConnectionsRoute-Dv2tzozb.css",
-        "bytes": 5154,
-        "sha256": "d95f102b1c9d70b446ef6c2cf1bbdde99e572066da63c642a549e2cfb3026ebb"
+        "file": "vue/ConnectionsRoute-Y6u8AtKf.css",
+        "bytes": 5761,
+        "sha256": "c5591cbf62d5092ebc44e9bea001cf98c8293c58c92a130f471ca15e904a407a"
       },
       {
-        "file": "vue/ContextRoute-BaIz1cAq.js",
-        "bytes": 10373,
-        "sha256": "7abcefdf43ffb9d1c1784a53271fa694705a17e981dcfc757730b225965204b0"
+        "file": "vue/ContextRoute-BHeDT017.js",
+        "bytes": 11271,
+        "sha256": "3048e16b47f540b46765af4ce89650fc29fc0e35a17c5b94742686901c5f438c"
       },
       {
-        "file": "vue/ContextRoute-BeO2sDTC.css",
-        "bytes": 920,
-        "sha256": "fafb59fb886791214e36f697c5f167533e89f616446b77647527899b1dfa1b4a"
+        "file": "vue/ContextRoute-C4oGxEAo.css",
+        "bytes": 1525,
+        "sha256": "b410a1de85e5e0ef0588d8915f1848b6c8da4df10d73dc9de2824b22fc1e345d"
       },
       {
-        "file": "vue/DiaryRoute-Bg1k1faT.css",
-        "bytes": 12539,
-        "sha256": "a3ede2168bf924cca49e2d1d41d603c8bf8a5b58898ec07be63a147b60ec258e"
+        "file": "vue/DiaryRoute-B98nJhpb.css",
+        "bytes": 10842,
+        "sha256": "80b5bf75ccf06cd2aa8fe2281d840ca62c9dd24736e26569906ef2c62b27d823"
       },
       {
-        "file": "vue/DiaryRoute-DVFTwKZY.js",
-        "bytes": 37384,
-        "sha256": "1fe53b3784f028ad0c9b76fe1ba5eada4146a7c182328e5e282060a2d884418c"
+        "file": "vue/DiaryRoute-BvYgseTS.js",
+        "bytes": 37923,
+        "sha256": "f519da6ae5b1b7a19375007f4eb156b6a130a0901c6e4cd0075e812c20968e01"
       },
       {
-        "file": "vue/PrepareWriting-Bp4wAapk.js",
-        "bytes": 19257,
-        "sha256": "a754259872034bd467b4012b700bbdac3ec448a665719ce5fb648fbef9c02f20"
+        "file": "vue/PrepareWriting-CJf6P04F.css",
+        "bytes": 2246,
+        "sha256": "467d5820a610f666b5c207857642d7ff1dafd7c5c4b231e1dddd417d365df7fe"
       },
       {
-        "file": "vue/PrepareWriting-CuTrZ9jX.css",
-        "bytes": 2055,
-        "sha256": "c9e7c1ee21057fab94558d8262808a44f797c7afed98149239730fda133c14a5"
+        "file": "vue/PrepareWriting-DEnXGStA.js",
+        "bytes": 20364,
+        "sha256": "df1da7a1231f39db49c33c1edefeda21348a46fe7ff1346ef982fa5af6338b90"
       },
       {
-        "file": "vue/ProjectRoute-DsLcYE8w.js",
+        "file": "vue/ProjectRoute-Bcf6qUGs.js",
         "bytes": 402,
-        "sha256": "c02851c27db01f85559562d91bfbf45954872d7fd1d8280dc309ce37191747de"
+        "sha256": "efad4f583f7510950161ba74cf68dc0bbbc9f91eb26cae8f293bc06263a29687"
       },
       {
-        "file": "vue/SourcesRoute-D-ofSBD2.css",
-        "bytes": 6798,
-        "sha256": "f68ea250767949c0fdc39b21665dd9819aa47454a4ff169616887027c51b3836"
+        "file": "vue/SourcesRoute-BEpePsNO.js",
+        "bytes": 38507,
+        "sha256": "2452c5b799adc2b11efe56b75f242bc90a6440da456c1ac2c1cef1b612e985e1"
       },
       {
-        "file": "vue/SourcesRoute-Q-xXTvh1.js",
-        "bytes": 35651,
-        "sha256": "19e2fafea11f23562bac63c86a0122a5ecad3759ee929a3be7065ab40ad3d74e"
+        "file": "vue/SourcesRoute-BG-aQY9E.css",
+        "bytes": 10677,
+        "sha256": "24be812fdbfbd3fd9d2e6c317d19ee9a7702eee3274f8c6bfd4d8bcd2f300dfd"
       },
       {
-        "file": "vue/TasksRoute-BwOn2dtZ.css",
-        "bytes": 3773,
-        "sha256": "e238fa07a144582b35ad0bcada348dc42fd716667b63d2267d0761067f24a1e2"
+        "file": "vue/TasksRoute-CYUJ2es0.css",
+        "bytes": 4383,
+        "sha256": "ea51a61afe771e1b98a6305d9b8df65eba3d0dbe23f7febe4bec1d80833cbac5"
       },
       {
-        "file": "vue/TasksRoute-DwajGWym.js",
-        "bytes": 28486,
-        "sha256": "09a00a402704331aa10dc8645c8e649852c11815d4f076dc7c73189a2205aa60"
+        "file": "vue/TasksRoute-r0O0Asmx.js",
+        "bytes": 28616,
+        "sha256": "54b1a036663b2250ddafc1e01210428307fc0aa213b38142a25b55a65d4ae201"
       },
       {
-        "file": "vue/WorkspaceRoute-B0Nt6K7c.js",
+        "file": "vue/WorkspaceRoute-C53UihcW.js",
         "bytes": 135,
-        "sha256": "ddd6e06e8b15a81828f521235ee2dcd5ec80863c69e3565a0e9d6142216df9dc"
+        "sha256": "0d1bfb8224444bb106aedcc58c79c6a15f3d0d8cba72c6b602bd29f89595344b"
       },
       {
-        "file": "vue/WorkspaceRoute-Dz_zqH0Z.css",
-        "bytes": 6594,
-        "sha256": "2a23b537373e77a48458854288cc48bdf40aa73f9a35ed72edc9010242081cf1"
+        "file": "vue/WorkspaceRoute-CCp42xgL.css",
+        "bytes": 6450,
+        "sha256": "6ebb528b7d118464dde9587468d72ffeac3f34c8b6a937c942a80d024ba88606"
       },
       {
-        "file": "vue/WorkspaceRoute.vue_vue_type_script_setup_true_lang-BGduSwtA.js",
-        "bytes": 31241,
-        "sha256": "97ebb5f9fdfb1cfc3b86af6d721020807a1d53f5354e96a13d376f1c091ed8e8"
+        "file": "vue/WorkspaceRoute.vue_vue_type_script_setup_true_lang-BYr-0FiR.js",
+        "bytes": 32029,
+        "sha256": "857af097447d1486ad322fb711ed4c6b401c48a4b3ae2732534e32b5762944ff"
       },
       {
-        "file": "vue/WritingRoute-B7P8TKT1.js",
-        "bytes": 84595,
-        "sha256": "123bf678768603868b0579c2d6badc73ef1da5e11bfcef851108bcd8e7d1f074"
+        "file": "vue/WritingRoute-9NngLyBX.js",
+        "bytes": 89657,
+        "sha256": "0d7cc04bdd0d3cf55413579d07e547f2025cf94d99790af84c69f18a0c865ceb"
       },
       {
-        "file": "vue/WritingRoute-Dn90MNQC.css",
-        "bytes": 22989,
-        "sha256": "440fb9388a00cb489533eace20827f3f97e34eeb8e4e97901bb4bc082cfb4c13"
+        "file": "vue/WritingRoute-BYyZGbcY.css",
+        "bytes": 30074,
+        "sha256": "2877ebdfea7e11b1e16f11d66a6708068ac89d662aac2fa841834df79f23e5c8"
+      },
+      {
+        "file": "vue/_plugin-vue_export-helper-DlAUqK2U.js",
+        "bytes": 91,
+        "sha256": "cb85b0f263dbe24e857338301c0627076592e9f1f1a5662929f86d2c126444aa"
       },
       {
         "file": "vue/api-DvfvzJK5.js",
@@ -15609,14 +16154,14 @@
         "sha256": "ee727ed018202f9f86258425ecc522264e205483b045671409dd400e960f1e9b"
       },
       {
-        "file": "vue/index-DYrnCO7s.css",
-        "bytes": 39792,
-        "sha256": "4299d9f22191632d7d4baacaf03fd23f08cd3ac22b2e890a5ec29d08d1c681df"
+        "file": "vue/index-BmixvdRJ.js",
+        "bytes": 256295,
+        "sha256": "1f684c526fd05ca6576e20110eec2a51a8cc11cc0b55ae3f87c58ca2c2f86f83"
       },
       {
-        "file": "vue/index-XP5x99Eb.js",
-        "bytes": 248200,
-        "sha256": "d496cc8dce6899d30cb1f5f06ccd7a90e92df36da834ca7c18dca1efe7e37407"
+        "file": "vue/index-CpkCO9Dh.css",
+        "bytes": 47910,
+        "sha256": "fc007f57aaeeabaf25e112dde95f3f0a8f6c9fe3d3005addade731292bf9339c"
       }
     ]
   }
