@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { errorText } from '../api.ts';
+import Button from '../ui/Button.vue';
 import { issueCode, listConnections, revokeConnection } from './api.ts';
 import type { Connection } from './api.ts';
 import CopyCommand from './CopyCommand.vue';
@@ -148,7 +149,7 @@ watch(() => props.url.href, (_value, _previous, onCleanup) => {
       <div v-if="code" id="pairing" class="pairing-code">
         <p class="section-note">Hermes 配对命令 · 有效至 <time :datetime="expiresAt">{{ time(expiresAt) }}</time></p>
         <CopyCommand :text="`sth personal connect ${code}`" label="复制命令" success-message="配对命令已复制。" fallback-message="已选中配对命令，请手动复制。" :valid-until="Date.parse(expiresAt)" @expired="expire">
-          <button type="button" class="button quiet" @click="hideCode(); codeStatus = ''; issueButton?.focus()">收起</button>
+          <Button variant="ghost" @click="hideCode(); codeStatus = ''; issueButton?.focus()">收起</Button>
         </CopyCommand>
       </div>
     </section>
@@ -200,36 +201,41 @@ watch(() => props.url.href, (_value, _previous, onCleanup) => {
 </template>
 
 <style scoped>
-.connections-route { min-inline-size: 0; max-inline-size: 53rem; margin-inline: auto; }
-.connections-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .65rem 1rem; }
+.connections-route { min-inline-size: 0; max-inline-size: 53rem; margin-inline: auto; color: var(--ink); }
+.connections-route h1 { font: 650 1.8rem/1.4 var(--sans); text-wrap: balance; }
+.connections-route h2 { font: 650 1.18rem/1.5 var(--sans); text-wrap: balance; }
+.connections-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .45rem 1rem; padding-block-end: 1rem; border-block-end: 1px solid var(--line); }
 .connections-header h1 { inline-size: 100%; }
-.connections-header p { color: var(--muted); }
-.connections-header a { display: inline-flex; align-items: center; min-block-size: 2.75rem; color: var(--accent-deep); }
-.service-origin { padding-block: .8rem 1.3rem; color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+.connections-header p { grid-column: 1; color: var(--muted); }
+.connections-header a:not(.ui-button) { display: inline-flex; align-items: center; min-block-size: 2.75rem; color: var(--accent-deep); }
+.service-origin { padding-block: .75rem 1.4rem; color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
 .service-origin code { color: var(--ink); }
-.section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-block-end: .75rem; }
-.section-heading h2 { font-size: 1.2rem; }
-.pairing-section { border-block-start: 1px solid var(--line-strong); padding-block-start: 1.5rem; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-block-end: .65rem; }
+.pairing-section { padding-block: 1.1rem 1.35rem; border-block: 1px solid var(--line); }
 .section-note { max-inline-size: 70ch; font-size: .9rem; color: var(--muted); line-height: 1.8; }
 #code-status { margin-block-start: .5rem; }
-.pairing-code { margin-block-start: 1rem; }
+.pairing-code { max-inline-size: 40rem; margin-block-start: .9rem; padding-block-start: .75rem; border-block-start: 1px solid var(--line); }
 .error { margin-block: .75rem; font-size: .92rem; color: var(--danger); overflow-wrap: anywhere; }
-.group-heading { font-size: .9rem; margin-block: 1.3rem .5rem; color: var(--muted); }
+.group-heading { margin-block: 1.2rem .4rem; color: var(--muted); font-size: .84rem; font-weight: 600; }
 .connection-list { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--line); }
-.connection-record { display: flex; align-items: center; gap: .75rem; padding-block: 1rem; border-block-end: 1px solid var(--line); }
+.connection-record { display: flex; align-items: center; gap: .75rem 1rem; padding-block: .85rem; border-block-end: 1px solid var(--line); }
+.connection-record > .button { flex: 0 0 auto; }
 .record-copy { flex: 1; min-inline-size: 0; }
 .record-copy h4 { margin: 0; font-size: 1rem; font-weight: 650; overflow-wrap: anywhere; }
 .record-copy p { margin-block-start: .3rem; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
-.connection-state { color: var(--accent-deep); font-size: .85rem; }
-.button { min-block-size: 2.75rem; }
-.access-help { margin-block-start: 2rem; border-block-start: 1px solid var(--line); padding-block: 1rem; }
+.connection-state { flex: 0 0 auto; color: var(--ink); font-size: .8125rem; font-weight: 550; }
+.connections-section > .section-note:empty { display: none; }
+.access-help { margin-block-start: 1.5rem; border-block-start: 1px solid var(--line); padding-block: .75rem 1rem; }
 .access-help summary { cursor: pointer; min-block-size: 2.75rem; color: var(--accent-deep); }
 .access-help p { max-inline-size: 70ch; font-size: .9rem; line-height: 1.8; margin-block: .7rem; overflow-wrap: anywhere; color: var(--muted); }
-.revoke-dialog { inline-size: min(30rem, calc(100% - 2rem)); max-block-size: calc(100dvh - 2rem); padding: 1.5rem; overflow: auto; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--sheet); color: var(--ink); }
-.revoke-dialog::backdrop { background: rgb(21 38 29 / 35%); }
+.revoke-dialog { inline-size: min(30rem, calc(100% - 2rem)); max-block-size: calc(100dvh - 2rem); padding: 1.5rem; overflow: auto; border: 1px solid var(--line-strong); border-radius: var(--radius-panel, 12px); background: var(--sheet); color: var(--ink); }
+.revoke-dialog::backdrop { background: rgb(37 37 37 / 45%); }
 .revoke-dialog p { margin-block: 1rem; overflow-wrap: anywhere; }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; }
 @media (width <= 30rem) {
+  .connections-header { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .connections-header p { grid-column: 1; }
+  .connections-header > :is(a, .ui-button) { justify-self: start; }
   .connection-record { flex-wrap: wrap; }
   .record-copy { flex-basis: calc(100% - 4rem); }
   .connection-record .button { margin-inline-start: auto; }

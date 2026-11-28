@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import Button from '../ui/Button.vue';
 import { bindWrite } from './legacy.js';
 import type { Catalog } from './legacy.js';
 
@@ -25,13 +26,12 @@ onMounted(() => {
 
 <template>
   <form ref="form" class="job-action" method="post" action="/api/web/invoke" :aria-label="label">
-    <button class="button secondary" type="submit">{{ confirm ? '确认取消待执行项' : label }}</button>
+    <Button type="submit" variant="outline">{{ confirm ? '确认取消待执行项' : label }}</Button>
     <p class="notice" role="alert" tabindex="-1" hidden></p>
   </form>
 </template>
 
 <style scoped>
 .job-action { min-inline-size: 0; max-inline-size: 100%; }
-.job-action button { min-block-size: 2.75rem; white-space: normal; overflow-wrap: anywhere; }
 .job-action .notice { margin-block-start: .75rem; overflow-wrap: anywhere; }
 </style>

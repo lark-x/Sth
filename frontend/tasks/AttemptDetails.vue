@@ -17,9 +17,9 @@ defineProps<{ attempt: Attempt }>();
 </template>
 
 <style scoped>
-.attempt-facts { display: grid; gap: .7rem; margin-block: 1rem; }
-.attempt-facts > div { display: grid; grid-template-columns: minmax(5.5rem, 8rem) minmax(0, 1fr); gap: .5rem 1rem; }
+.attempt-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .5rem 1.25rem; margin-block: .85rem; }
+.attempt-facts > div { display: grid; grid-template-columns: minmax(5.5rem, 8rem) minmax(0, 1fr); gap: .35rem .85rem; padding-block: .45rem; border-block-end: 1px solid var(--line); }
 dt { color: var(--muted); font-size: .875rem; }
 dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (width <= 30rem) { .attempt-facts > div { grid-template-columns: 1fr; gap: .15rem; } }
+@media (width <= 30rem) { .attempt-facts { grid-template-columns: minmax(0, 1fr); } .attempt-facts > div { grid-template-columns: 1fr; gap: .15rem; } }
 </style>

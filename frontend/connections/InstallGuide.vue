@@ -122,7 +122,6 @@ summary { display: list-item; min-block-size: 3rem; padding-block: .8rem; cursor
 .hermes-actions > div { display: flex; align-items: center; gap: .5rem; }
 .hermes-actions input { inline-size: 1.1rem; block-size: 1.1rem; flex: 0 0 auto; margin: 0; }
 .hermes-actions label { display: inline-flex; align-items: center; min-block-size: 3rem; margin: 0; cursor: pointer; }
-.path-fields input, .host-field select { min-block-size: 3rem; font-size: 1rem; }
 small, .guide-hint, .guide-note { color: var(--muted); }
 small { font-size: .82rem; }
 .guide-note { border-block-start: 1px solid var(--line); padding-block-start: 1rem; }

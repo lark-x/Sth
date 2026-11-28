@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, useId, watch } from 'vue';
+import Button from '../ui/Button.vue';
 
 const props = withDefaults(defineProps<{
   text: string;
@@ -54,7 +55,7 @@ function onClick() { if (!nativeCommands) void copy(); }
   <div class="command-copy">
     <pre :id="targetId" ref="target" @command="onCommand"><code>{{ text }}</code></pre>
     <div class="copy-actions">
-      <button type="button" class="button secondary" command="--copy" :commandfor="targetId" @click="onClick">{{ label }}</button>
+      <Button variant="outline" command="--copy" :commandfor="targetId" @click="onClick">{{ label }}</Button>
       <slot />
     </div>
     <p class="copy-status" role="status" aria-atomic="true">{{ status }}</p>
@@ -63,8 +64,7 @@ function onClick() { if (!nativeCommands) void copy(); }
 
 <style scoped>
 .command-copy { min-inline-size: 0; }
-pre { margin: .65rem 0; padding: .9rem 1rem; border-radius: 6px; background: var(--sidebar); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; font: .85rem/1.8 ui-monospace, Consolas, monospace; user-select: text; }
+pre { margin: .65rem 0; padding: .9rem 1rem; border-radius: var(--radius-control, 6px); background: var(--surface-subtle, var(--sidebar)); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; font: .85rem/1.8 ui-monospace, Consolas, monospace; user-select: text; }
 .copy-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.button { min-inline-size: 2.75rem; min-block-size: 2.75rem; }
 .copy-status { min-block-size: 1.6em; margin-block-start: .35rem; color: var(--muted); font-size: .88rem; }
 </style>

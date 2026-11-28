@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
+import Button from '../ui/Button.vue';
 import AttemptDetails from './AttemptDetails.vue';
 import JobAction from './JobAction.vue';
 import { ApiError, catalog, display, mediaProvider, read, taskLinks, workspaceError } from './legacy.js';
@@ -119,15 +120,15 @@ function tabHref(href: string) {
     <header class="masthead">
       <div class="heading-copy"><h1 tabindex="-1">{{ title }}</h1><p v-if="provider" class="masthead-meta">{{ provider }}</p></div>
       <div class="actions">
-        <a v-if="route?.kind === 'list' && operations.has('jobs.create')" :href="newHref" class="button primary"><AppIcon name="plus" />新建任务</a>
-        <button type="button" class="button secondary" :disabled="loading" @click="emit('refresh')"><AppIcon name="refresh" />刷新状态</button>
+        <Button v-if="route?.kind === 'list' && operations.has('jobs.create')" as="a" :href="newHref"><AppIcon name="plus" />新建任务</Button>
+        <Button variant="outline" :disabled="loading" @click="emit('refresh')"><AppIcon name="refresh" />刷新状态</Button>
       </div>
     </header>
     <nav class="workspace-nav" aria-label="任务视图">
       <a v-for="[href, text] in taskLinks" :key="href" :href="tabHref(href)" :aria-current="(href === '/jobs' && route?.kind !== 'media') || (href === '/media' && route?.kind === 'media') ? 'page' : undefined">{{ text }}</a>
     </nav>
     <p v-if="loading" class="list-state" role="status">正在读取…</p>
-    <div v-else-if="error" class="list-state"><p class="notice" role="alert">{{ error }}</p><button type="button" class="button secondary" @click="load">重试</button></div>
+    <div v-else-if="error" class="list-state"><p class="notice" role="alert">{{ error }}</p><Button variant="outline" @click="load">重试</Button></div>
     <template v-else-if="list">
       <search v-if="list.filters.length">
         <form method="get" :action="url.pathname" aria-label="筛选任务" class="task-filter" @submit.prevent="filter">
@@ -136,7 +137,7 @@ function tabHref(href: string) {
             <select v-if="field.choices" :id="`task-filter-${field.key}`" :name="field.key" :value="field.value"><option value="">全部</option><option v-for="[value, text] in field.choices" :key="value" :value="value">{{ text }}</option></select>
             <input v-else :id="`task-filter-${field.key}`" type="search" :name="field.key" :value="field.value" :maxlength="field.maxLength">
           </div>
-          <button type="submit" class="button secondary">{{ list.filters.some(field => field.key === 'q') ? '搜索' : '筛选' }}</button>
+          <Button type="submit" variant="outline">{{ list.filters.some(field => field.key === 'q') ? '搜索' : '筛选' }}</Button>
         </form>
       </search>
       <ul v-if="list.items.length" class="rows" role="list">
@@ -146,8 +147,8 @@ function tabHref(href: string) {
       </ul>
       <p v-else class="list-state">暂无任务</p>
       <nav v-if="list.offset || list.nextOffset" class="actions load-more" aria-label="任务分页">
-        <a v-if="list.offset" :href="pageHref(url, Math.max(0, list.offset - 20))" class="button secondary"><AppIcon name="back" />上一页</a>
-        <a v-if="list.nextOffset" :href="pageHref(url, list.nextOffset)" class="button secondary">下一页<AppIcon name="next" /></a>
+        <Button v-if="list.offset" as="a" variant="outline" :href="pageHref(url, Math.max(0, list.offset - 20))"><AppIcon name="back" />上一页</Button>
+        <Button v-if="list.nextOffset" as="a" variant="outline" :href="pageHref(url, list.nextOffset)">下一页<AppIcon name="next" /></Button>
       </nav>
     </template>
     <template v-else-if="job">
@@ -179,7 +180,7 @@ function tabHref(href: string) {
     <template v-else-if="media">
       <figure class="task-media">
         <img v-if="!imageFailed" :key="imageVersion" :src="media.contentHref" :width="media.width" :height="media.height" :alt="media.title" @error="imageFailed = true">
-        <div v-else class="list-state"><p role="status">图片预览暂时无法加载。</p><button class="button secondary" type="button" @click="imageFailed = false; imageVersion++">重试预览</button></div>
+        <div v-else class="list-state"><p role="status">图片预览暂时无法加载。</p><Button variant="outline" @click="imageFailed = false; imageVersion++">重试预览</Button></div>
         <figcaption class="actions"><a :href="media.contentHref" target="_blank" rel="noopener">打开媒体文件</a><a :href="media.contentHref" :download="downloadName(media)">下载媒体文件</a></figcaption>
       </figure>
       <dl class="media-facts"><div><dt>文件类型</dt><dd>{{ media.contentType }}</dd></div><div><dt>宽度</dt><dd>{{ media.width }}</dd></div><div><dt>高度</dt><dd>{{ media.height }}</dd></div><div><dt>文件字节数</dt><dd>{{ media.byteLength }}</dd></div><div><dt>创建时间</dt><dd><time :datetime="media.createdAt">{{ dateText(media.createdAt) }}</time></dd></div></dl>
@@ -190,46 +191,49 @@ function tabHref(href: string) {
 </template>
 
 <style scoped>
-.tasks-domain { min-inline-size: 0; overflow-wrap: anywhere; }
-h1 { font-family: var(--sans); text-wrap: balance; }
+.tasks-domain { min-inline-size: 0; overflow-wrap: anywhere; color: var(--ink); }
+.tasks-domain h1 { font-family: var(--sans); text-wrap: balance; }
 .heading-copy { min-inline-size: 0; }
-.tasks-domain .button, .provenance a, figcaption a, summary { min-block-size: 2.75rem; }
-.tasks-domain .button { white-space: normal; }
-.tasks-domain .workspace-nav { flex-wrap: wrap; }
-.task-row { padding-block: 1.25rem; border-block-end: 1px solid var(--line); }
-.task-row h2 { font-size: 1.125rem; font-family: var(--sans); line-height: 1.6; }
+.provenance a, figcaption a, summary { min-block-size: 2.75rem; }
+.tasks-domain .workspace-nav { flex-wrap: wrap; margin-block: .65rem 1.25rem; }
+.task-row { display: block; padding: .85rem .65rem; border-block-end: 1px solid var(--line); transition: background-color var(--motion-fast, 120ms); }
+.task-row:hover { background: var(--surface-subtle, var(--sidebar)); }
+.task-row h2 { font-size: 1.06rem; font-family: var(--sans); line-height: 1.55; font-weight: 600; }
 .task-row h2 a { display: inline-flex; align-items: center; min-block-size: 2.75rem; padding-block: .25rem; }
-.row-meta { margin-block-start: .35rem; font-variant-numeric: tabular-nums; }
+.row-meta { margin-block-start: .35rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .list-state { padding-block: 1.5rem; color: var(--muted); }
-.list-state button { margin-block-start: .75rem; }
-.task-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; padding-block: 1rem 1.5rem; }
-.task-filter .field { flex: 1 1 12rem; min-inline-size: 0; margin: 0; }
-.task-filter label { display: block; margin-block-end: .4rem; }
-.task-filter select, .task-filter input { inline-size: 100%; min-block-size: 2.75rem; }
-.task-section { margin-block-start: 2rem; padding-block-start: 1.25rem; border-block-start: 1px solid var(--line); }
-.task-section h2 { margin-block-end: .85rem; font: 650 1.2rem/1.6 var(--sans); }
-progress { display: block; inline-size: min(100%, 32rem); block-size: .7rem; margin-block: 1rem; accent-color: var(--accent); }
-.task-counts { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin-block: 1rem; }
-.task-counts > div { display: flex; gap: .6rem; }
+.list-state :deep(.ui-button) { margin-block-start: .75rem; }
+.task-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); align-items: end; gap: .85rem 1rem; padding-block: .5rem 1.25rem; }
+.task-filter .field { min-inline-size: 0; margin: 0; }
+.task-filter .ui-button { justify-self: start; }
+.task-section { margin-block-start: 1.75rem; padding-block-start: 1.15rem; border-block-start: 1px solid var(--line); }
+.task-section h2 { margin-block-end: .75rem; font: 650 1.15rem/1.55 var(--sans); }
+.task-section > .row-meta { margin-block-start: 0; }
+progress { display: block; inline-size: min(100%, 32rem); block-size: .65rem; margin-block: .85rem; accent-color: var(--ink); }
+.task-counts { display: flex; flex-wrap: wrap; gap: .6rem 1.35rem; margin-block: .85rem 1rem; }
+.task-counts > div { display: flex; gap: .5rem; }
 dt { color: var(--muted); }
 dd { margin: 0; font-variant-numeric: tabular-nums; }
 .job-actions { align-items: start; }
-summary { cursor: pointer; padding-block: .6rem; }
+summary { cursor: pointer; min-block-size: 2.75rem; padding-block: .6rem; }
 .task-items { padding-inline-start: 1.5rem; }
-.task-items > li { padding-block: 1rem 1.5rem; border-block-end: 1px solid var(--line); }
-.task-items h3 { font: 600 1.05rem/1.6 var(--sans); }
-.task-items details { margin-block: .5rem; }
-.provenance { column-gap: 1.5rem; }
+.task-items > li { padding-block: .95rem 1.25rem; border-block-end: 1px solid var(--line); }
+.task-items h3 { font: 600 1rem/1.55 var(--sans); }
+.task-items details { margin-block: .45rem; }
+.provenance { column-gap: 1.25rem; }
 .provenance a, figcaption a { display: inline-flex; align-items: center; text-underline-offset: .25em; }
-.task-media { margin: 1.5rem 0; }
+.task-media { margin: 1.25rem 0 1.5rem; }
 .task-media img { display: block; max-inline-size: 100%; block-size: auto; object-fit: contain; }
-.task-media figcaption { margin-block-start: .75rem; gap: .75rem 1.5rem; }
-.media-facts { display: flex; flex-wrap: wrap; gap: 1rem 2rem; }
-.media-facts dt { margin-block-end: .25rem; font-size: .875rem; }
+.task-media figcaption { margin-block-start: .75rem; gap: .5rem 1.25rem; }
+.media-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .85rem 1.25rem; margin-block: .5rem 1.25rem; }
+.media-facts > div { min-inline-size: 0; }
+.media-facts dt { margin-block-end: .2rem; font-size: .8125rem; }
+.media-facts dd { overflow-wrap: anywhere; }
 @media (width <= 36rem) {
   .masthead { align-items: start; }
   .masthead > .actions { inline-size: 100%; }
   .task-items { padding-inline-start: 1.25rem; }
-  .task-filter .field { flex-basis: 100%; }
+  .task-filter { grid-template-columns: minmax(0, 1fr); }
+  .task-filter .ui-button { justify-self: stretch; }
 }
 </style>

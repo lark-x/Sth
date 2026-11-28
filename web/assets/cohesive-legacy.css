@@ -1,0 +1,190 @@
+/* Presentation refinements for native routes mounted beneath .legacy-route.
+   Shared control appearance remains in controls.css. */
+.legacy-route :is(.workspace-section, .settings-section) {
+  padding-block: 1.15rem;
+  border-block-end: 1px solid var(--line);
+}
+
+.legacy-route :is(.workspace-section, .settings-section) > h2,
+.legacy-route .workspace-section > h3 {
+  margin-block: 0 .7rem;
+  font-family: var(--sans);
+  text-wrap: balance;
+}
+
+.legacy-route .workspace-section > p + h3,
+.legacy-route .workspace-section > :is(.workspace-facts, .workspace-notes, .workspace-media, .workspace-fields, .workspace-repeat) + h3 {
+  margin-block-start: 1.15rem;
+}
+
+.legacy-route .workspace-facts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .7rem 1.2rem;
+  margin-block: .85rem;
+}
+
+.legacy-route .workspace-facts > div {
+  min-inline-size: 0;
+  padding-block-end: .45rem;
+  border-block-end: 1px solid var(--line);
+}
+
+.legacy-route .workspace-facts dt,
+.legacy-route .workspace-facts dd {
+  overflow-wrap: anywhere;
+}
+
+.legacy-route .workspace-facts dt {
+  margin-block-end: .18rem;
+  font-size: .8125rem;
+}
+
+.legacy-route .workspace-notes {
+  margin-block: .65rem;
+  padding-inline-start: 1.35rem;
+}
+
+.legacy-route .workspace-notes > li {
+  padding-block: .25rem;
+}
+
+.legacy-route .workspace-notes > li + li {
+  margin-block-start: .55rem;
+}
+
+.legacy-route .workspace-notes :is(h2, h3) {
+  margin-block: .35rem;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.legacy-route .workspace-notes blockquote {
+  margin-block: .45rem;
+  padding-inline-start: .75rem;
+  border-inline-start: 1px solid var(--line-strong);
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.legacy-route :is(.workspace-editor, .editor) {
+  max-inline-size: 48rem;
+  gap: 1rem;
+  padding-block-start: 1rem;
+}
+
+.legacy-route .workspace-fields,
+.legacy-route .workspace-repeat {
+  gap: .9rem;
+}
+
+.legacy-route .workspace-fieldset {
+  padding: .85rem;
+  border-color: var(--line);
+  border-radius: var(--radius-control, 6px);
+}
+
+.legacy-route .workspace-fieldset legend {
+  padding-inline: .2rem;
+  font-size: .875rem;
+}
+
+.legacy-route .workspace-repeat-row {
+  gap: .75rem;
+  padding-block: .2rem .7rem;
+}
+
+.legacy-route .workspace-comparison {
+  gap: 1.25rem;
+}
+
+.legacy-route .workspace-comparison article {
+  padding: 1rem 0;
+  border: 0;
+  border-block-start: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.legacy-route .workspace-comparison article h2,
+.legacy-route .workspace-comparison article h3 {
+  line-height: 1.5;
+}
+
+.legacy-route .workspace-media {
+  margin-block: 1rem 1.35rem;
+}
+
+.legacy-route .workspace-media img {
+  border-radius: var(--radius-control, 6px);
+}
+
+.legacy-route .workspace-media figcaption {
+  color: var(--muted);
+}
+
+.legacy-route .workspace-section details > summary,
+.legacy-route .workspace-cancel > summary {
+  min-block-size: 2.75rem;
+  align-content: center;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.legacy-route .workspace-section .actions {
+  gap: .5rem .85rem;
+  margin-block: .45rem;
+}
+
+.legacy-route .passage-body {
+  max-inline-size: 68ch;
+  font-size: var(--body-size);
+  line-height: var(--body-leading);
+}
+
+.legacy-route .passage-actions {
+  margin-block-start: 1rem;
+}
+
+.legacy-route .workspace-filter {
+  gap: .75rem 1rem;
+  margin-block: .85rem 1rem;
+}
+
+.legacy-route .workspace-filter .field {
+  min-inline-size: min(100%, 12rem);
+}
+
+.legacy-route .workspace-reference {
+  min-block-size: 2.75rem;
+}
+
+.legacy-route .workspace-history {
+  gap: .35rem;
+}
+
+@media (width <= 40rem) {
+  .legacy-route :is(.workspace-section, .settings-section) {
+    padding-block: .95rem;
+  }
+
+  .legacy-route :is(.workspace-editor, .editor) {
+    gap: .85rem;
+  }
+
+  .legacy-route .workspace-fieldset {
+    padding: .7rem;
+  }
+
+  .legacy-route .workspace-comparison {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .5rem;
+  }
+
+  .legacy-route .workspace-filter {
+    align-items: stretch;
+  }
+
+  .legacy-route .workspace-filter .field {
+    min-inline-size: 100%;
+  }
+}
