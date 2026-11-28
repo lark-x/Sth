@@ -4,14 +4,14 @@
 
 ## 普通用户三步
 
-本轮验收的 Windows x64 分发包为 `sth-hermes-1.2.0-2307e73-win32-x64.zip`，SHA-256 为 `d8fe171aa7ec92e343bb23c5579c1508624412bee22f65ee7eb78b90827f7b24`。收到后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
+本轮验收的 Windows x64 分发包为 `sth-hermes-1.2.0-ed01a63-win32-x64.zip`，86,781,935 字节，SHA-256 为 `c74aae6768f1380ddd42a6dae669d8837d71d07e3e06d5783e924e4e790b9bb9`。收到后解压到自己的目录。下面使用 PowerShell，路径按实际解压位置调整。包需要与操作系统和 CPU 架构匹配。
 
-仓库目前公开，安装包仍保存在未发布的草稿中，只有有权访问草稿的维护者可以下载附件。GitHub 已核对文件大小为 87,787,642 字节，服务端摘要与上述 SHA-256 一致。发布目标为 `2307e7351e63571d9873c39df3b96ca91a6592f2`。[Windows x64 发布草稿](https://github.com/lark-x/Sth/releases/tag/untagged-44d41aa989d8bfea1fb6)
+最新包保存在维护者本机 `frontend/.artifacts/author-review/package/`，本轮没有上传或公开新的 GitHub Release。它包含本机应用 `9e73ab1` 相同的前端构建，已在隔离 Hermes profile 从 `2307e73` 旧包升级并通过 10 项确定性检查，详见 [交付验收](ACCEPTANCE.md)。此前的 [Windows x64 发布草稿](https://github.com/lark-x/Sth/releases/tag/untagged-44d41aa989d8bfea1fb6) 仍对应旧包 `2307e73`，不能作为本轮新版的下载入口。
 
 1. 安装。在解压后含 `plugin.yaml` 的目录中运行。
 
    ```powershell
-   Set-Location C:/Downloads/sth-hermes-1.2.0-2307e73-win32-x64
+   Set-Location C:/Downloads/sth-hermes-1.2.0-ed01a63-win32-x64
    hermes plugins install ([System.Uri](Get-Location).Path).AbsoluteUri --enable --force
    ```
 

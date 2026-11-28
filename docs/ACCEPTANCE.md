@@ -2,6 +2,45 @@
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
 
+## 2026-11-28 · 作者读写与候选稿审阅
+
+本轮分支为 [`feat/author-reading-review`](https://github.com/lark-x/Sth/tree/feat/author-reading-review)，应用提交 [`9e73ab139c15f678985c732ce69e565acfb815b2`](https://github.com/lark-x/Sth/commit/9e73ab139c15f678985c732ce69e565acfb815b2) 已推送并部署到本机 <http://127.0.0.1:9322>。后续提交只补充交付记录，运行应用以该 SHA 为准。`main` 仍为 `ec1f1e4ba41f261419e70658a76b5e68868caada`。范围、所有权、独立审查、架构成本和失败轮次详见 [本轮记录](AUTHOR_READING_REVIEW.md)。
+
+- 读稿保留正文完整标题，工具栏突出准确修订、采用与旧版身份；手机将场景路径收入版本菜单。
+- 文稿列表按标题、真实原文摘要、单列版本信息组织，减少同一范围内重复的章节信息。
+- 比稿在桌面收起中间文稿列表，平板默认给正文完整宽度；采用前展示候选版本、目标场景和原采用稿，长正文之前即可确认。
+- 依据面板分别解释本版已确认记录、场景可用资料与准备下一稿；读取失败显示未知状态，不能误报没有依据。
+
+| 已实现的界面 | 合成样例截图 |
+| --- | --- |
+| 桌面读稿与比稿 | [1280px 读稿](author-review-screens/chromium-1280-reader.png) · [双稿对照](author-review-screens/chromium-1280-compare-left.png) |
+| 采用前确认 | [1280px 对象与动作](author-review-screens/chromium-1280-adopt.png) |
+| 手机正文与列表 | [390px 读稿](author-review-screens/chromium-390-reader.png) · [文稿列表](author-review-screens/chromium-390-directory.png) |
+| WebKit 320px | [版本菜单](author-review-screens/webkit-320-versions.png) · [已确认依据](author-review-screens/webkit-320-evidence.png) · [无关联记录](author-review-screens/webkit-320-evidence-empty.png) |
+
+### 验证结果与边界
+
+完整浏览器回归 **239/239**，最终候选文稿专项 **164/164**，均无跳过；类型检查与架构基线核对通过。六组 Chromium 1280/768/390/320、WebKit 390/320 共 **65 个页面状态**通过隔离库截图验收。主代理与独立审查席查看了最终画面；测试计数不替代视觉判断。[截图清单](author-review-screens/manifest.json) 保留来源与摘要，图片均为合成样例。
+
+改造前后 12 个页面组合的 API 请求量相同；390px 旧稿正文起点由 185px 提前至 156px。构建由 639,331 增至 646,465 字节（+7,134，约 1.1%）。用时只有单次样本，有升有降，不宣称性能改善。业务源码摘要为 `432f2c3b846130309b4037709ece83e326eba7a60cfc0908bf1ca399881d694e`，构建摘要为 `47dcf8dd433b56afd1251ee51d8ee48591f72c99da3ba794ceb3f17da3e298c8`。公共操作、数据格式、迁移与依赖版本未改动。
+
+前三轮文稿回归曾出现旧断言、空态加载同步以及偶发的导航加载／WebKit 按钮稳定性超时。旧断言和空态等待已修正；后两类现象仅在定向与最终完整回归中未再出现，未确认根因。保留失败日志和新增失败诊断，没有提高超时或删除、跳过用例。Windows snapshot 浏览器原生退出的记录也保留，未计入通过。真实 iOS/WKWebView、真人私聊和真实模型本轮未验收。两项低优先级视觉观察保留在本轮记录中。
+
+### 部署与数据核对
+
+- 运行镜像为 `sha256:6d58d8a62d02635b1eea4d57b153fb38b2742f46717d099ae1fc43e9c5c356f3`。OCI revision、运行源码、原配置与原数据卷均匹配，Docker 和 HTTP 健康；25 个前端文件在验收构建、发布镜像、运行容器及本轮 Hermes 包中逐文件一致。
+- 发布前演练及发布后独立核验通过：59 张表、5,679 行与演练结果一致，完整性和外键正常。回滚 dry-run 通过，目标为上轮 `aeefc4cb1f2aa9c9641ef847c052afa58a028085`，没有执行回滚。
+- 实际 9322 服务六组布局验收 **72/72**，覆盖首页、日记、全部文稿、角色、资料、任务、设置、旧稿准确修订、依据开关、比稿返回及采用确认页。没有点击真实稿件的最终采用动作；无控制台异常、HTTP 失败或横向溢出。主代理另查看实际桌面读稿／采用、手机比稿和 WebKit 320px 依据图。
+- 浏览器验收后，其余 58 张表完全不变，原有回执全部保留，只新增与捕获请求逐项对应的 **540 条 `web:owner` 读取回执**；结构、内部序列、完整性及外键通过。真实作者内容截图保留本机忽略目录。
+
+本机证据根目录为 `frontend/.artifacts/author-review/`：`final/browser-accepted.log`、`final/manuscript-release.log`、`final/release-execute.log`、`final/verify-release.log`、`final/rollback-dry.log`、`final/frontend-delivery.json`、`live-9e73ab1/report.json`、`final/live-data-audit.json`。预检及发布记录位于 `artifacts/release-preflight-20261127/runs/2026-11-28T08-25-07-578Z-355bb474/`。发布使用 screenshot-matrix 模式；独立核验中的 `browserAcceptancePassed: false` 仅表示未选择 targeted-browser 模式，`browserAcceptancePending: false`，部署后的实际 72 项验证如上。
+
+### Hermes 分发包
+
+本机已生成 `frontend/.artifacts/author-review/package/sth-hermes-1.2.0-ed01a63-win32-x64.zip`，86,781,935 字节，SHA-256 为 `c74aae6768f1380ddd42a6dae669d8837d71d07e3e06d5783e924e4e790b9bb9`。包基于最后业务修改 `ed01a63`；之后至部署提交的变化仅涉及测试及文档，25 个前端文件已与部署镜像逐字节核对一致。当前 ZIP 保存在本机，本轮没有上传或公开新的 GitHub Release。
+
+通过已安装 Hermes 的隔离 profile 先安装 `2307e73` 旧包，再按 stop/install/start 流程升级至本包，确定性验收 **10/10**。1,930 个 manifest 文件和 25 项生产依赖验证通过，升级后的运行时与 HTTP 首页均匹配本包；工作区、连接、原资料版本与回执保留，新写入、重开、幂等重放及跨终端拒绝通过。该记录不是另跑新包的空 profile 安装，也不代表真实模型或真人私聊验收。证据为 `package/onboarding.stdout.log` 和 [安装说明](HERMES_SETUP.md)。
+
 ## 2026-11-28 · 统一导航与 UI 基础组件
 
 这次补充迭代针对用户截图中的两套侧栏与视觉落差，分支为 `feat/unified-writing-ui`。全站保持一个资料库实例，读稿为三栏，首页／角色／资料／设置复用同一导航；手机辅助页使用临时资料库 pane。引入 Reka UI 的 Button／Dropdown 基础和 Lucide 图标，按 shadcn-vue 的源码持有方式定制现有灰白主题。原业务接口与版本化内容继续沿用。
