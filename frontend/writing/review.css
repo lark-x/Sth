@@ -7,8 +7,31 @@
 }
 
 .wr-review-controls {
-  align-items: flex-start;
-  padding-block: .45rem;
+  flex: 1 1 auto;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding: 0;
+}
+
+.wr-compare-settings {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: .25rem .75rem;
+  min-block-size: 2.75rem;
+  border-block-end: 1px solid var(--wr-line);
+  background: var(--sheet, #fff);
+}
+
+.wr-review-controls.wr-compare-switch {
+  position: static;
+  z-index: auto;
+  flex-wrap: nowrap;
+  gap: .25rem .65rem;
+  border: 0;
+  background: transparent;
 }
 
 .wr-diff-legend {
@@ -62,6 +85,10 @@
 }
 
 .wr-review-comparison article > header {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding-block: .55rem;
   border-block-start: 1px solid var(--wr-line-strong, #8a8a8a);
   border-block-end: 1px solid var(--wr-line);
 }
@@ -73,10 +100,11 @@
 
 .wr-review-draft-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: .35rem;
-  padding-block-start: .45rem;
+  gap: .25rem;
+  margin-block-start: auto;
+  padding-block-start: .2rem;
 }
 
 .wr-review-draft-actions > .ui-button {
@@ -185,9 +213,15 @@
 }
 
 .wr-review-confirm-controls {
-  display: grid;
-  justify-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: .55rem;
+}
+
+.wr-review-confirm-controls > .wr-notice,
+.wr-review-refresh-control {
+  flex-basis: 100%;
 }
 
 .wr-review-confirm-controls > .wr-notice {
@@ -197,6 +231,17 @@
 .wr-review-submit {
   min-inline-size: 10rem;
   min-block-size: 2.75rem;
+}
+
+.wr-review-return {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+}
+
+.wr-review-return-note {
+  color: var(--muted, #686868);
+  font-size: .8125rem;
 }
 
 .wr-review-refresh-control {
@@ -248,6 +293,21 @@
 }
 
 @media (max-width: 48rem) {
+  .wr-compare-settings {
+    flex-wrap: wrap;
+    gap: 0;
+    padding-block: .15rem;
+  }
+
+  .wr-compare-versions,
+  .wr-review-controls.wr-compare-switch {
+    flex: 1 1 100%;
+  }
+
+  .wr-review-controls.wr-compare-switch {
+    flex-wrap: wrap;
+  }
+
   .wr-diff-legend {
     flex-basis: 100%;
     margin-inline-start: 0;
@@ -273,12 +333,17 @@
     inline-size: 100%;
   }
 
+  .wr-review-return-note {
+    flex-basis: 100%;
+  }
+
   .wr-review-adopt-form .wr-review-refresh {
     min-inline-size: min(15rem, calc(100vw - 2 * var(--wr-gutter)));
     max-inline-size: 100%;
   }
 
   .wr-review-draft-actions {
+    flex-wrap: wrap;
     gap: .25rem;
   }
 

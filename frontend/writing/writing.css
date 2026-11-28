@@ -5,7 +5,7 @@
 .writing-route h2 { font-size: 1.25rem; line-height: 1.5; text-wrap: balance; }
 .writing-route h3 { font-size: 1.05rem; line-height: 1.55; text-wrap: balance; }
 .writing-route :is(p, li) { text-wrap: pretty; }
-.writing-route a { color: var(--accent, #252525); text-underline-offset: .22em; overflow-wrap: anywhere; }
+.writing-route a:not(.ui-button) { color: var(--accent, #252525); text-underline-offset: .22em; overflow-wrap: anywhere; }
 .writing-route :focus-visible { outline: 2px solid var(--accent, #252525); outline-offset: 3px; }
 .writing-route input, .writing-route textarea { caret-color: var(--accent, #252525); }
 .writing-route ::selection { color: var(--ink, #252525); background: var(--selection, #e7e7e7); }
@@ -158,20 +158,29 @@
 }
 @media (width < 640px) {
   .wr-reader-toolbar { column-gap: .15rem; padding-block: .1rem .38rem; }
-  .wr-reader-toolbar > .ms-view-controls { grid-row: 1; }
-  .wr-toolbar-actions { grid-row: 1; }
+  .wr-reader-toolbar { grid-template-rows: auto; }
+  .wr-reader-toolbar > .ms-view-controls { grid-area: 1 / 1; }
+  .wr-toolbar-identity { grid-area: 1 / 2; }
+  .wr-toolbar-actions { grid-area: 1 / 3; }
   .wr-toolbar-actions .wr-toolbar-save { display: none; }
   .wr-more-menu .wr-menu-save { display: flex; min-block-size: 2.75rem; }
   .wr-reader-toolbar .wr-tool { min-block-size: 2.75rem; min-inline-size: 2.75rem; padding: .4rem; }
   .wr-toolbar-picker { min-block-size: 2.75rem; }
   .wr-toolbar-label { display: none; }
   .wr-toolbar-current-version { display: inline; white-space: nowrap; }
-  .writing-route .wr-toolbar-meta { grid-column: 2 / -1; }
+  .writing-route .wr-toolbar-meta {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .wr-reader-path { display: none; }
   .wr-version-path { display: flex; align-items: baseline; }
 }
 @media (hover: hover) {
-  .writing-route a:hover { text-decoration-thickness: 2px; }
+  .writing-route a:not(.ui-button):hover { text-decoration-thickness: 2px; }
   .wr-button:hover:not(:disabled) { background: var(--wr-hover); }
   .wr-primary:hover:not(:disabled) { background: var(--muted, #686868); }
   .writing-route .wr-tool:hover, .wr-toolbar-picker:hover { background: var(--wr-hover); }

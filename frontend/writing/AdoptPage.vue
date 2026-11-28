@@ -24,7 +24,7 @@ const { data, busy, error, reload } = useRead(async signal => {
   const [scene, context, revisions] = await Promise.all([
     read<Scene>('scene.read', { sceneId: draft.sceneId }, signal),
     read<Scene>('scene.read', { sceneId: draft.sceneId, revision: draft.sceneRevision }, signal),
-    all<DraftSummary>('draft.revisions', { draftId }, signal),
+    all<DraftSummary>('draft.revisions', { draftId }, signal).catch(() => [] as DraftSummary[]),
   ]);
   current.value = scene;
   if (!signal.aborted) document.title = `采纳候选稿 · ${draft.title} · Sth`;
@@ -54,6 +54,12 @@ const comparisonHref = computed(() => current.value
   : '/create');
 const returnToReview = computed(() => returnHref(props.url, comparisonHref.value));
 const reviewPageHref = props.url.pathname + props.url.search;
+const draftHref = computed(() => data.value
+  ? href(recordHref('drafts', data.value.draft.draftId), {
+      revision: data.value.draft.revision,
+      returnTo: reviewPageHref,
+    })
+  : '/create');
 const latestDraftRevision = computed(() => data.value?.revisions[0]?.revision);
 const branchHref = computed(() => data.value
   ? href(recordHref('scenes', data.value.context.sceneId), {
@@ -61,12 +67,6 @@ const branchHref = computed(() => data.value
       action: 'branch',
       draftId: data.value.draft.draftId,
       draftRevision: data.value.draft.revision,
-    })
-  : '/create');
-const evidenceHref = computed(() => data.value
-  ? href(recordHref('drafts', data.value.draft.draftId), {
-      revision: data.value.draft.revision,
-      returnTo: reviewPageHref,
     })
   : '/create');
 </script>
@@ -77,8 +77,8 @@ const evidenceHref = computed(() => data.value
       <a :href="returnToReview">返回对照候选稿</a>
       <h1>采纳候选稿</h1>
       <p class="wr-review-scope">
-        <strong>{{ current.title }} · {{ version(current.revision) }}</strong>
-        <span>{{ sceneScope }}</span>
+        <strong>{{ current.title }}</strong>
+        <span>场景第 {{ current.revision }} 版 · {{ sceneScope }}</span>
         <span v-if="current.branchFrom">源场景固定在第 {{ current.branchFrom.revision }} 版</span>
       </p>
     </header>
@@ -147,6 +147,8 @@ const evidenceHref = computed(() => data.value
             >
               <span>{{ save.busy ? '正在采纳…' : save.pending ? '重试同一次提交' : '采纳候选稿' }}</span>
             </Button>
+            <a class="wr-review-return" :href="draftHref">返回此稿</a>
+            <span class="wr-review-return-note">打开后可在读稿工具栏查看本版依据</span>
           </div>
         </form>
         <section
@@ -159,7 +161,6 @@ const evidenceHref = computed(() => data.value
         <details class="wr-review-more">
           <summary>更多操作</summary>
           <nav aria-label="采纳页更多操作">
-            <a :href="evidenceHref">核对此稿依据</a>
             <a :href="branchHref">从此稿建立 IF</a>
           </nav>
         </details>

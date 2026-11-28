@@ -280,43 +280,44 @@ function latestRevision(draft: DraftSummary) {
       <p v-if="data.scene.branchFrom || data.scene.branchId" class="wr-muted">IF 分支</p>
     </header>
     <template v-if="data.compared && lines">
-      <details class="wr-compare-versions">
-        <summary>选择对照版本</summary>
-      <form
-        class="wr-compare-form"
-        aria-label="选择对照版本"
-        method="get"
-        :action="recordHref('scenes', data.scene.sceneId)"
-        @submit.prevent="compare"
-      >
-        <div>
-          <label for="wr-left">左稿</label
-          ><select id="wr-left" v-model="leftKey" name="left">
-            <option
-              v-for="draft in data.versions"
-              :key="draftKey(draft)"
-              :value="draftKey(draft)"
-            >
-              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
-            </option>
-          </select>
-        </div>
-        <div>
-          <label for="wr-right">右稿</label
-          ><select id="wr-right" v-model="rightKey" name="right">
-            <option
-              v-for="draft in data.versions"
-              :key="draftKey(draft)"
-              :value="draftKey(draft)"
-            >
-              {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
-            </option>
-          </select>
-        </div>
-        <button type="submit" class="wr-button">对照</button>
-      </form>
-      </details>
-      <nav class="wr-compare-switch wr-review-controls" aria-label="同段切换">
+      <div class="wr-compare-settings">
+        <details class="wr-compare-versions">
+          <summary>选择对照版本</summary>
+          <form
+            class="wr-compare-form"
+            aria-label="选择对照版本"
+            method="get"
+            :action="recordHref('scenes', data.scene.sceneId)"
+            @submit.prevent="compare"
+          >
+            <div>
+              <label for="wr-left">左稿</label
+              ><select id="wr-left" v-model="leftKey" name="left">
+                <option
+                  v-for="draft in data.versions"
+                  :key="draftKey(draft)"
+                  :value="draftKey(draft)"
+                >
+                  {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label for="wr-right">右稿</label
+              ><select id="wr-right" v-model="rightKey" name="right">
+                <option
+                  v-for="draft in data.versions"
+                  :key="draftKey(draft)"
+                  :value="draftKey(draft)"
+                >
+                  {{ draft.title }} · {{ version(draft.revision) }}{{ isAdopted(draft) ? ` · ${adoptionLabels.adopted}` : '' }}{{ latestRevision(draft) === draft.revision ? ' · 最新' : '' }}
+                </option>
+              </select>
+            </div>
+            <button type="submit" class="wr-button">对照</button>
+          </form>
+        </details>
+        <nav class="wr-compare-switch wr-review-controls" aria-label="同段切换">
         <button
           type="button"
           class="wr-tool"
@@ -342,7 +343,8 @@ function latestRevision(draft: DraftSummary) {
           <span class="wr-diff-key"><span class="wr-diff-swatch wr-diff-added">增</span>右稿新增</span>
           <span class="wr-diff-key"><span class="wr-diff-swatch wr-diff-missing">—</span>无对应段</span>
         </span>
-      </nav>
+        </nav>
+      </div>
       <p
         v-if="data.compared.left.body === data.compared.right.body"
         role="status"
@@ -405,7 +407,7 @@ function latestRevision(draft: DraftSummary) {
                   revision: data.compared[side].revision,
                   returnTo: url.pathname + url.search + url.hash,
                 })"
-                >核对依据</Button
+                >打开稿件后查看依据</Button
               >
               <Button
                 as="a"
@@ -419,7 +421,7 @@ function latestRevision(draft: DraftSummary) {
                 >采纳{{ index ? '右稿' : '左稿' }}</Button
               >
               <details class="wr-compare-actions" @toggle="alignParagraphs">
-                <summary>更多操作</summary>
+                <summary>采用与 IF</summary>
                 <nav :aria-label="index ? '右稿更多操作' : '左稿更多操作'">
                   <a
                     :href="href(recordHref('scenes', data.scene.sceneId), {
