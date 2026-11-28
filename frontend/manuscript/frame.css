@@ -1,7 +1,8 @@
 .sth-app .manuscript-frame {
   --ms-evidence-width: min(320px, 40vw);
+  --ms-library-width: 14rem;
   display: grid;
-  grid-template-columns: 13rem 17rem minmax(0, 1fr);
+  grid-template-columns: var(--ms-library-width) 17rem minmax(0, 1fr);
   min-block-size: 100dvh;
   background: var(--sheet);
   color: var(--ink);
@@ -17,7 +18,10 @@
   border-inline-end: 1px solid var(--line);
 }
 .manuscript-library { grid-column: 1; grid-row: 1; background: var(--sidebar); }
-.manuscript-sheets { grid-column: 2; grid-row: 1; background: #fafafa; }
+.manuscript-sheets { grid-column: 2; grid-row: 1; background: #fcfcfc; }
+.sth-app .manuscript-frame.ms-auxiliary { grid-template-columns: var(--ms-library-width) minmax(0, 1fr); }
+.ms-auxiliary > .manuscript-library { display: flex; }
+.ms-auxiliary > .manuscript-sheets { display: none; }
 .sth-app .ms-editor { grid-column: -2/-1; grid-row: 1; min-inline-size: 0; inline-size: 100%; margin: 0; padding: 0 0 4rem; }
 .ms-view-tools, .ms-sheets-bar { display: flex; align-items: center; gap: .65rem; padding: .45rem 1rem; min-block-size: 2.85rem; border-block-end: 1px solid var(--line); }
 .ms-sheets-bar, .ms-tablet-library, .ms-phone-sheets { display: none; }
@@ -45,10 +49,12 @@
   .ms-tablet-library { display: inline-flex; }
   .ms-library-open > .manuscript-library { display: block; }
   .ms-library-open > .manuscript-sheets { display: none; }
+  .ms-auxiliary > .manuscript-library { display: flex; }
 }
 @media (width < 640px) {
   .sth-app .manuscript-frame, .sth-app .manuscript-frame.ms-focus { display: flex; flex-direction: column; }
   .manuscript-frame > :is(.manuscript-library,.manuscript-sheets,.ms-editor) { display: none; }
+  .ms-auxiliary > .manuscript-library { display: none; }
   .manuscript-frame[data-pane=library] > .manuscript-library,
   .manuscript-frame[data-pane=sheets] > .manuscript-sheets { display: flex; }
   .manuscript-frame[data-pane=editor] > .ms-editor { display: block; }

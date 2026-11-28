@@ -104,7 +104,7 @@ async function metrics(page) {
       body: style(document.body), heading: style(main.querySelector('h1')),
       headingFocus: { active: document.activeElement === main.querySelector('h1'),
         outline: getComputedStyle(main.querySelector('h1')).outlineStyle },
-      sidebar: style(document.querySelector('.sidebar')),
+      library: style(document.querySelector('.manuscript-library')),
       projectTitle: main.querySelector('.ce-book-heading h2') ? style(main.querySelector('.ce-book-heading h2')) : null,
       prose: main.querySelector('.ce-prose') ? style(main.querySelector('.ce-prose')) : null,
       controls: content.map(element => ({ text: (element.getAttribute('aria-label') || element.textContent || element.id).trim().slice(0, 70),
@@ -151,7 +151,11 @@ async function pixels(page, png, layout) {
     const context = canvas.getContext('2d');
     context.drawImage(image, 0, 0);
     const sample = (x, y) => [...context.getImageData(Math.round(x), Math.round(y), 1, 1).data];
-    return { main: sample(main.x + 4, main.y + 4), sidebar: sample(4, 4), width: image.width, height: image.height };
+    const library = document.querySelector('.manuscript-library');
+    const libraryBox = library?.getBoundingClientRect();
+    const libraryVisible = library && library.checkVisibility() && libraryBox && libraryBox.width > 0 && libraryBox.height > 0;
+    return { main: sample(main.x + 4, main.y + 4), library: libraryVisible ? sample(libraryBox.x + 4, libraryBox.y + 4) : null,
+      width: image.width, height: image.height };
   }, { base64: png.toString('base64'), main: layout.main });
 }
 
@@ -236,7 +240,7 @@ test('secondary business pages inherit the shared theme and remain usable at des
         pixels: await pixels(page, png, layout), renderedFonts: await renderedFonts(page, session), keyboard: stops };
       report.cases.push(result);
       if (layout.documentWidth > viewport.width + 1 || layout.overflow.length) report.violations.push(`${name}: horizontal overflow`);
-      if (layout.body.color !== 'rgb(37, 37, 37)' || layout.sidebar.background !== 'rgb(242, 242, 242)') report.violations.push(`${name}: shared neutral theme missing`);
+      if (layout.body.color !== 'rgb(37, 37, 37)' || layout.library.background !== 'rgb(242, 242, 242)') report.violations.push(`${name}: shared neutral theme missing`);
       if (!stops.length || !stops.every(stop => stop.focusVisible && stop.outline !== 'none' && parseFloat(stop.outlineWidth) >= 2)) report.violations.push(`${name}: missing keyboard focus`);
       if (stops.some(stop => stop.x < -1 || stop.right > viewport.width + 1 || stop.bottom <= 0 || stop.y >= viewport.height)) report.violations.push(`${name}: keyboard focus outside the viewport`);
       if (layout.projectTitle && layout.projectTitle.font !== layout.body.font) report.violations.push(`${name}: project title overrides the shared UI font`);

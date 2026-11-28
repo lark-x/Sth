@@ -8,12 +8,14 @@ import { pairPersonalClient } from '../../tests/browser/personal-api.mjs';
 const artifacts = new URL('../.artifacts/', import.meta.url);
 
 async function home(page) {
-  if (page.viewportSize().width < 640 && await page.locator('.manuscript-frame').count()) {
+  if (page.viewportSize().width < 640 && await page.locator('.sth-library-toggle').isVisible()) {
+    await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
+  } else if (page.viewportSize().width < 640 && await page.locator('.manuscript-frame').count()) {
     await page.locator('.diary-route[aria-busy="false"]').waitFor();
     await page.getByRole('button', { name: '返回文稿列表', exact: true }).click();
     await page.getByRole('button', { name: '资料库', exact: true }).click();
   }
-  await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+  await page.locator('#library-navigation').getByRole('link', { name: 'Sth 首页', exact: true }).click();
 }
 
 async function capture(page, name) {
@@ -54,8 +56,8 @@ for (const [name, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     await page.getByRole('link', { name: '整理角色', exact: true }).click();
     await page.getByRole('heading', { name: '角色', exact: true }).waitFor();
     if (viewport.width < 640) await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), 'page');
-    if (viewport.width < 640) await page.getByRole('button', { name: '关闭', exact: true }).click();
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), 'page');
+    if (viewport.width < 640) await page.getByRole('button', { name: '返回当前页面', exact: true }).click();
     await page.goBack();
     await page.getByRole('heading', { name: '记一句', exact: true }).waitFor();
     await page.getByLabel('此刻想记下什么', { exact: true }).fill('保存下来的一句话。');
@@ -166,7 +168,7 @@ test('phone keyboard navigation reaches the visible library and sheet list', asy
   const page = await openBrowser(t, origin, { width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
-  await page.getByRole('link', { name: '创作', exact: true }).click();
+  await page.getByRole('link', { name: '全部文稿', exact: true }).click();
   for (const pane of ['.manuscript-library', '.manuscript-sheets']) {
     await page.locator(pane).waitFor({ state: 'visible' });
     await page.locator('.skip-link').focus();
@@ -189,7 +191,8 @@ test('shell dispatches exact migration routes and keeps unknown subroutes on the
   for (const path of ['/workspace']) {
     await page.goto(path);
     await page.locator('.creative-entry').waitFor();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '创作', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.locator('#library-navigation [aria-current="page"]').count(), 0, 'auxiliary pages do not highlight a manuscript collection');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '全部文稿', exact: true }).getAttribute('href'), '/projects');
   }
   for (const path of ['/settings', '/settings/connections']) {
     await page.goto(path);
@@ -198,27 +201,28 @@ test('shell dispatches exact migration routes and keeps unknown subroutes on the
   }
   await page.goto('/author-context');
   await page.locator('.author-context').waitFor();
-  assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '创作', exact: true }).getAttribute('aria-current'), 'page');
+  assert.equal(await page.locator('#library-navigation [aria-current="page"]').count(), 0, 'auxiliary pages do not highlight a manuscript collection');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '全部文稿', exact: true }).getAttribute('href'), '/projects');
   for (const path of ['/sources', '/sources/new']) {
     await page.goto(path);
     await page.locator('.sources-domain').waitFor();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '资料', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '资料', exact: true }).getAttribute('aria-current'), path.split('?')[0] === '/sources' ? 'page' : null);
   }
   for (const path of ['/research', '/judgments', '/sources/id/unknown', '/sources?action=unsupported']) {
     await page.goto(path);
     await page.locator('.legacy-route').waitFor();
     assert.equal(await page.locator('.sources-domain').count(), 0);
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '资料', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '资料', exact: true }).getAttribute('aria-current'), path.split('?')[0] === '/sources' ? 'page' : null);
   }
   for (const path of ['/characters', '/characters/new']) {
     await page.goto(path);
     await page.locator('.characters-route').waitFor();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '角色', exact: true }).getAttribute('aria-current'), path === '/characters' ? 'page' : null);
   }
   for (const path of ['/jobs', '/tasks']) {
     await page.goto(path);
     await page.locator('.tasks-domain').waitFor();
-    assert.equal(await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '任务', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await page.locator('#library-navigation').getByRole('link', { name: '任务', exact: true }).getAttribute('aria-current'), 'page');
   }
   for (const path of ['/characters/id/history', '/characters/id?action=unknown', '/jobs/new', '/media', '/generations']) {
     await page.goto(path);

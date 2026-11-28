@@ -6,12 +6,15 @@ import type { LibraryPreviewReason } from './library-data.ts';
 import { collectionRoute } from './routes.ts';
 import { manuscriptView } from './view.ts';
 import ManuscriptViewControls from './ManuscriptViewControls.vue';
+import Button from '../ui/Button.vue';
 import './frame.css';
 
-const props = defineProps<{ url: URL }>();
-const emit = defineEmits<{ navigate: [href: string] }>();
+const props = withDefaults(defineProps<{ url: URL; workbench?: boolean; label?: string }>(), { workbench: true });
+const emit = defineEmits<{ navigate: [href: string]; rememberReading: [] }>();
 type Pane = 'library' | 'sheets' | 'editor';
 const root = ref<HTMLElement>();
+const navigationToggle = ref<HTMLButtonElement>();
+let auxiliaryPosition: { href: string; top: number; left: number } | undefined;
 const first = ref<string>();
 const emptyReason = ref<LibraryPreviewReason>();
 const previewTitles: Record<LibraryPreviewReason, string> = {
@@ -25,7 +28,7 @@ const compact = ref(window.matchMedia('(max-width: 639px)').matches);
 const focus = ref(false);
 const wideLibrary = ref(false);
 const activePane = ref<Pane>('editor');
-const collection = computed(() => collectionRoute(props.url));
+const collection = computed(() => props.workbench && collectionRoute(props.url));
 const editorUrl = computed(() => collection.value ? first.value && new URL(first.value, props.url) : props.url);
 const isBook = computed(() => /^\/projects\/[^/]+\/?$/.test(props.url.pathname));
 const emptyAction = computed(() => {
@@ -39,15 +42,31 @@ const emptyAction = computed(() => {
 });
 const listOnly = computed(() => collection.value && compact.value);
 const query = window.matchMedia('(max-width: 639px)');
-function sizeChanged() { compact.value = query.matches; }
+function sizeChanged() {
+  compact.value = query.matches;
+  if (!compact.value && !props.workbench && auxiliaryPosition) closeAuxiliaryNavigation();
+}
 onMounted(() => query.addEventListener('change', sizeChanged));
 onBeforeUnmount(() => query.removeEventListener('change', sizeChanged));
 
 function defaultPane(url: URL): Pane {
+  if (!props.workbench) return 'editor';
   if (/^\/(projects|create)\/?$/.test(url.pathname) && collectionRoute(url)) return 'library';
   return collectionRoute(url) ? 'sheets' : 'editor';
 }
 function setPane(pane: Pane) {
+  if (!props.workbench) {
+    if (pane !== 'library') { closeAuxiliaryNavigation(); return; }
+    auxiliaryPosition = { href: props.url.href, top: window.scrollY, left: window.scrollX };
+    activePane.value = 'library';
+    wideLibrary.value = true;
+    void nextTick(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      root.value?.querySelector<HTMLButtonElement>('.library-return')?.focus({ preventScroll: true });
+    });
+    return;
+  }
+  if (activePane.value === 'editor' && pane !== 'editor') emit('rememberReading');
   activePane.value = pane;
   wideLibrary.value = pane === 'library';
   focus.value = false;
@@ -63,10 +82,36 @@ function setPane(pane: Pane) {
   });
 }
 
-watch([() => props.url, compact], ([url], [previous]) => {
+function closeAuxiliaryNavigation() {
+  const position = auxiliaryPosition;
+  auxiliaryPosition = undefined;
+  activePane.value = 'editor';
+  wideLibrary.value = false;
+  if (!position) return;
+  void nextTick(() => {
+    if (position.href !== props.url.href) return;
+    if (compact.value) navigationToggle.value?.focus({ preventScroll: true });
+    window.scrollTo({ top: position.top, left: position.left, behavior: 'instant' });
+  });
+}
+function escapeNavigation(event: KeyboardEvent) {
+  if (!props.workbench && activePane.value === 'library' && event.key === 'Escape') {
+    event.preventDefault();
+    closeAuxiliaryNavigation();
+  }
+}
+
+watch([() => props.url, compact, () => props.workbench], ([url], [previous]) => {
   if (url.href !== previous?.href) {
     first.value = undefined;
     emptyReason.value = undefined;
+  }
+  if (!props.workbench) {
+    if (url.href !== previous?.href) auxiliaryPosition = undefined;
+    activePane.value = 'editor';
+    wideLibrary.value = false;
+    focus.value = false;
+    return;
   }
   const saved = history.state?.manuscriptPane;
   activePane.value = ['library', 'sheets', 'editor'].includes(saved) ? saved : defaultPane(url);
@@ -97,19 +142,28 @@ function handleLinks(event: MouseEvent) {
   if (!link || link.target || link.origin !== location.origin || !link.closest('.manuscript-library,.manuscript-sheets')) return;
   if (link.href === props.url.href) {
     event.preventDefault();
+    if (!props.workbench) { closeAuxiliaryNavigation(); return; }
     setPane(link.closest('.manuscript-sheets') ? 'editor' : 'sheets');
   }
 }
 </script>
 
 <template>
-  <div ref="root" class="manuscript-frame" :data-pane="activePane" :class="{ 'ms-focus': focus, 'ms-library-open': wideLibrary }" @click="handleLinks">
-    <LibraryPanels :url="url" @preview="preview" @navigate="emit('navigate', $event)" />
-    <div v-if="activePane === 'sheets'" class="ms-sheets-bar">
+  <div ref="root" class="manuscript-frame" :data-pane="activePane" :class="{ 'ms-focus': focus, 'ms-library-open': wideLibrary, 'ms-auxiliary': !workbench }" @click="handleLinks" @keydown="escapeNavigation">
+    <LibraryPanels :url="url" :workbench="workbench" @preview="preview" @navigate="emit('navigate', $event)">
+      <Button v-if="!workbench && compact" class="library-return" variant="ghost" size="icon" aria-label="返回当前页面" @click="closeAuxiliaryNavigation"><AppIcon name="back" /></Button>
+    </LibraryPanels>
+    <div v-if="workbench && activePane === 'sheets'" class="ms-sheets-bar">
       <button class="ms-tool" type="button" @click="setPane('library')"><AppIcon name="back" />资料库</button>
     </div>
     <main id="main" class="ms-editor" tabindex="-1">
-      <nav class="ms-view-tools" aria-label="阅读视图">
+      <header v-if="!workbench" class="sth-mobile-toolbar" aria-label="工作区位置">
+        <button ref="navigationToggle" type="button" class="sth-library-toggle" aria-label="打开资料库导航" aria-controls="library-navigation"
+          :aria-expanded="activePane === 'library'" @click="setPane('library')"><AppIcon name="panels" /></button>
+        <a href="/" class="sth-mobile-brand" aria-label="Sth 首页">Sth</a>
+        <span class="sth-mobile-location">{{ label || '工作区' }}</span>
+      </header>
+      <nav v-else class="ms-view-tools" aria-label="阅读视图">
         <ManuscriptViewControls />
       </nav>
       <slot v-if="editorUrl && !listOnly" :editor-url="editorUrl" />

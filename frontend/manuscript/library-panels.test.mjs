@@ -150,7 +150,7 @@ test('library panels use real operations with stable manuscript rows and preview
       width: element.getBoundingClientRect().width, background: getComputedStyle(element).backgroundColor,
     }));
     assert.equal(mark.width, 28);
-    assert.equal(mark.background, 'rgb(231, 231, 231)');
+    assert.equal(mark.background, 'rgba(0, 0, 0, 0)');
     assert.equal(await rows(page).count(), 24);
     assert.deepEqual((await titles(page)).slice(0, 3), [second.title, first.title, third.title]);
     assert.match(await rows(page).nth(1).innerText(), /只在采用稿中出现的海盐/);
@@ -367,7 +367,7 @@ test('collection navigation keeps its title and a usable pane across preview, hi
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
       if (width < 640) await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
-      await page.getByRole('link', { name: '创作', exact: true }).click();
+      await page.locator('.manuscript-library').getByRole('link', { name: '全部文稿', exact: true }).click();
       await settled(page);
       await assertTitle('资料库 · Sth');
       const collections = [

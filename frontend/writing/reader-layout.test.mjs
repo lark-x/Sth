@@ -9,6 +9,27 @@ const output = resolve('frontend/.artifacts/reader-layout/verified');
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const body = page => page.locator('#passage-body');
 
+async function retryLayout(retry) {
+  return retry.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const toolbar = document.querySelector('.wr-reader-toolbar').getBoundingClientRect();
+    const radius = getComputedStyle(element).borderRadius;
+    const corner = Math.max(2, Math.ceil(parseFloat(radius)) + 1);
+    // Sample the painted edges, not the transparent corners of a rounded button.
+    const points = [
+      [rect.left + corner, rect.top + 2], [rect.right - corner, rect.top + 2],
+      [rect.right - 2, rect.top + corner], [rect.right - 2, rect.bottom - corner],
+      [rect.right - corner, rect.bottom - 2], [rect.left + corner, rect.bottom - 2],
+      [rect.left + 2, rect.bottom - corner], [rect.left + 2, rect.top + corner],
+      [(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2],
+    ];
+    return { focused: document.activeElement === element, top: rect.top, bottom: rect.bottom, toolbarBottom: toolbar.bottom,
+      unobscured: points.every(([x, y]) => element.contains(document.elementFromPoint(x, y))), viewport: innerHeight,
+      radius, hitPoints: points.map(([x, y]) => ({ x, y, tag: document.elementFromPoint(x, y)?.tagName,
+        className: document.elementFromPoint(x, y)?.className })) };
+  });
+}
+
 test('restored uncertain saves expose the retry action without losing ordinary draft cursors', { timeout: 120_000 }, async t => {
   const workspace = await startManuscriptWorkspace({ ui: 'snapshot' });
   t.after(workspace.close);
@@ -53,13 +74,7 @@ test('restored uncertain saves expose the retry action without losing ordinary d
       await page.reload();
       const retry = button(page, '重试同一次提交');
       await ready(page, retry);
-      const layout = await retry.evaluate(element => {
-        const rect = element.getBoundingClientRect();
-        const toolbar = document.querySelector('.wr-reader-toolbar').getBoundingClientRect();
-        const points = [[rect.left + 2, rect.top + 2], [rect.right - 2, rect.bottom - 2]];
-        return { focused: document.activeElement === element, top: rect.top, bottom: rect.bottom, toolbarBottom: toolbar.bottom,
-          unobscured: points.every(([x, y]) => element.contains(document.elementFromPoint(x, y))), viewport: innerHeight };
-      });
+      const layout = await retryLayout(retry);
       const stem = `${engine.name()}-${width}`;
       await writeJson(resolve(directory, `${stem}.json`), layout);
       await page.screenshot({ path: resolve(directory, `${stem}-reopened.png`), animations: 'disabled' });
@@ -67,6 +82,16 @@ test('restored uncertain saves expose the retry action without losing ordinary d
       assert.equal(layout.focused, true, 'pending receipt recovery prioritizes the retry action');
       assert.equal(await editor.inputValue(), prose);
       assert.equal(await editor.getAttribute('readonly'), '');
+      await retry.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const cover = document.createElement('div');
+        cover.id = 'receipt-test-cover';
+        Object.assign(cover.style, { position: 'fixed', left: `${rect.left}px`, top: `${rect.top}px`,
+          width: `${rect.width}px`, height: '3px', zIndex: '2147483647' });
+        document.body.append(cover);
+      });
+      assert.equal((await retryLayout(retry)).unobscured, false, 'even a 3px edge obstruction must fail the hit test');
+      await page.locator('#receipt-test-cover').evaluate(element => element.remove());
       await retry.click();
       await body(page).waitFor();
       assert.equal(await body(page).textContent(), prose);

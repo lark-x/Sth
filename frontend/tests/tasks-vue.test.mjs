@@ -54,7 +54,7 @@ async function fixture(t, { viewport = desktop, provider } = {}) {
       target: backend, changeOrigin: true,
       configure(proxy) { proxy.on('proxyReq', request => request.setHeader('Origin', backend)); },
     } } },
-    optimizeDeps: { noDiscovery: true, include: ['vue'] },
+    optimizeDeps: { noDiscovery: true, include: ['vue', 'reka-ui', '@lucide/vue'] },
   });
   web.on('request', vite.middlewares);
   await new Promise(done => web.listen(0, '127.0.0.1', done));

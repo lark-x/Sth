@@ -28,21 +28,24 @@ function heading(page, name) {
 }
 
 async function openNavigation(page) {
-  if (page.viewportSize().width >= 640) return page;
-  await page.getByRole('button', { name: '打开资料库导航', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '资料库', exact: true });
-  await dialog.waitFor();
-  return dialog;
+  const library = page.locator('#library-navigation');
+  if (!await library.isVisible()) {
+    const toggle = page.getByRole('button', { name: '打开资料库导航', exact: true });
+    if (await toggle.isVisible()) await toggle.click();
+    else await showLibrary(page);
+  }
+  await library.waitFor();
+  return library;
 }
 
 async function nav(page, name) {
   const navigation = await openNavigation(page);
-  await navigation.getByRole('navigation', { name: '主导航' }).getByRole('link', { name, exact: true }).click();
+  await navigation.getByRole('link', { name, exact: true }).click();
 }
 
 async function settings(page) {
   const navigation = await openNavigation(page);
-  await navigation.getByRole('navigation', { name: /^(?:应用设置|工作区工具)$/ }).getByRole('link', { name: '设置', exact: true }).click();
+  await navigation.getByRole('navigation', { name: '工作区工具', exact: true }).getByRole('link', { name: '设置', exact: true }).click();
 }
 
 async function showLibrary(page) {
@@ -57,18 +60,13 @@ async function showLibrary(page) {
 }
 
 async function home(page) {
-  if (await page.locator('.manuscript-frame').count()) {
-    await showLibrary(page);
-  } else if (page.viewportSize().width < 640) {
-    await nav(page, '首页');
-    return;
-  }
-  await page.getByRole('link', { name: 'Sth 首页', exact: true }).click();
+  const navigation = await openNavigation(page);
+  await navigation.getByRole('link', { name: 'Sth 首页', exact: true }).click();
 }
 
 async function openProjects(page) {
   await home(page);
-  await nav(page, '创作');
+  await nav(page, '全部文稿');
   await showLibrary(page);
 }
 
@@ -128,7 +126,7 @@ async function expectDiaryPage(page, diary) {
 }
 
 async function createPersonalDiary(page) {
-  const entry = await page.locator('.manuscript-frame').count()
+  const entry = await page.locator('.manuscript-frame:not(.ms-auxiliary)').count()
     ? page.locator('.manuscript-sheets footer').getByRole('link', { name: '写日记', exact: true })
     : page.getByRole('link', { name: '写日记', exact: true });
   await entry.click();
@@ -210,11 +208,13 @@ for (const [name, viewport] of [['desktop', desktop], ['narrow', narrow]]) {
   test(`${name}: zero-project onboarding, personal diary edit, and project character diary`, { timeout }, async (t) => {
     const { page, origin } = await launch(t, viewport);
     const navigation = await openNavigation(page);
-    assert.deepEqual(await navigation.getByRole('navigation', { name: '主导航' }).getByRole('link').allTextContents(),
-      viewport.width < 640 ? ['首页', '日记', '创作', '角色', '资料', '任务'] : ['日记', '创作', '角色', '资料', '任务']);
+    assert.deepEqual(await navigation.locator('.library-primary > a, .library-resources > a, .library-footer > a')
+      .evaluateAll(elements => elements.map(element => element.textContent.trim())),
+    ['最近写过', '日记', '全部文稿', '角色', '资料', '任务', '设置']);
     if (viewport.width < 640) {
-      assert.deepEqual(await navigation.getByRole('navigation', { name: '应用设置' }).getByRole('link').allTextContents(), ['设置']);
-      await navigation.getByRole('button', { name: '关闭', exact: true }).click();
+      assert.deepEqual(await navigation.getByRole('navigation', { name: '工作区工具' }).getByRole('link')
+        .evaluateAll(elements => elements.map(element => element.textContent.trim())), ['任务', '设置']);
+      await navigation.getByRole('button', { name: '返回当前页面', exact: true }).click();
       await navigation.waitFor({ state: 'hidden' });
     }
     await page.getByText('日记本还是空的', { exact: true }).waitFor();

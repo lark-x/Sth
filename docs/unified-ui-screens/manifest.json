@@ -1,0 +1,96 @@
+{
+  "provenance": "Synthetic isolated workspace; actual Vue application via Playwright. Browser screenshots, not real iOS acceptance.",
+  "sourceSha256": "f6dc468fff971acaa50d5129c4e4ff34c1295056a07b4de0f08ce747a38a7759",
+  "bundleSha256": "3581724c7028fefff317155957ab2cb11f8e80167bf1e98e63704f4aa430d800",
+  "groups": [
+    {
+      "name": "chromium-1280",
+      "passed": true,
+      "cases": 6,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-768",
+      "passed": true,
+      "cases": 6,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-390",
+      "passed": true,
+      "cases": 7,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-320",
+      "passed": true,
+      "cases": 7,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "webkit-390",
+      "passed": true,
+      "cases": 7,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "webkit-320",
+      "passed": true,
+      "cases": 7,
+      "sourceStable": true,
+      "servedBuildStable": true
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "chromium-1280-reader.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-1280/chromium-1280-reader.png",
+      "sha256": "eb64949f441b53c4d89477f2e2896333f386a8aeed58d7353375a9963a341866"
+    },
+    {
+      "file": "chromium-1280-settings.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-1280/chromium-1280-settings.png",
+      "sha256": "77828a2c22626d5a6ad9a81bdad381f76c29ad5064ee3d6b9dd1b6a5ce8a2040"
+    },
+    {
+      "file": "chromium-1280-create-menu.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-1280/chromium-1280-create-menu.png",
+      "sha256": "f9b7491b6d6a69dcb6c717479403d2e522e422d70c50d83d6946a76ae16591f8"
+    },
+    {
+      "file": "chromium-768-reader.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-768/chromium-768-reader.png",
+      "sha256": "d9141bbab4c2717e7fe1902aa343bbbc0094a1169e3d0230a08e33363edbaeba"
+    },
+    {
+      "file": "chromium-390-reader.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-390/chromium-390-reader.png",
+      "sha256": "c060c41f6eab1ec4f1cae6acecb88827db550415274c4d2334b9ac83dbd518cb"
+    },
+    {
+      "file": "chromium-390-home.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/chromium-390/chromium-390-home.png",
+      "sha256": "2fe6d10c228ddfb9ec8e83b5ea0082fe1eee270d751ae3dcc43e65d9df23a58f"
+    },
+    {
+      "file": "webkit-320-navigation.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/webkit-320/webkit-320-navigation.png",
+      "sha256": "60a2a6114c5b381ef2fa11aae2f2847e67edcea5e283e706a533e529e714e8ad"
+    },
+    {
+      "file": "webkit-320-reader.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/webkit-320/webkit-320-reader.png",
+      "sha256": "d81eb654408a38de158fede35ba0193e84cff7041d65af15c1f2b7c70b3d6830"
+    },
+    {
+      "file": "webkit-320-evidence.png",
+      "source": "frontend/.artifacts/unified-ui/final-verified/webkit-320/webkit-320-evidence.png",
+      "sha256": "c495ba9096b9749bc8bfba582e37133aaca6dbd148f61a9bc5c1b9c8584855aa"
+    }
+  ]
+}

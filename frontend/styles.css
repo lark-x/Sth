@@ -13,24 +13,12 @@
 .sth-app ::selection { background: var(--selection); color: var(--ink); }
 .sth-app :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .sth-app input, .sth-app textarea { caret-color: var(--accent); }
-.sth-app .sth-shell { min-block-size: 100dvh; grid-template-columns: 13rem minmax(0, 1fr); }
-.sth-app .sth-sidebar { block-size: 100dvh; }
-.sth-mobile-toolbar { display: none; }
-.sth-mobile-navigation { inset: 0; inline-size: 100%; max-inline-size: none; block-size: 100dvh; max-block-size: none; margin: 0; padding: 0 1rem max(1rem, env(safe-area-inset-bottom)); border: 0; background: var(--sidebar); color: var(--ink); overflow: auto; }
-.sth-mobile-navigation:modal { overscroll-behavior: contain; }
-.sth-mobile-navigation::backdrop { background: var(--sheet); overflow: hidden; overscroll-behavior: contain; }
-.sth-navigation-heading { position: sticky; inset-block-start: 0; display: flex; align-items: center; justify-content: space-between; min-block-size: 3.75rem; margin-block-end: 1rem; border-block-end: 1px solid var(--line); background: var(--sidebar); }
-.sth-navigation-heading h1 { font-size: 1rem; font-weight: 600; }
-.sth-navigation-heading form { margin: 0; }
-.sth-mobile-navigation nav { display: grid; gap: .25rem; }
-.sth-mobile-navigation nav a { display: flex; align-items: center; gap: .75rem; min-block-size: 3rem; padding: .65rem .75rem; color: var(--muted); text-decoration: none; border-radius: 5px; }
-.sth-mobile-navigation nav a:hover, .sth-mobile-navigation nav a[aria-current] { background: var(--selection); color: var(--ink); }
-.sth-mobile-navigation nav a[aria-current] { font-weight: 650; }
-.sth-mobile-navigation nav .sth-navigation-task { margin-block-start: 1.5rem; font-size: .875rem; }
-.sth-mobile-navigation .sth-navigation-secondary { font-size: .875rem; }
-.sth-app .brand[aria-current] { text-underline-offset: .25em; }
 .sth-app main { inline-size: min(100%, 70rem); }
+.sth-page-content { inline-size: min(100%, 70rem); margin-inline: auto; padding: 2rem clamp(1.25rem, 4dvw, 4rem) 4rem; }
 .sth-app .sth-home-main { padding: 2.5rem clamp(1.25rem, 4dvw, 4rem) 4rem; }
+.sth-mobile-toolbar { display: flex; align-items: center; gap: .6rem; min-block-size: 3.5rem; padding-inline: 1.5rem; border-block-end: 1px solid var(--line); background: var(--sheet); }
+.sth-library-toggle, .sth-mobile-brand { display: none; }
+.sth-mobile-location { color: var(--muted); font-size: .8125rem; }
 .legacy-route { min-inline-size: 0; }
 .sth-home { max-inline-size: 53rem; margin-inline: auto; }
 .sth-home h1 { font: 650 1.75rem/1.4 var(--sans); }
@@ -70,26 +58,13 @@
 .sth-route-error { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
 .sth-route-error h1, .sth-route-error p { flex-basis: 100%; }
 
-@media (width >= 640px) {
-  .sth-app .sth-shell { display: grid; }
-  .sth-app .sth-sidebar { position: sticky; display: block; padding: 1.5rem .75rem; overflow: auto; border-block-end: 0; border-inline-end: 1px solid var(--line); }
-  .sth-app .brand { margin: 0 0 1.5rem .5rem; font-size: 1.5rem; }
-  .sth-app #navigation { display: grid; grid-template-columns: minmax(0, 1fr); gap: .35rem; }
-  .sth-app #navigation a { justify-content: start; }
-  .sth-app #navigation .sth-navigation-task { margin-block-start: 1.5rem; }
-  .sth-app #settings-navigation { margin-block-start: 1rem; padding-block-start: .65rem; border-block-start: 1px solid var(--line); }
-  .sth-app .sth-sidebar nav a { gap: .65rem; padding: .45rem .65rem; font-size: .875rem; }
-}
-
 @media (width < 640px) {
-  .sth-app .sth-shell { display: block; }
-  .sth-app .sth-sidebar { display: none; }
-  .sth-mobile-toolbar { display: flex; align-items: center; gap: .5rem; block-size: 3.75rem; padding-inline: .5rem 1rem; border-block-end: 1px solid var(--line); background: var(--sheet); }
-  .sth-library-toggle { display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--ink); }
+  .sth-mobile-toolbar { block-size: 3.75rem; padding-inline: .5rem 1rem; }
+  .sth-library-toggle { display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--ink); }
   .sth-library-toggle:hover { background: var(--selection); }
   .sth-mobile-brand { display: inline-flex; align-items: center; min-block-size: 2.75rem; font-size: 1rem; font-weight: 650; text-decoration: none; }
-  .sth-mobile-location { margin-inline-start: auto; color: var(--muted); font-size: .8125rem; }
-  .sth-app .sth-home-main { padding: 1.25rem 1.25rem 3rem; }
+  .sth-mobile-location { margin-inline-start: auto; }
+  .sth-page-content, .sth-app .sth-home-main { padding: 1.25rem 1.25rem 3rem; }
 }
 
 @media (width <= 30rem) {
@@ -110,6 +85,6 @@
 }
 
 @media (forced-colors: active) {
-  .sth-app .sidebar a[aria-current] { outline: 1px solid Highlight; }
+  .sth-app .manuscript-library a[aria-current] { outline: 1px solid Highlight; }
   .sth-app .button.primary { border-color: ButtonText; }
 }

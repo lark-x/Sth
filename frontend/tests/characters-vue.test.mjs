@@ -64,6 +64,7 @@ async function fixture(t) {
   const entry = '/__characters_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
+    optimizeDeps: { include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'characters-route-test',
@@ -188,9 +189,9 @@ test('Vue character pages retain the character business flows', { timeout: 180_0
     await t.test(`${size} uses the delivered matcher through the current real shell`, async t => {
       const page = await open(t, origin, '/characters?__characters_shell=1', viewport);
       if (size === 'phone') await click(page, '打开资料库导航');
-      const navigation = page.getByRole('navigation', { name: '主导航' });
+      const navigation = page.locator('#library-navigation');
       assert.equal(await link(navigation, '角色').getAttribute('aria-current'), 'page');
-      if (size === 'phone') await click(page, '关闭');
+      if (size === 'phone') await click(page, '返回当前页面');
       assert.equal(await page.locator('.legacy-route').count(), 0);
       await link(page, '新建角色').click();
       await editorReady(page);

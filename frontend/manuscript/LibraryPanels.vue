@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, onScopeDispose, ref, shallowRef, useId, watch } from 'vue';
 import type { Directive } from 'vue';
 import AppIcon from '../AppIcon.vue';
+import Button from '../ui/Button.vue';
+import CreateMenu from '../ui/CreateMenu.vue';
 import bookMark from '../../web/assets/book.svg';
 import { all, href, message, recordHref } from '../workspace/api.ts';
 import { retain, savedText } from '../workspace/useSubmission.ts';
@@ -15,7 +17,7 @@ import type { LibraryChapter, LibraryContext, LibraryPreviewReason, LibrarySheet
 import { recentManuscripts } from './recent.ts';
 import './library-panels.css';
 
-const props = defineProps<{ url: URL }>();
+const props = withDefaults(defineProps<{ url: URL; workbench?: boolean }>(), { workbench: true });
 const emit = defineEmits<{ navigate: [href: string]; preview: [href: string, reason?: LibraryPreviewReason] }>();
 const id = useId();
 const sheetsPanel = ref<HTMLElement>();
@@ -64,13 +66,17 @@ const vTrackSheet: Directive<HTMLElement> = {
     intersecting.delete(element.dataset.sheetKey!);
   },
 };
-const allScope = computed(() => context.value.shelf === 'project' && !context.value.projectId);
+const allScope = computed(() => props.workbench && context.value.shelf === 'project' && !context.value.projectId);
 const allScopeHref = computed(() => /^\/(create|projects)\/?$/.test(props.url.pathname) && !props.url.search
   ? props.url.pathname : context.value.allPath ?? '/projects');
 const activeProjectId = computed(() => context.value.projectId);
 const activeProject = computed(() => projects.value.find(project => project.projectId === activeProjectId.value));
 const activeChapter = computed(() => chapters.value.find(chapter => chapter.chapterId === context.value.chapterId));
-const collectionTitle = computed(() => libraryCollectionTitle(props.url, projects.value, chapters.value));
+const collectionTitle = computed(() => props.workbench ? libraryCollectionTitle(props.url, projects.value, chapters.value) : undefined);
+function sectionCurrent(section: 'characters' | 'sources', projectId?: string) {
+  return new RegExp(`^/${section}/?$`).test(props.url.pathname)
+    && (props.url.searchParams.get('projectId') || undefined) === projectId;
+}
 function updateCollectionTitle() {
   if (collectionTitle.value && document.title !== collectionTitle.value) document.title = collectionTitle.value;
 }
@@ -205,6 +211,8 @@ async function loadSheets() {
     if (!treeError.value && next.chapterId && !chapters.value.some(chapter => chapter.chapterId === next.chapterId && chapter.projectId === next.projectId)) {
       throw new ApiError(404, 'chapter_not_found', '找不到这个章节。');
     }
+    // Global pages share the tree, but never request or reset a manuscript list.
+    if (!props.workbench) { context.value = next; return; }
     const key = shelfKey(next);
     if (loadedShelf !== key) {
       query.value = '';
@@ -243,6 +251,7 @@ async function loadSheets() {
 }
 
 function readCandidates() {
+  if (!props.workbench) return;
   const request = controller;
   if (!request || request.signal.aborted || busy.value || error.value || activeCandidates.size >= 4) return;
   const previewKey = previewViewport.matches && isLibraryCollection(props.url) ? selectedSheet.value?.key : undefined;
@@ -262,6 +271,7 @@ function readCandidates() {
 }
 
 function publishPreview() {
+  if (!props.workbench) return;
   if (!isLibraryCollection(props.url) || (busy.value && !searching.value)) return;
   const selection = selectedSheet.value;
   if (selection?.needsCandidate && !searching.value) return;
@@ -341,12 +351,13 @@ async function clearSearch() {
 }
 function refresh() { void loadTree(); void loadSheets(); }
 function manuscriptsChanged() {
+  if (!props.workbench) return;
   const route = writingRoute(props.url);
   if (context.value.shelf === 'recent'
     || (route?.kind === 'draft' && route.page === 'read' && !props.url.searchParams.has('revision'))) void loadSheets();
 }
 void loadTree();
-watch(() => props.url.href, () => { lastPreview = undefined; void loadSheets(); }, { immediate: true });
+watch([() => props.url.href, () => props.workbench], () => { lastPreview = undefined; void loadSheets(); }, { immediate: true });
 watch([query, busy, chapters], readCandidates, { flush: 'post' });
 watch([query, busy, searchPending, searchIncomplete, selectedSheet], publishPreview, { flush: 'post' });
 watch(footerCount, text => {
@@ -372,20 +383,22 @@ onScopeDispose(() => {
 </script>
 
 <template>
-  <aside class="manuscript-library" aria-label="资料库" @click="navigate" @keydown="panelKeydown">
+  <aside id="library-navigation" class="manuscript-library" aria-label="资料库" @click="navigate" @keydown="panelKeydown">
     <header class="library-heading">
+      <slot />
       <a class="library-brand" href="/" aria-label="Sth 首页"><span class="library-brand-mark"><img :src="bookMark" width="20" height="20" alt=""></span><span>Sth</span></a>
-      <button class="library-icon-button" type="button" aria-label="刷新资料库和文稿" :disabled="treeBusy || busy" @click="refresh">
+      <Button class="library-icon-button" variant="ghost" size="icon" aria-label="刷新资料库和文稿" :disabled="treeBusy || busy" @click="refresh">
         <AppIcon name="refresh" />
-      </button>
+      </Button>
     </header>
+    <div class="library-create-row"><CreateMenu :url="url" @navigate="emit('navigate', $event)" /></div>
     <div class="library-scroll">
       <nav class="library-primary" aria-label="文稿资料库">
-        <a class="library-link" href="/workspace?tab=recent" :aria-current="context.shelf === 'recent' ? 'page' : undefined">
-          <svg class="library-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /></svg>
+        <a class="library-link" href="/workspace?tab=recent" :aria-current="workbench && context.shelf === 'recent' ? 'page' : undefined">
+          <AppIcon name="clock" />
           <span>最近写过</span>
         </a>
-        <a class="library-link" href="/diaries" :aria-current="context.shelf === 'diaries' ? 'page' : undefined">
+        <a class="library-link" href="/diaries" :aria-current="workbench && context.shelf === 'diaries' ? 'page' : undefined">
           <AppIcon name="diary" /><span>日记</span>
         </a>
         <a class="library-link" :href="allScopeHref" :aria-current="allScope ? 'page' : undefined">
@@ -411,7 +424,7 @@ onScopeDispose(() => {
                 <svg class="library-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
               </button>
               <a class="library-link library-project-link" :href="projectShelfHref(project.projectId)"
-                :aria-current="context.shelf === 'project' && !context.chapterId && !context.section && activeProjectId === project.projectId ? 'page' : undefined">
+                :aria-current="workbench && context.shelf === 'project' && !context.chapterId && !context.section && activeProjectId === project.projectId ? 'page' : undefined">
                 <AppIcon name="book" /><span>{{ project.title }}</span>
                 <span v-if="!treeBusy && !treeError" class="library-count" :aria-label="`${chapterCount(project.projectId)} 幕`">{{ chapterCount(project.projectId) }}</span>
               </a>
@@ -419,29 +432,33 @@ onScopeDispose(() => {
             <ul :id="`${id}-project-${project.projectId}`" class="library-children" :hidden="!expanded.has(project.projectId)">
               <li v-for="chapter in projectChapters(project.projectId)" :key="chapter.chapterId">
                 <a class="library-link library-chapter-link" :href="projectShelfHref(project.projectId, chapter.chapterId)"
-                  :aria-current="context.shelf === 'project' && !context.section && context.chapterId === chapter.chapterId ? 'page' : undefined">
+                  :aria-current="workbench && context.shelf === 'project' && !context.section && context.chapterId === chapter.chapterId ? 'page' : undefined">
                   <span>{{ chapter.title }}</span><span class="library-count" :aria-label="`${chapter.sceneCount} 幕`">{{ chapter.sceneCount }}</span>
                 </a>
               </li>
               <li><a class="library-link library-chapter-link" :href="unplacedShelfHref(project.projectId)"
-                :aria-current="context.shelf === 'unplaced' && activeProjectId === project.projectId ? 'page' : undefined"><span>未编入章节</span></a></li>
+                :aria-current="workbench && context.shelf === 'unplaced' && activeProjectId === project.projectId ? 'page' : undefined"><span>未编入章节</span></a></li>
               <li class="library-related-start"><a class="library-link library-related" :href="href('/characters', { projectId: project.projectId })"
-                :aria-current="context.section === 'characters' && activeProjectId === project.projectId ? 'page' : undefined"><AppIcon name="people" /><span>作品角色</span></a></li>
+                :aria-current="sectionCurrent('characters', project.projectId) ? 'page' : undefined"><AppIcon name="people" /><span>作品角色</span></a></li>
               <li><a class="library-link library-related" :href="href('/sources', { projectId: project.projectId })"
-                :aria-current="context.section === 'sources' && activeProjectId === project.projectId ? 'page' : undefined"><AppIcon name="book" /><span>作品资料</span></a></li>
+                :aria-current="sectionCurrent('sources', project.projectId) ? 'page' : undefined"><AppIcon name="book" /><span>作品资料</span></a></li>
             </ul>
           </li>
         </ul>
       </nav>
       <p v-if="!treeBusy && !treeError && !projects.length" class="library-state">还没有作品。<a href="/projects/new">新建作品</a></p>
+      <nav class="library-primary library-resources" aria-label="创作资料">
+        <a class="library-link" href="/characters" :aria-current="sectionCurrent('characters') ? 'page' : undefined"><AppIcon name="people" /><span>角色</span></a>
+        <a class="library-link" href="/sources" :aria-current="sectionCurrent('sources') ? 'page' : undefined"><AppIcon name="file" /><span>资料</span></a>
+      </nav>
     </div>
     <nav class="library-footer" aria-label="工作区工具">
-      <a class="library-link" href="/jobs" :aria-current="/^\/jobs(?:\/|$)/.test(url.pathname) ? 'page' : undefined"><AppIcon name="tasks" /><span>任务</span></a>
+      <a class="library-link" href="/jobs" :aria-current="/^\/(jobs|tasks)(?:\/|$)/.test(url.pathname) ? 'page' : undefined"><AppIcon name="tasks" /><span>任务</span></a>
       <a class="library-link" href="/settings" :aria-current="/^\/settings(?:\/|$)/.test(url.pathname) ? 'page' : undefined"><AppIcon name="settings" /><span>设置</span></a>
     </nav>
   </aside>
 
-  <section ref="sheetsPanel" class="manuscript-sheets" :aria-labelledby="`${id}-sheets-title`" @click="navigate" @keydown="panelKeydown">
+  <section v-show="workbench" ref="sheetsPanel" class="manuscript-sheets" :aria-labelledby="`${id}-sheets-title`" @click="navigate" @keydown="panelKeydown">
     <header class="library-sheets-heading">
       <h2 :id="`${id}-sheets-title`">{{ title }}</h2>
       <p>{{ subtitle }}</p>
@@ -453,6 +470,7 @@ onScopeDispose(() => {
       <form class="library-search" role="search" aria-label="搜索当前分组" @submit.prevent="focusSheet()">
         <label :for="`${id}-search`">搜索文稿</label>
         <div class="library-search-field">
+          <AppIcon name="search" />
           <input :id="`${id}-search`" ref="searchInput" v-model="query" type="search" placeholder="标题、正文或章节" autocomplete="off"
             :aria-controls="`${id}-sheets`" @keydown.down.prevent="focusSheet()" @keydown.esc.prevent="clearSearch">
         </div>

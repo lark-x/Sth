@@ -2,6 +2,25 @@
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
 
+## 2026-11-28 · 统一导航与 UI 基础组件
+
+这次补充迭代针对用户截图中的两套侧栏与视觉落差，分支为 `feat/unified-writing-ui`。全站保持一个资料库实例，读稿为三栏，首页／角色／资料／设置复用同一导航；手机辅助页使用临时资料库 pane。引入 Reka UI 的 Button／Dropdown 基础和 Lucide 图标，按 shadcn-vue 的源码持有方式定制现有灰白主题。原业务接口与版本化内容继续沿用。
+
+| 实际界面 | 截图 |
+| --- | --- |
+| 桌面读稿、设置共用导航 | [1280px 三栏](unified-ui-screens/chromium-1280-reader.png) · [同一设置侧栏](unified-ui-screens/chromium-1280-settings.png) |
+| 菜单及平板布局 | [新建菜单](unified-ui-screens/chromium-1280-create-menu.png) · [768px 读稿](unified-ui-screens/chromium-768-reader.png) |
+| 手机首屏 | [390px 读稿](unified-ui-screens/chromium-390-reader.png) · [首页](unified-ui-screens/chromium-390-home.png) |
+| WebKit 320px | [资料库](unified-ui-screens/webkit-320-navigation.png) · [正文](unified-ui-screens/webkit-320-reader.png) · [加载完成后的依据](unified-ui-screens/webkit-320-evidence.png) |
+
+图片使用隔离的合成样本，未复制线上作者内容。六组 Chromium 1280/768/390/320、WebKit 390/320 共 40 个页面状态，均验证无横向溢出和浏览器异常，源码与服务构建保持一致。源码摘要 `f6dc468fff971acaa50d5129c4e4ff34c1295056a07b4de0f08ce747a38a7759`，构建摘要 `3581724c7028fefff317155957ab2cb11f8e80167bf1e98e63704f4aa430d800`；图片来源及各组状态见 [清单](unified-ui-screens/manifest.json)。真实 iPhone/WKWebView 验收仍延后。
+
+新增统一导航回归覆盖同一 DOM 实例、作品展开、全局入口、准确选中项、手机关闭／同页点击／Esc、临时 pane 不增历史、辅助页不读文稿列表，以及跨页返回的原修订／选段／焦点／滚动。测试实际发现 WebKit 320px 在隐藏正文后丢失离页坐标，改为切栏前由 App 保存；修前失败日志和修后 4/4 分别保留在 `unified-navigation-main-2.log`、`unified-navigation-fixed.log`。菜单键盘回归 4/4、保存回执可见性定向回归 5/5、角色／首页／日记定向回归 29/29 已通过，均在本机 `frontend/.artifacts/unified-ui/`。
+
+最终完整浏览器回归 **230/230**、文稿专项 **159/159**，均无跳过；构建与类型检查通过。最终日志为 `browser-final.log`、`manuscript-final.log`、`build-final.log`、`typecheck-final.log`。独立代码审查覆盖核心实现、阅读位置修复与测试变更，未发现阻塞；独立视觉审查最后核对 13 张窄屏图，确认资料入口发现性与依据加载完成后的展示问题已经关闭。没有通过增加超时、删除或跳过失败用例来通过本轮验证。
+
+架构基线已更新并通过 `--check --skip-build`。公共接口、数据格式与迁移源码无变化，循环依赖和重复片段数量不变。未压缩构建由 533,421 增至 639,331 字节（+105,910，19.9%）；此为组件依赖成本，不作为性能改善。前后指标与边界见 [本轮治理对照](ULYSSES_EXECUTION.md#2026-11-28--统一工作区与-ui-组件补充迭代)。
+
 ## 2026-11-28 · Ulysses 方向整合验收
 
 本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。初轮整合应用代码为 `91be384`，最后独立视觉复核又修正了待确认回执重开时的按钮遮挡。最终应用提交 `2307e7351e63571d9873c39df3b96ca91a6592f2` 已部署到本机 9322，并用于生成本轮 Hermes ZIP；后续分支提交仅补充测试和验收文档。

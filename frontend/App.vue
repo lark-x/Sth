@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onErrorCaptured, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onErrorCaptured, ref } from 'vue';
 import AppIcon from './AppIcon.vue';
 import RouteDocument from './RouteDocument.vue';
 import { characterRoute } from './characters/routes.ts';
@@ -11,16 +11,11 @@ import type { ReadingPosition } from './navigation-state.ts';
 import { currentNavigation } from './routes.ts';
 import { sourceRoute } from './sources/routes.ts';
 import { writingRoute } from './writing/routes.ts';
-import bookMark from '../web/assets/book.svg';
 
 const url = ref(new URL(location.href));
 const refreshVersion = ref(0);
 const announcement = ref('');
 const routeError = ref(false);
-const libraryNavigation = ref<HTMLDialogElement>();
-const navigationOpen = ref(false);
-const phoneNavigation = window.matchMedia('(width < 640px)');
-let navigationPosition: { top: number; left: number } | undefined;
 const returnToManuscript = ref<string | undefined>(referenceReturn(url.value, history.state));
 let announcementTimer: ReturnType<typeof setTimeout> | undefined;
 let focusNextMount = false;
@@ -67,41 +62,6 @@ function returnDepth(target: URL, state: Record<string, unknown> | null) {
     Number.isSafeInteger(depth) && Number(depth) > 0 && Number(depth) < history.length &&
     state?.sthManuscriptReturn === reader ? Number(depth) : undefined;
 }
-
-function openNavigation(event: MouseEvent) {
-  // Safari does not focus buttons on pointer activation. Give the native dialog
-  // the same focused invoker for pointer and keyboard focus restoration.
-  (event.currentTarget as HTMLButtonElement).focus({ preventScroll: true });
-  navigationPosition = { top: window.scrollY, left: window.scrollX };
-  libraryNavigation.value?.showModal();
-  navigationOpen.value = Boolean(libraryNavigation.value?.open);
-}
-
-function closeNavigation() {
-  libraryNavigation.value?.close();
-  navigationClosed();
-}
-
-function navigationClosed() {
-  navigationOpen.value = Boolean(libraryNavigation.value?.open);
-  if (navigationOpen.value || !navigationPosition) return;
-  // WebKit can scroll the page behind a full-height modal despite containment.
-  window.scrollTo({ ...navigationPosition, behavior: 'instant' });
-  navigationPosition = undefined;
-}
-
-function selectNavigation(event: MouseEvent) {
-  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-  if (event.target instanceof Element && event.target.closest('a[href]')) closeNavigation();
-}
-
-function resizeNavigation() {
-  if (!phoneNavigation.matches) closeNavigation();
-}
-
-watch(url, closeNavigation);
-onMounted(() => phoneNavigation.addEventListener('change', resizeNavigation));
-onBeforeUnmount(() => phoneNavigation.removeEventListener('change', resizeNavigation));
 
 function visibleContent() {
   const main = document.getElementById('main');
@@ -196,6 +156,8 @@ function navigate(href: string, replace = false) {
     }
     history.replaceState(state, '', destination);
   } else {
+    // Global tools also preserve the reader's entry for ordinary browser Back.
+    rememberReader();
     const auxiliary = referencePage(destination);
     const matchesReader = nextReturn === url.value.href ||
       (!destination.searchParams.has('returnTo') && referenceDetail(destination));
@@ -214,6 +176,12 @@ function navigate(href: string, replace = false) {
 function refresh() {
   refreshVersion.value++;
   void updateRoute();
+}
+
+function rememberReader() {
+  if (writingRoute(url.value)?.page !== 'read') return;
+  const position = readingPosition();
+  if (position) history.replaceState({ ...history.state, sthManuscriptPosition: position }, '');
 }
 
 function rememberEvidencePosition(event: Event) {
@@ -272,47 +240,8 @@ onErrorCaptured(() => {
   <div class="sth-app" @click.capture="rememberEvidencePosition" @click="onClick" @sth:open-evidence.capture="rememberEvidencePosition"
     @sth:evidence-state="evidenceStateChanged" @sth:replace="onReplace" @sth:announce="onAnnounce">
     <a class="skip-link" href="#main" @click="skipToContent">跳到正文</a>
-    <ManuscriptFrame v-if="workbench && !routeError" :url="url" @navigate="navigate" v-slot="{ editorUrl }">
-      <RouteDocument :key="editorUrl.href + ':' + refreshVersion" :url="editorUrl" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
-    </ManuscriptFrame>
-    <div v-else class="shell sth-shell">
-      <header class="sth-mobile-toolbar" aria-label="全局导航">
-        <button type="button" class="sth-library-toggle" aria-label="打开资料库导航" aria-controls="library-navigation"
-          :aria-expanded="navigationOpen" @click="openNavigation"><AppIcon name="panels" /></button>
-        <a href="/" class="sth-mobile-brand" aria-label="Sth 首页" :aria-current="isHome ? 'page' : undefined">Sth</a>
-        <span class="sth-mobile-location">{{ navigationTitle }}</span>
-      </header>
-      <header class="sidebar sth-sidebar">
-        <a class="brand" href="/" aria-label="Sth 首页" :aria-current="isHome ? 'page' : undefined">
-          <span class="brand-mark"><img :src="bookMark" width="24" height="24" alt=""></span>
-          <span>Sth</span>
-        </a>
-        <nav id="navigation" aria-label="主导航">
-          <a v-for="item in destinations" :key="item.href" :href="item.href" :class="{ 'sth-navigation-task': item.href === '/jobs' }" :aria-current="active === item.href ? 'page' : undefined">
-            <AppIcon :name="item.icon" /><span>{{ item.name }}</span>
-          </a>
-        </nav>
-        <nav id="settings-navigation" aria-label="应用设置">
-          <a href="/settings" :aria-current="active === '/settings' ? 'page' : undefined"><AppIcon name="settings" /><span>设置</span></a>
-        </nav>
-      </header>
-      <dialog id="library-navigation" ref="libraryNavigation" class="sth-mobile-navigation" aria-labelledby="library-navigation-title"
-        @close="navigationClosed" @click.capture="selectNavigation">
-        <header class="sth-navigation-heading">
-          <h1 id="library-navigation-title">资料库</h1>
-          <form method="dialog"><button type="submit" class="button quiet" autofocus>关闭</button></form>
-        </header>
-        <nav aria-label="主导航">
-          <a href="/" :aria-current="isHome ? 'page' : undefined"><AppIcon name="library" /><span>首页</span></a>
-          <a v-for="item in destinations" :key="item.href" :href="item.href" :class="{ 'sth-navigation-task': item.href === '/jobs' }" :aria-current="active === item.href ? 'page' : undefined">
-            <AppIcon :name="item.icon" /><span>{{ item.name }}</span>
-          </a>
-        </nav>
-        <nav class="sth-navigation-secondary" aria-label="应用设置">
-          <a href="/settings" :aria-current="active === '/settings' ? 'page' : undefined"><AppIcon name="settings" /><span>设置</span></a>
-        </nav>
-      </dialog>
-      <main id="main" tabindex="-1" :class="{ 'sth-home-main': isHome }">
+    <ManuscriptFrame :url="url" :workbench="workbench && !routeError" :label="navigationTitle" @navigate="navigate" @remember-reading="rememberReader" v-slot="{ editorUrl }">
+      <div :class="{ 'sth-page-content': !workbench || routeError, 'sth-home-main': isHome }">
         <a v-if="returnToManuscript && (!ownsReferenceReturn || routeError)" :href="returnToManuscript" class="button quiet"><AppIcon name="back" />返回原稿</a>
         <div v-if="routeError" class="sth-route-error">
           <h1 tabindex="-1">页面暂时无法打开</h1>
@@ -320,9 +249,9 @@ onErrorCaptured(() => {
           <button type="button" class="button primary" @click="refresh">重试</button>
           <a href="/" class="button quiet">返回首页</a>
         </div>
-        <RouteDocument v-else :key="url.href + ':' + refreshVersion" :url="url" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
-      </main>
-    </div>
+        <RouteDocument v-else :key="editorUrl.href + ':' + refreshVersion" :url="editorUrl" @navigate="navigate" @refresh="refresh" @ready="focusPage" />
+      </div>
+    </ManuscriptFrame>
     <div id="announcement" class="toast" role="status" aria-atomic="true">{{ announcement }}</div>
   </div>
 </template>

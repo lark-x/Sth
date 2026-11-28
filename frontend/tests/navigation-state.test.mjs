@@ -99,7 +99,7 @@ test('return history rejects incomplete state and keeps ordinary library navigat
     await page.goto('/settings');
     await page.getByRole('heading', { level: 1 }).waitFor();
     await page.evaluate(() => history.replaceState({ sthManuscriptReturnDepth: 1 }, ''));
-    await page.locator('#navigation').getByRole('link', { name: '任务', exact: true }).click();
+    await page.locator('#library-navigation').getByRole('link', { name: '任务', exact: true }).click();
     await page.waitForURL('**/jobs');
     assert.equal(await page.evaluate(() => history.state?.sthManuscriptReturnDepth), undefined);
     assert.equal(await backLink(page).count(), 0);

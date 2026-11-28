@@ -9,7 +9,7 @@ import { assertFitsViewport } from '../../tests/browser/harness.mjs';
 const artifacts = resolve('frontend/.artifacts/home-diary');
 const recentKey = 'sth:manuscripts:recent:v1';
 const button = (page, name) => page.getByRole('button', { name, exact: true });
-const navigation = page => page.getByRole('dialog', { name: '资料库', exact: true });
+const navigation = page => page.locator('#library-navigation');
 const quick = page => page.getByLabel('此刻想记下什么', { exact: true });
 const diaryReady = page => page.locator('.diary-route[aria-busy="false"]').waitFor();
 
@@ -26,7 +26,7 @@ async function homeReady(page) {
 }
 
 async function navigationClosed(page) {
-  await page.waitForFunction(() => !document.querySelector('#library-navigation')?.open &&
+  await page.waitForFunction(() => document.querySelector('.manuscript-frame')?.getAttribute('data-pane') !== 'library' &&
     document.querySelector('.sth-library-toggle')?.getAttribute('aria-expanded') === 'false');
 }
 
@@ -82,36 +82,39 @@ test('home, global navigation and diary share a compact responsive writing shell
         assert.ok(firstBox.y + firstBox.height < height, `first recent manuscript fits at ${firstBox.y + firstBox.height}px`);
         if (width < 640) {
           assert.equal((await page.locator('.sth-mobile-toolbar').boundingBox()).height, 60);
-          assert.equal(await page.locator('.sth-sidebar').isVisible(), false);
+          assert.equal(await page.locator('.manuscript-library').isVisible(), false);
           const toggle = await button(page, '打开资料库导航').boundingBox();
           assert.ok(toggle.width >= 44 && toggle.height >= 44);
         } else {
-          assert.equal((await page.locator('.sth-sidebar').boundingBox()).width, 208);
-          assert.equal(await page.locator('.sth-mobile-toolbar').isVisible(), false);
+          assert.equal((await page.locator('.manuscript-library').boundingBox()).width, 224);
+          assert.equal(await page.locator('.sth-mobile-toolbar').isVisible(), true);
+          assert.equal(await page.locator('.sth-library-toggle').isVisible(), false);
         }
         await capture(page, `${prefix}-home`);
         const unfinished = '先留在首页，等回来的时候继续写。';
         await quick(page).fill(unfinished);
 
         if (width < 640) {
+          const historyLength = await page.evaluate(() => history.length);
           await button(page, '打开资料库导航').click();
-          assert.equal(await button(page, '打开资料库导航').getAttribute('aria-expanded'), 'true');
-          assert.equal(await navigation(page).locator('a').count(), 7);
-          assert.equal(await navigation(page).getByRole('link', { name: '首页', exact: true }).getAttribute('aria-current'), 'page');
-          assert.equal(await button(page, '关闭').evaluate(element => element === document.activeElement), true);
-          for (let index = 0; index < 10; index++) {
-            await page.keyboard.press('Tab');
-            assert.equal(await page.evaluate(() => document.activeElement === document.body ||
-              Boolean(document.activeElement.closest('#library-navigation'))), true, 'Tab cannot enter the background page');
-          }
+          assert.equal(await page.locator('.sth-library-toggle').getAttribute('aria-expanded'), 'true');
+          assert.equal(await page.locator('.manuscript-frame').getAttribute('data-pane'), 'library');
+          assert.equal(await navigation(page).evaluate(element => element.tagName), 'ASIDE');
+          assert.equal(await page.getByRole('dialog').count(), 0, 'the shared library is not a dialog');
+          assert.equal(await navigation(page).getAttribute('inert'), null);
+          assert.equal(await page.evaluate(() => history.length), historyLength, 'opening the auxiliary pane does not push history');
+          assert.equal(await button(page, '返回当前页面').evaluate(element => element === document.activeElement), true);
+          assert.deepEqual(await navigation(page).locator('.library-brand, .library-primary > .library-link, .library-resources > .library-link, .library-footer > .library-link').evaluateAll(elements =>
+            elements.map(element => element.textContent.trim()).filter(Boolean)),
+          ['Sth', '最近写过', '日记', '全部文稿', '角色', '资料', '任务', '设置']);
           await capture(page, `${prefix}-navigation`);
           await page.keyboard.press('Escape');
           await navigationClosed(page);
-          assert.equal(await button(page, '打开资料库导航').getAttribute('aria-expanded'), 'false');
+          assert.equal(await page.locator('.sth-library-toggle').getAttribute('aria-expanded'), 'false');
           assert.equal(await button(page, '打开资料库导航').evaluate(element => element === document.activeElement), true);
           assert.equal(await quick(page).inputValue(), unfinished);
           await button(page, '打开资料库导航').click();
-          await button(page, '关闭').click();
+          await button(page, '返回当前页面').click();
           await navigationClosed(page);
           assert.equal(await button(page, '打开资料库导航').evaluate(element => element === document.activeElement), true);
 
@@ -127,18 +130,20 @@ test('home, global navigation and diary share a compact responsive writing shell
           await page.keyboard.press('Escape');
           await navigationClosed(page);
           assert.equal(await page.evaluate(() => scrollY), top, 'closing navigation restores the exact home scroll');
+          assert.equal(await button(page, '打开资料库导航').evaluate(element => element === document.activeElement), true);
           assert.equal(await quick(page).inputValue(), unfinished);
           await page.evaluate(() => scrollTo(0, 0));
 
-          for (const [name, path] of [['日记', '/diaries'], ['创作', '/create'], ['角色', '/characters'], ['资料', '/sources'], ['任务', '/jobs'], ['设置', '/settings']]) {
+          for (const [name, path] of [['日记', '/diaries'], ['全部文稿', '/projects'], ['角色', '/characters'], ['资料', '/sources'], ['任务', '/jobs'], ['设置', '/settings']]) {
             await button(page, '打开资料库导航').click();
             await navigation(page).getByRole('link', { name, exact: true }).click();
             await page.waitForURL(workspace.origin + path);
-            assert.equal(await page.locator('dialog:modal').count(), 0, 'navigation releases modality before route entry');
+            assert.equal(await page.locator('dialog:modal').count(), 0, 'navigation is not modal');
             if (['角色', '资料', '任务', '设置'].includes(name)) {
               await button(page, '打开资料库导航').click();
               assert.equal(await navigation(page).getByRole('link', { name, exact: true }).getAttribute('aria-current'), 'page');
-              await button(page, '关闭').click();
+              await button(page, '返回当前页面').click();
+              await navigationClosed(page);
             }
             await page.goBack();
             await homeReady(page);
@@ -146,8 +151,8 @@ test('home, global navigation and diary share a compact responsive writing shell
           }
           await button(page, '打开资料库导航').click();
           await page.setViewportSize({ width: 768, height: 1024 });
-          await page.waitForFunction(() => !document.querySelector('#library-navigation')?.open);
-          assert.equal(await page.locator('.sth-sidebar').isVisible(), true);
+          await page.waitForFunction(() => document.querySelector('.manuscript-frame')?.getAttribute('data-pane') !== 'library');
+          assert.equal(await page.locator('.manuscript-library').isVisible(), true);
           await page.setViewportSize({ width, height });
         }
 
@@ -267,8 +272,13 @@ test('home, global navigation and diary share a compact responsive writing shell
     await homeReady(page);
     assert.match(await diaryLink.innerText(), /第 2 版/);
     assert.equal(await diaryLink.locator('.sth-manuscript-excerpt').count(), 0, 'mismatched list revision remains without an excerpt');
-    assert.ok(calls.every(operation => ['diary.list', 'manuscript.recent'].includes(operation)),
-      `home uses only its two existing list operations: ${calls.join(', ')}`);
+    assert.ok(calls.every(operation => ['chapter.list', 'diary.list', 'manuscript.recent', 'project.list'].includes(operation)),
+      `home uses only shared tree and existing list operations: ${calls.join(', ')}`);
+    for (const operation of ['chapter.list', 'diary.list', 'manuscript.recent', 'project.list']) {
+      assert.ok(calls.includes(operation), `home reads ${operation}`);
+    }
+    assert.ok(!calls.some(operation => /^(draft|scene)\.list$/.test(operation)),
+      `home never requests manuscript body lists: ${calls.join(', ')}`);
     assert.equal(current.revision, 2);
     cases.push({ name: 'exact-diary-excerpts', width: [390, 320], passed: true });
   });
