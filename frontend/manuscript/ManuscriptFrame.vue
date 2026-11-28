@@ -42,12 +42,38 @@ const emptyAction = computed(() => {
 });
 const listOnly = computed(() => collection.value && compact.value);
 const query = window.matchMedia('(max-width: 639px)');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let paneAnimation: Animation | undefined;
+function stopPaneAnimation() { paneAnimation?.cancel(); paneAnimation = undefined; }
 function sizeChanged() {
+  stopPaneAnimation();
   compact.value = query.matches;
   if (!compact.value && !props.workbench && auxiliaryPosition) closeAuxiliaryNavigation();
 }
 onMounted(() => query.addEventListener('change', sizeChanged));
 onBeforeUnmount(() => query.removeEventListener('change', sizeChanged));
+onMounted(() => reducedMotion.addEventListener('change', stopPaneAnimation));
+onBeforeUnmount(() => {
+  reducedMotion.removeEventListener('change', stopPaneAnimation);
+  stopPaneAnimation();
+});
+
+// Presentation only: navigation, focus and reading restoration never wait for
+// an animation. Do not transform the editor: its fixed evidence panel must keep
+// the viewport as its containing block, including when opened mid-transition.
+watch([activePane, focus, wideLibrary], ([pane], [previous]) => {
+  stopPaneAnimation();
+  if (reducedMotion.matches || !root.value) return;
+  const target = root.value.querySelector<HTMLElement>(compact.value && pane !== 'editor'
+    ? `.manuscript-${pane}` : '.ms-editor');
+  if (!target?.getClientRects().length || typeof target.animate !== 'function') return;
+  const order: Pane[] = ['library', 'sheets', 'editor'];
+  const direction = order.indexOf(pane) >= order.indexOf(previous) ? 1 : -1;
+  const frames = compact.value && pane !== 'editor'
+    ? [{ opacity: .6, transform: `translateX(${direction * 12}px)` }, { opacity: 1, transform: 'none' }]
+    : [{ opacity: .78 }, { opacity: 1 }];
+  paneAnimation = target.animate(frames, { duration: compact.value ? 220 : 160, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+}, { flush: 'post' });
 
 function defaultPane(url: URL): Pane {
   if (!props.workbench) return 'editor';

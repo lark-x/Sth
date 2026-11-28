@@ -117,9 +117,10 @@ async function evidenceState(page) {
   });
 }
 
-async function makeSession(browser, browserName, viewport, origin) {
+async function makeSession(browser, browserName, viewport, origin, motionDirectory) {
   const context = await browser.newContext({ baseURL: origin, viewport: { width: viewport.width, height: viewport.height },
-    locale: 'zh-CN', timezoneId: 'Asia/Shanghai', deviceScaleFactor: 1, colorScheme: 'light', reducedMotion: 'reduce',
+    locale: 'zh-CN', timezoneId: 'Asia/Shanghai', deviceScaleFactor: 1, colorScheme: 'light', reducedMotion: motionDirectory ? 'no-preference' : 'reduce',
+    ...(motionDirectory ? { recordVideo: { dir: motionDirectory, size: { width: viewport.width, height: viewport.height } } } : {}),
     serviceWorkers: 'block', ...(browserName === 'webkit' ? { isMobile: true, hasTouch: true } : {}) });
   const page = await context.newPage();
   page.setDefaultTimeout(actionTimeout);
@@ -721,6 +722,7 @@ export async function captureManuscripts(options) {
   const browserNames = selected(options.browsers, ['chromium', 'webkit'], '--browsers');
   const viewportNames = selected(options.viewports, viewports.map(viewport => viewport.name), '--viewports');
   const only = selected(options.only, screenshotCases, '--only');
+  assert.ok(options.motion === undefined || options.motion === 'record', '--motion must be record');
   await mkdir(output, { recursive: true });
   // Avoid silently mixing screenshots or a manifest from different builds.
   const { readdir } = await import('node:fs/promises');
@@ -733,7 +735,7 @@ export async function captureManuscripts(options) {
     build: await inspectManuscriptBuild(options.ui), scope: { browsers: browserNames, viewports: viewportNames, cases: only,
       matrix: browserNames.flatMap(browser => viewports.filter(viewport => viewportNames.includes(viewport.name)
         && (browser !== 'webkit' || viewport.width <= 390)).map(viewport => ({ browser, viewport }))) },
-    cases: [], screenshots: [], browserErrors: [], startupErrors: [], limitations: [
+    cases: [], screenshots: [], videos: [], motion: options.motion ?? 'reduced', browserErrors: [], startupErrors: [], limitations: [
       'Desktop browser engines with emulated viewport sizes. Physical iOS, keyboards and WKWebView are outside this capture.',
       'Prepared generation records preserve fixture references. Fixture prose is synthetic and does not claim model execution.',
       'Loading and read-error images use recorded browser request delays or faults. Conflict uses a real concurrent API revision.',
@@ -753,7 +755,8 @@ export async function captureManuscripts(options) {
         for (const viewport of viewports.filter(item => viewportNames.includes(item.name))) {
           // The required extra WebKit captures cover both mobile widths.
           if (name === 'webkit' && viewport.width > 390) continue;
-          sessions.push(await makeSession(browser, name, viewport, run.workspace.origin));
+          sessions.push(await makeSession(browser, name, viewport, run.workspace.origin,
+            options.motion ? join(output, 'videos') : undefined));
         }
       } catch (error) { manifest.startupErrors.push({ browser: name, message: error.message }); }
     }
@@ -789,7 +792,14 @@ export async function captureManuscripts(options) {
     manifest.fixtureCalls = run.workspace.calls;
   } catch (error) { manifest.startupErrors.push({ message: error.message, stack: error.stack }); }
   finally {
-    for (const session of sessions) await session.context.close().catch(error => manifest.startupErrors.push({ cleanup: error.message }));
+    for (const session of sessions) {
+      await session.context.close().catch(error => manifest.startupErrors.push({ cleanup: error.message }));
+      if (session.page.video()) {
+        try { manifest.videos.push({ browser: session.browser, viewport: session.viewport,
+          file: relative(output, await session.page.video().path()).replaceAll('\\', '/') }); }
+        catch (error) { manifest.startupErrors.push({ video: error.message }); }
+      }
+    }
     for (const browser of browsers) await browser.close().catch(error => manifest.startupErrors.push({ cleanup: error.message }));
     if (run.workspace?.inspectServedBundle) {
       manifest.finalBundle = await run.workspace.inspectServedBundle().catch(error => ({ error: error.message }));
@@ -1103,10 +1113,11 @@ ${manifest.sourceStable === false ? '<p class="warning">运行期间工作区源
 }
 
 async function main() {
-  const options = parseOptions(process.argv.slice(2), ['--out', '--stage', '--ui', '--browsers', '--viewports', '--only', '--strict', '--help', '--gallery']);
+  const options = parseOptions(process.argv.slice(2), ['--out', '--stage', '--ui', '--browsers', '--viewports', '--only', '--strict', '--help', '--gallery', '--motion']);
   if (options.help) {
     console.log('node scripts/capture-manuscript.mjs --out <empty-directory> [--stage final] [--ui source|built|snapshot] [--browsers chromium,webkit] [--viewports desktop,tablet,phone,compact] [--only case,...] [--strict]');
     console.log('node scripts/capture-manuscript.mjs --gallery <capture-directory|manifest.json> [--out <review-directory>]');
+    console.log('Add --motion record to keep normal motion and record a WebM for each viewport.');
     console.log(`Cases: ${screenshotCases.join(',')}`);
     return;
   }

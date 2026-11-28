@@ -18,7 +18,7 @@
   border-inline-end: 1px solid var(--line);
 }
 .manuscript-library { grid-column: 1; grid-row: 1; background: var(--sidebar); }
-.manuscript-sheets { grid-column: 2; grid-row: 1; background: #fcfcfc; }
+.manuscript-sheets { grid-column: 2; grid-row: 1; background: var(--surface-subtle); }
 .sth-app .manuscript-frame.ms-auxiliary { grid-template-columns: var(--ms-library-width) minmax(0, 1fr); }
 .ms-auxiliary > .manuscript-library { display: flex; }
 .ms-auxiliary > .manuscript-sheets { display: none; }
@@ -26,13 +26,14 @@
 .ms-view-tools, .ms-sheets-bar { display: flex; align-items: center; gap: .65rem; padding: .45rem 1rem; min-block-size: 2.85rem; border-block-end: 1px solid var(--line); }
 .ms-sheets-bar, .ms-tablet-library, .ms-phone-sheets { display: none; }
 .ms-view-tools .ms-tool, .ms-sheets-bar .ms-tool {
-  align-items: center; gap: .42rem; border: 0; border-radius: .3rem; background: transparent; padding: .25rem .45rem; min-block-size: 2rem; color: var(--muted); font: 500 .8125rem/1.4 var(--sans); text-decoration: none;
+  align-items: center; gap: .42rem; border: 0; border-radius: var(--radius-control); background: transparent; padding: .25rem .45rem; min-block-size: var(--control-small); color: var(--muted); font: 500 .8125rem/1.4 var(--sans); text-decoration: none;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
 }
 .ms-wide-focus { display: inline-flex; }
 .ms-view-tools :is(button,a):hover, .ms-sheets-bar button:hover { color: var(--ink); background: var(--selection); }
 .ms-view-tools .icon, .ms-sheets-bar .icon { inline-size: 1rem; block-size: 1rem; }
 .ms-view-controls { display: inline-flex; align-items: center; gap: .25rem; }
-.ms-view-controls .ms-tool { align-items: center; justify-content: center; inline-size: 2.5rem; min-block-size: 2.5rem; border: 0; border-radius: 4px; padding: 0; background: transparent; color: var(--muted); }
+.ms-view-controls .ms-tool { align-items: center; justify-content: center; inline-size: 2.5rem; min-block-size: 2.5rem; border: 0; border-radius: var(--radius-control); padding: 0; background: transparent; color: var(--muted); transition: background-color var(--motion-fast), color var(--motion-fast); }
 .ms-view-controls .ms-tool:hover, .ms-view-controls .ms-tool[aria-pressed=true] { background: var(--selection); color: var(--ink); }
 .ms-view-controls .icon { inline-size: 1.15rem; block-size: 1.15rem; }
 .ms-editor:has(.wr-reader-toolbar .ms-view-controls, .diary-toolbar .ms-view-controls) > .ms-view-tools { display: none; }

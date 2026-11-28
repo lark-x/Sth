@@ -1,0 +1,79 @@
+/* Shared control vocabulary for Vue and retained native pages. Tokens live in
+   notebook.css. Domain styles own placement, never business state. */
+:is(.ui-button, .button) {
+  --control-fill: transparent;
+  --control-ink: var(--ink);
+  --control-line: transparent;
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-block-size: var(--control-size);
+  max-inline-size: 100%;
+  padding: .45rem .85rem;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-control);
+  background: var(--control-fill);
+  color: var(--control-ink);
+  font: 550 .8125rem/1.45 var(--sans);
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.ui-button, .button.primary { --control-fill: var(--ink); --control-ink: #fff; }
+.ui-button[data-variant=outline], .button.secondary { --control-fill: var(--sheet); --control-ink: var(--ink); --control-line: var(--field-border); }
+.ui-button[data-variant=secondary] { --control-fill: var(--selection); --control-ink: var(--ink); }
+.ui-button[data-variant=ghost], .button.quiet { --control-fill: transparent; --control-ink: var(--muted); }
+.ui-button[data-variant=danger], .button.danger { --control-fill: var(--danger); --control-ink: #fff; }
+:is(.ui-button, .button):hover:not(:disabled):not([aria-disabled=true]) { background: var(--surface-hover); color: var(--ink); }
+.ui-button[data-variant=default]:hover:not(:disabled), .button.primary:hover:not(:disabled) { background: #41413e; color: #fff; }
+.ui-button[data-variant=danger]:hover:not(:disabled), .button.danger:hover:not(:disabled) { background: #702c24; color: #fff; }
+:is(.ui-button, .button):active:not(:disabled):not([aria-disabled=true]) { box-shadow: inset 0 1px 3px rgb(0 0 0 / .16); }
+:is(.ui-button, .button):is(:disabled, [aria-disabled=true]) { cursor: not-allowed; opacity: .65; }
+:is(.ui-button, .button)[aria-busy=true] { cursor: progress; }
+:is(.ui-button, .button):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.ui-button[data-size=sm] { min-block-size: var(--control-small); padding: .35rem .65rem; }
+.ui-button[data-size=icon] { inline-size: var(--control-small); min-block-size: var(--control-small); padding: .4rem; }
+:is(.ui-button, .button) .icon { inline-size: 1rem; block-size: 1rem; }
+.ui-button[data-loading=true]::after { content: ''; position: absolute; inset: auto .6rem .2rem; block-size: 2px; border-radius: 2px; background: currentColor; opacity: .55; }
+:is(.ui-field, .field) { display: grid; gap: .4rem; min-inline-size: 0; }
+:is(.ui-field, .field) > label, .ui-label { font-size: .8125rem; line-height: 1.5; font-weight: 600; }
+.ui-input, :is(.ui-field, .field) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea) {
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: var(--control-size);
+  padding: .55rem .75rem;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--sheet);
+  color: var(--ink);
+  font: 400 .875rem/1.6 var(--sans);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.ui-input:hover:not(:disabled), :is(.ui-field, .field) :is(input, select, textarea):hover:not(:disabled) { border-color: var(--muted); }
+.ui-input:focus-visible, :is(.ui-field, .field) :is(input, select, textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ui-input:disabled, :is(.ui-field, .field) :is(input, select, textarea):disabled { color: var(--muted); background: var(--surface-subtle); cursor: not-allowed; }
+.ui-input[aria-invalid=true], :is(.ui-field, .field) :is(input, select, textarea):is([aria-invalid=true], :user-invalid) { border-color: var(--danger); }
+:is(.ui-field, .field) textarea, textarea.ui-input { resize: vertical; line-height: 1.8; }
+:is(.ui-field, .field) :is(input[type=checkbox], input[type=radio]) { accent-color: var(--ink); }
+.ui-field-note { margin: 0; color: var(--muted); font-size: .8125rem; line-height: 1.65; }
+.ui-field-error { margin: 0; color: var(--danger); font-size: .8125rem; line-height: 1.65; }
+.ui-status { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .8125rem; line-height: 1.6; }
+.ui-status[data-tone=error] { color: var(--danger); }
+.ui-status[data-tone=confirmed] { color: var(--ink); }
+@media (pointer: coarse), (width < 640px) {
+  .ui-button[data-size=icon] { min-inline-size: 2.75rem; }
+  .ui-input, :is(.ui-field, .field) :is(input, select, textarea) { font-size: 1rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-button[data-loading=true]::after { animation: ui-busy 1.1s ease-in-out infinite alternate; transform-origin: left; }
+  @keyframes ui-busy { from { transform: scaleX(.3); opacity: .35; } to { transform: scaleX(1); opacity: .7; } }
+}
+@media (forced-colors: active) {
+  :is(.ui-button, .button) { border-color: ButtonText; }
+  :is(.ui-button, .button):disabled { opacity: 1; color: GrayText; border-color: GrayText; }
+}

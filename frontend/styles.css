@@ -11,10 +11,10 @@
 }
 
 .sth-app ::selection { background: var(--selection); color: var(--ink); }
-.sth-app :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.sth-app :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 .sth-app input, .sth-app textarea { caret-color: var(--accent); }
 .sth-app main { inline-size: min(100%, 70rem); }
-.sth-page-content { inline-size: min(100%, 70rem); margin-inline: auto; padding: 2rem clamp(1.25rem, 4dvw, 4rem) 4rem; }
+.sth-page-content { inline-size: min(100%, 66rem); margin-inline: auto; padding: 2rem clamp(1.25rem, 4dvw, 3.5rem) 4rem; }
 .sth-app .sth-home-main { padding: 2.5rem clamp(1.25rem, 4dvw, 4rem) 4rem; }
 .sth-mobile-toolbar { display: flex; align-items: center; gap: .6rem; min-block-size: 3.5rem; padding-inline: 1.5rem; border-block-end: 1px solid var(--line); background: var(--sheet); }
 .sth-library-toggle, .sth-mobile-brand { display: none; }
