@@ -21,6 +21,17 @@
 
 架构基线已更新并通过 `--check --skip-build`。公共接口、数据格式与迁移源码无变化，循环依赖和重复片段数量不变。未压缩构建由 533,421 增至 639,331 字节（+105,910，19.9%）；此为组件依赖成本，不作为性能改善。前后指标与边界见 [本轮治理对照](ULYSSES_EXECUTION.md#2026-11-28--统一工作区与-ui-组件补充迭代)。
 
+### 本轮部署与 GitHub 交付
+
+应用提交 [`aeefc4cb1f2aa9c9641ef847c052afa58a028085`](https://github.com/lark-x/Sth/commit/aeefc4cb1f2aa9c9641ef847c052afa58a028085) 已推送至 [`feat/unified-writing-ui`](https://github.com/lark-x/Sth/tree/feat/unified-writing-ui)，并部署到本机 <http://127.0.0.1:9322>。`main` 仍为 `ec1f1e4ba41f261419e70658a76b5e68868caada`。后续本分支提交只补充交付记录，部署身份以该应用 SHA 为准。
+
+- 运行容器为 `sth-authoring-web-1`，镜像 `sha256:c4beffeb5792859045a5e77ff18abd6512cd0fa69f3cca995f0dd23a4981e93c`。冻结提交、OCI revision、运行源码、原服务配置和 `sth-authoring_workspace` 数据卷均核对通过；Docker 与 HTTP 健康。25 个前端文件与本机验收构建逐文件一致，提交后的应用源码摘要仍与截图清单相同。
+- 发布前演练、发布后独立核对通过：59 张表、5,051 行逐项一致，没有新增迁移或表。回滚 dry-run 通过，旧镜像可用，未执行回滚。
+- 实际服务六组 Chromium 1280/768/390/320、WebKit 390/320 验收 **60/60**，覆盖首页、日记、全部文稿、角色、资料、任务、设置、旧版稿件、依据开关和已有研究日记。无页面异常、HTTP 失败或横向溢出；依据关闭后恢复触发按钮焦点与原位置。主代理另查看实际桌面旧稿／设置与 WebKit 320px 依据截图。
+- 浏览器验收后再次快照对照，其余 58 张表完全不变、原有回执全部保留，只新增与捕获请求逐项匹配的 360 条 `web:owner` 读取回执，完整性、外键与内部序列校验通过。真实作者内容截图保留在本机忽略目录，不上传 GitHub。
+
+本机证据根目录为 `frontend/.artifacts/unified-ui/`：`preflight-aeefc4c.log`、`release-aeefc4c.log`、`verify-release-aeefc4c.log`、`rollback-dry-aeefc4c.log`、`committed-source-aeefc4c.json`、`deployed-frontend-aeefc4c.json`、`live-aeefc4c/report.json`、`live-data-audit-aeefc4c.json`。发布预检目录为 `artifacts/release-preflight-20261127/runs/2026-11-28T03-52-49-301Z-3e11a8d3/`。独立核验采用 screenshot-matrix 模式，报告中的 `browserAcceptancePassed: false` 表示未选择 targeted-browser 模式；其 `browserAcceptancePending: false`，实际部署后的 60 项结果如上。
+
 ## 2026-11-28 · Ulysses 方向整合验收
 
 本轮在 `feat/ulysses-workspace` 完成灰白写作界面、真实文稿摘要、紧凑读稿工具栏、章内新建直接落笔、原句优先的依据，以及跨角色/资料多跳返回原稿原段。初轮整合应用代码为 `91be384`，最后独立视觉复核又修正了待确认回执重开时的按钮遮挡。最终应用提交 `2307e7351e63571d9873c39df3b96ca91a6592f2` 已部署到本机 9322，并用于生成本轮 Hermes ZIP；后续分支提交仅补充测试和验收文档。
