@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AppIcon from './AppIcon.vue';
 import { ApiError, errorText, invoke, localDate, operation } from './api.ts';
 import type { DiarySummary } from './api.ts';
@@ -119,6 +119,8 @@ function fitQuickNote() {
   textarea.style.height = `${Math.min(textarea.scrollHeight, Number.isFinite(maximum) ? maximum : textarea.scrollHeight)}px`;
 }
 
+watch(quickBody, fitQuickNote, { flush: 'post' });
+
 onMounted(() => {
   fitQuickNote();
   document.title = '首页 · Sth';
@@ -147,7 +149,7 @@ onBeforeUnmount(() => {
     <form class="sth-capture" @submit.prevent="save">
       <div class="sth-capture-field ui-field">
         <label for="quick-note">此刻想记下什么</label>
-        <textarea id="quick-note" ref="quickNote" class="ui-input sth-capture-input" v-model="quickBody" name="body" rows="2" maxlength="100000" required :readonly="saving || Boolean(quickCall)" placeholder="一个念头，或者今天发生的小事。" :aria-describedby="saveError ? 'quick-note-error' : undefined" @input="fitQuickNote" />
+        <textarea id="quick-note" ref="quickNote" class="ui-input sth-capture-input" v-model="quickBody" name="body" rows="2" maxlength="100000" required :readonly="saving || Boolean(quickCall)" placeholder="一个念头，或者今天发生的小事。" :aria-describedby="saveError ? 'quick-note-error' : undefined" />
       </div>
       <p v-if="saveError" id="quick-note-error" class="sth-error" role="alert">{{ saveError }}</p>
       <p v-else-if="quickCall && !saving" class="sth-error">上一次保存需要确认，内容已保留。请核对并重试。</p>

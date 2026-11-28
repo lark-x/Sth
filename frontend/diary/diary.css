@@ -16,7 +16,7 @@
 }
 .diary-route *, .diary-route *::before, .diary-route *::after { box-sizing: border-box; }
 .diary-route h1, .diary-route h2, .diary-route p { margin: 0; }
-.diary-route h1 { font: 600 1.8rem/1.4 var(--sans); text-wrap: balance; }
+.diary-route h1 { font: 600 var(--page-title-size, 1.5rem)/var(--page-title-leading, 1.4) var(--sans); text-wrap: balance; }
 .diary-route h2 { font-size: 1.125rem; margin-block-end: .75rem; }
 .diary-route :where(a:not(.ui-button)) { color: var(--diary-accent); text-underline-offset: .2em; }
 .diary-route :focus-visible { outline: 2px solid var(--diary-accent); outline-offset: 3px; }

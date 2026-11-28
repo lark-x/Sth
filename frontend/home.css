@@ -97,8 +97,6 @@
   gap: .5rem 1rem;
   min-block-size: 2.5rem;
   margin-block: 1.7rem .4rem;
-  padding-block-end: .4rem;
-  border-block-end: 1px solid var(--line);
 }
 
 .sth-home .sth-section-heading .sth-text-link { color: var(--muted); }
