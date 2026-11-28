@@ -39,10 +39,19 @@ test('review pages give manuscripts room and restore the reader without changing
       const editorWidth = await page.locator('#main').evaluate(node => node.getBoundingClientRect().width);
       assert.ok(editorWidth >= width - (width >= 1050 ? 240 : 1), `review receives readable space: ${editorWidth}/${width}`);
       assert.equal(await library.getAttribute('data-review-continuity'), 'same-library');
+      if (width >= 1050) {
+        assert.equal(await library.isVisible(), true, 'desktop review retains the library');
+      }
       if (width >= 640 && width < 1050) {
         const toggle = page.getByRole('button', { name: '资料库', exact: true });
         await toggle.click();
         assert.equal(await library.isVisible(), true, 'the existing library action remains usable in tablet review');
+        const librarySize = await library.evaluate(node => ({
+          width: node.getBoundingClientRect().width,
+          expected: parseFloat(getComputedStyle(document.documentElement).fontSize) * 15,
+        }));
+        assert.ok(Math.abs(librarySize.width - librarySize.expected) <= 1,
+          `tablet library occupies the existing 15rem column: ${JSON.stringify(librarySize)}`);
         assert.equal(await page.locator('.wr-comparison').isVisible(), true);
         await toggle.click();
         assert.equal(await library.isVisible(), false);
@@ -75,6 +84,10 @@ test('review pages give manuscripts room and restore the reader without changing
       await page.goto(adoption.href);
       await page.getByRole('heading', { name: '采纳候选稿', exact: true, level: 1 }).waitFor();
       assert.equal(await sheets.isVisible(), false, 'adoption gives its manuscript the same review space');
+      assert.equal(await library.isVisible(), width >= 1050, 'adoption retains the responsive library visibility');
+      const adoptionWidth = await page.locator('#main').evaluate(node => node.getBoundingClientRect().width);
+      assert.ok(adoptionWidth >= width - (width >= 1050 ? 240 : 1),
+        `adoption receives the same readable space: ${adoptionWidth}/${width}`);
       assert.equal((await workspace.invoke('scene.read', { sceneId: fixture.scene.sceneId })).adopted.revision, 1,
         'viewing a confirmation never changes the adopted revision');
       assert.deepEqual(errors, []);
