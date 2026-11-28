@@ -12,49 +12,14 @@
 
 .sth-app ::selection { background: var(--selection); color: var(--ink); }
 .sth-app :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.sth-app :is(main, h1)[tabindex="-1"]:focus { outline: none; }
 .sth-app input, .sth-app textarea { caret-color: var(--accent); }
 .sth-app main { inline-size: min(100%, 70rem); }
 .sth-page-content { inline-size: min(100%, 66rem); margin-inline: auto; padding: 2rem clamp(1.25rem, 4dvw, 3.5rem) 4rem; }
-.sth-app .sth-home-main { padding: 2.5rem clamp(1.25rem, 4dvw, 4rem) 4rem; }
 .sth-mobile-toolbar { display: flex; align-items: center; gap: .6rem; min-block-size: 3.5rem; padding-inline: 1.5rem; border-block-end: 1px solid var(--line); background: var(--sheet); }
 .sth-library-toggle, .sth-mobile-brand { display: none; }
 .sth-mobile-location { color: var(--muted); font-size: .8125rem; }
 .legacy-route { min-inline-size: 0; }
-.sth-home { max-inline-size: 53rem; margin-inline: auto; }
-.sth-home h1 { font: 650 1.75rem/1.4 var(--sans); }
-.sth-home h2 { font-size: 1.125rem; font-weight: 600; }
-.sth-home h3 { font-size: 1rem; font-weight: 600; line-height: 1.6; }
-.sth-home-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem 1rem; margin-block-end: 1.25rem; }
-.sth-home-header > time { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
-.sth-capture { padding: 1rem 1.25rem .85rem; background: var(--sheet); border: 1px solid var(--line-strong); border-radius: 6px; }
-.sth-capture label { display: block; margin-block-end: .6rem; font-weight: 600; font-size: .9rem; }
-.sth-capture textarea { display: block; resize: vertical; inline-size: 100%; min-block-size: 6rem; max-inline-size: 100%; padding: .25rem 0; border: 0; border-radius: 0; background: transparent; font-size: 1rem; line-height: 1.8; }
-.sth-capture textarea:focus { outline-offset: .3rem; }
-.sth-capture textarea::placeholder { color: var(--muted); opacity: 1; }
-.sth-capture textarea[readonly] { color: var(--muted); }
-.sth-capture-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding-block-start: .85rem; margin-block-start: .5rem; border-block-start: 1px solid var(--line); }
-.sth-capture .button { min-block-size: 2.75rem; }
-.sth-text-link { display: inline-flex; align-items: center; gap: .5rem; min-block-size: 2.75rem; color: var(--accent-deep); text-decoration: none; font-size: .9rem; }
-.sth-text-link .icon, .sth-domain-links .icon { inline-size: 1rem; block-size: 1rem; }
-.sth-text-link:hover, .sth-domain-links a:hover { text-decoration: underline; text-underline-offset: .25em; }
-.sth-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; margin-block: 2.75rem .8rem; }
-.sth-recent-list { margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--line-strong); }
-.sth-recent-entry { display: flex; align-items: center; gap: 1rem; border-block-end: 1px solid var(--line); }
-.sth-entry-link { display: flex; flex: 1; min-inline-size: 0; align-items: baseline; gap: 1.5rem; padding-block: 1.2rem; text-decoration: none; }
-.sth-entry-link:hover h3 { color: var(--accent); text-decoration: underline; text-underline-offset: .25em; }
-.sth-entry-date { flex: 0 0 6rem; display: grid; gap: .3rem; font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.sth-entry-date span { font-size: .75rem; }
-.sth-entry-copy { min-inline-size: 0; }
-.sth-entry-copy p { margin-block-start: .35rem; color: var(--muted); font-size: .87rem; line-height: 1.75; overflow-wrap: anywhere; }
-.sth-continue { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: .5rem; min-block-size: 2.75rem; color: var(--accent); font-size: .85rem; text-decoration: none; }
-.sth-continue:hover { text-decoration: underline; }
-.sth-continue .icon { inline-size: 1rem; block-size: 1rem; }
-.sth-list-state { padding-block: 2rem; border-block: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
-.sth-list-state .button { margin-block-start: 1rem; }
-.sth-empty p + p { margin-block-start: .5rem; font-size: .9rem; }
-.sth-error { margin-block: .75rem; color: #8c362c; font-size: .9rem; line-height: 1.7; }
-.sth-domain-links { display: flex; flex-wrap: wrap; gap: .4rem 2rem; margin-block-start: 2rem; }
-.sth-domain-links a { display: inline-flex; align-items: center; gap: .75rem; min-block-size: 2.75rem; color: var(--muted); text-decoration: none; font-size: .85rem; }
 .sth-route-error { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
 .sth-route-error h1, .sth-route-error p { flex-basis: 100%; }
 
@@ -64,24 +29,7 @@
   .sth-library-toggle:hover { background: var(--selection); }
   .sth-mobile-brand { display: inline-flex; align-items: center; min-block-size: 2.75rem; font-size: 1rem; font-weight: 650; text-decoration: none; }
   .sth-mobile-location { margin-inline-start: auto; }
-  .sth-page-content, .sth-app .sth-home-main { padding: 1.25rem 1.25rem 3rem; }
-}
-
-@media (width <= 30rem) {
-  .sth-home h1 { font-size: 1.375rem; }
-  .sth-home-header { gap: .25rem .75rem; margin-block-end: .85rem; }
-  .sth-home-header > time { font-size: .75rem; }
-  .sth-capture { padding: .85rem; }
-  .sth-capture textarea { min-block-size: 5.5rem; line-height: 1.6; }
-  .sth-capture-footer { padding-block-start: .5rem; margin-block-start: .25rem; gap: .5rem; }
-  .sth-section-heading { margin-block: 1.5rem 0; min-block-size: 2.75rem; }
-  .sth-recent-entry { gap: .5rem; align-items: flex-start; }
-  .sth-entry-link { display: block; }
-  .sth-entry-date { display: flex; flex-wrap: wrap; gap: .5rem; margin-block-end: .4rem; font-size: .8rem; }
-  .sth-continue { margin-block-start: 1rem; }
-  .sth-continue span { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
-  .sth-continue { min-inline-size: 2.75rem; }
-  .sth-domain-links { gap: .2rem 1.5rem; }
+  .sth-page-content { padding: 1.25rem 1.25rem 3rem; }
 }
 
 @media (forced-colors: active) {

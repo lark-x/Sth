@@ -88,6 +88,12 @@ try {
               await page.evaluate(async () => { await document.fonts.ready; await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))); });
               record.observation = await page.evaluate(() => {
                 const visible = node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden';
+                const luminance = color => {
+                  const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+                  if (!channels || channels.length !== 3) return null;
+                  return channels.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+                    .reduce((total, value, index) => total + value * [.2126, .7152, .0722][index], 0);
+                };
                 return {
                   title: document.title,
                   headings: [...document.querySelectorAll('main h1, main h2')].filter(visible).map(node => node.textContent.trim()),
@@ -96,6 +102,15 @@ try {
                   viewportWidth: innerWidth,
                   contentWidth: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth),
                   smallTouchControls: innerWidth < 640 ? [...document.querySelectorAll('.ui-button,.button')].filter(visible).filter(node => node.getBoundingClientRect().height < 43.5).map(node => ({ text: node.textContent.trim().slice(0, 60), height: node.getBoundingClientRect().height })) : [],
+                  unreadablePrimaryControls: [...document.querySelectorAll('.ui-button[data-variant=default],.button.primary')]
+                    .filter(visible).filter(node => !node.matches(':disabled,[aria-disabled=true]')).flatMap(node => {
+                      const background = luminance(getComputedStyle(node).backgroundColor);
+                      const textNode = [...node.querySelectorAll('span')].find(item => item.textContent.trim()) ?? node;
+                      const foreground = luminance(getComputedStyle(textNode).color);
+                      if (background === null || foreground === null) return [];
+                      const ratio = (Math.max(background, foreground) + .05) / (Math.min(background, foreground) + .05);
+                      return ratio < 4.5 ? [{ text: node.textContent.trim(), ratio }] : [];
+                    }),
                 };
               });
               record.image = `${engine}-${viewport.width}-${name}.png`;
@@ -104,6 +119,7 @@ try {
               assert.ok(!/找不到页面|页面暂时无法打开/.test(record.observation.title), 'Route resolves to its actual page');
               assert.deepEqual(record.pageErrors, [], 'No uncaught browser error');
               assert.deepEqual(record.observation.smallTouchControls, [], 'Shared mobile controls have 44px touch height');
+              assert.deepEqual(record.observation.unreadablePrimaryControls, [], 'Primary action text remains legible after domain styles');
               record.status = 'passed';
             } catch (error) {
               record.status = 'failed'; record.error = error.message;

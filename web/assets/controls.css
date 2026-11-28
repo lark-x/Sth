@@ -42,7 +42,9 @@
 .ui-button[data-loading=true]::after { content: ''; position: absolute; inset: auto .6rem .2rem; block-size: 2px; border-radius: 2px; background: currentColor; opacity: .55; }
 :is(.ui-field, .field) { display: grid; gap: .4rem; min-inline-size: 0; }
 :is(.ui-field, .field) > label, .ui-label { font-size: .8125rem; line-height: 1.5; font-weight: 600; }
-.ui-input, :is(.ui-field, .field) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea) {
+/* Input-type exclusions must not raise every textarea/select's specificity:
+   page-owned writing fields can then set their own measure and typography. */
+.ui-input, :is(.ui-field, .field) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea) {
   min-inline-size: 0;
   inline-size: 100%;
   min-block-size: var(--control-size);

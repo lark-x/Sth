@@ -1,4 +1,5 @@
 @import './controls.css';
+@import './cohesive-legacy.css';
 
 :root {
   color-scheme: light;
@@ -20,6 +21,8 @@
   --body-font: var(--sans);
   --body-size: 1.125rem;
   --body-leading: 1.8;
+  --page-title-size: 1.5rem;
+  --page-title-leading: 1.4;
   --surface-subtle: #fafaf9;
   --surface-hover: #efefed;
   --field-border: #92928d;
