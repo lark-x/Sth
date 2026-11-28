@@ -24,6 +24,7 @@ import { returnHref } from './reading.ts';
 import { compareLines } from './diff.ts';
 import ReadState from './ReadState.vue';
 import SceneContext from './SceneContext.vue';
+import './review.css';
 const props = defineProps<{ route: WritingRoute; url: URL }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
 const pinnedScene = props.url.searchParams.has('revision');
@@ -271,7 +272,7 @@ function latestRevision(draft: DraftSummary) {
 <template>
   <ReadState :busy="busy" :error="error" @retry="reload" />
   <template v-if="data && !busy && !error">
-    <header class="wr-heading wr-reader-heading wr-compare-heading">
+    <header class="wr-heading wr-reader-heading wr-compare-heading wr-review-page wr-review-compare">
       <a :href="back">返回{{ data.scene.title }}</a>
       <h1>对照候选稿</h1>
       <p class="wr-muted">{{ adoptionLabels.scope }}</p>
@@ -314,7 +315,7 @@ function latestRevision(draft: DraftSummary) {
         <button type="submit" class="wr-button">对照</button>
       </form>
       </details>
-      <nav class="wr-compare-switch" aria-label="同段切换">
+      <nav class="wr-compare-switch wr-review-controls" aria-label="同段切换">
         <button
           type="button"
           class="wr-tool"
@@ -335,7 +336,11 @@ function latestRevision(draft: DraftSummary) {
             type="checkbox"
             name="differences"
           />显示段落差异</label
-        >
+        ><span class="wr-diff-legend" aria-label="差异图例">
+          <span class="wr-diff-key"><span class="wr-diff-swatch wr-diff-removed">删</span>左稿删去</span>
+          <span class="wr-diff-key"><span class="wr-diff-swatch wr-diff-added">增</span>右稿新增</span>
+          <span class="wr-diff-key"><span class="wr-diff-swatch wr-diff-missing">—</span>无对应段</span>
+        </span>
       </nav>
       <p
         v-if="data.compared.left.body === data.compared.right.body"
@@ -344,7 +349,7 @@ function latestRevision(draft: DraftSummary) {
       >
         两稿正文一致。
       </p>
-      <div ref="comparison" class="wr-comparison wr-aligned-comparison">
+      <div ref="comparison" class="wr-comparison wr-aligned-comparison wr-review-comparison">
         <article
           v-for="(side, index) in ['left', 'right'] as const"
           v-show="!compact || activeSide === side"
@@ -359,7 +364,7 @@ function latestRevision(draft: DraftSummary) {
                 : undefined
             "
           >
-            <h2>
+            <h2 class="wr-review-draft-title">
               {{ index ? '右稿' : '左稿' }} ·
               <a
                 :href="
@@ -398,6 +403,7 @@ function latestRevision(draft: DraftSummary) {
                     href(recordHref('drafts', data.compared[side].draftId), {
                       revision: data.compared[side].revision,
                       action: 'adopt',
+                      returnTo: url.pathname + url.search + url.hash,
                     })
                   "
                   >采纳{{ index ? '右稿' : '左稿' }}</a

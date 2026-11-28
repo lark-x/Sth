@@ -1,0 +1,147 @@
+.wr-review-page {
+  min-inline-size: 0;
+}
+
+.wr-review-compare {
+  padding-block-end: .6rem;
+}
+
+.wr-review-controls {
+  align-items: flex-start;
+  padding-block: .45rem;
+}
+
+.wr-diff-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .2rem .7rem;
+  margin-inline-start: auto;
+  color: var(--muted, #686868);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.wr-diff-key {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .25rem;
+  white-space: nowrap;
+}
+
+.wr-diff-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.25rem;
+  border: 1px solid var(--wr-line-strong, #8a8a8a);
+  padding-inline: .15rem;
+  color: var(--ink, #252525);
+  background: var(--sheet, #fff);
+  font-size: .75rem;
+  line-height: 1.35;
+}
+
+.wr-diff-removed {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.wr-diff-added {
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-underline-offset: .16em;
+}
+
+.wr-diff-missing {
+  border-style: dashed;
+}
+
+.wr-review-comparison {
+  margin-block-start: .75rem;
+}
+
+.wr-review-comparison article > header {
+  border-block-start: 1px solid var(--wr-line-strong, #8a8a8a);
+  border-block-end: 1px solid var(--wr-line);
+}
+
+.wr-review-draft-title {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.wr-review-adopt {
+  padding-block-end: 1rem;
+}
+
+.wr-review-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .2rem .75rem;
+}
+
+.wr-review-scope span {
+  color: var(--muted, #686868);
+  font-size: .9rem;
+}
+
+.wr-review-adopt-layout {
+  gap: 2rem;
+}
+
+.wr-review-adopt-form {
+  padding-block: .75rem;
+  border-block: 1px solid var(--wr-line);
+}
+
+.wr-review-adopt-form > .wr-actions {
+  margin-block-end: 0;
+}
+
+.wr-review-current-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .25rem .7rem;
+  margin-block-end: .5rem;
+}
+
+.wr-review-target {
+  padding-block-start: 1.25rem;
+}
+
+.wr-review-current summary {
+  color: var(--ink, #252525);
+  font-weight: 600;
+}
+
+.wr-review-no-current {
+  padding-block: 1.5rem;
+  border-block-end: 1px solid var(--wr-line);
+}
+
+@media (max-width: 48rem) {
+  .wr-diff-legend {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+    padding-block-start: .2rem;
+  }
+
+  .wr-review-adopt-form .wr-actions {
+    align-items: stretch;
+  }
+
+  .wr-review-adopt-form .wr-actions > * {
+    flex: 1 1 12rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .wr-diff-swatch {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+}
