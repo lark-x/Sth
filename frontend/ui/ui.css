@@ -1,4 +1,6 @@
-/* Control fundamentals also serve legacy pages through notebook.css. */
+@import '../../web/assets/controls.css';
+
+/* Also import the shared rules for standalone domain consumers and fixtures. */
 .ui-menu {
   z-index: 40;
   min-inline-size: 12rem;

@@ -111,13 +111,19 @@ test('actual manuscript toolbar opens the fixed panel on Chromium and mobile Web
           assert.ok(heading && heading.y >= 0 && heading.y < 100);
           await page.screenshot({ path: resolve(artifacts, `${engine}-${viewport.width}-scrolled.png`), animations: 'disabled' });
           await panel.press('Escape');
-          assert.equal(await evidence(page).count(), 0);
           assert.equal(await toolbarEntry(page).evaluate(node => document.activeElement === node), true);
           assert.equal(await toolbarEntry(page).getAttribute('aria-expanded'), 'false');
+          // Logical close releases interaction immediately. Its inert surface
+          // may remain briefly while the approved visual exit completes.
+          const closing = page.locator('.evidence-panel');
+          assert.equal(await closing.getAttribute('aria-hidden'), 'true');
+          assert.equal(await closing.evaluate(node => node.inert), true);
           const returned = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
           assert.ok(Math.abs(returned.x - before.x) <= 1 && Math.abs(returned.y - before.y) <= 1, 'closing restores the exact reading scroll');
           assert.equal(await page.evaluate(() => document.body.style.position), '');
           assert.equal(await page.locator('.wr-reader-toolbar').evaluate(node => Boolean(node.closest('[inert]'))), false);
+          await closing.waitFor({ state: 'hidden' });
+          assert.equal(await evidence(page).count(), 0);
           await page.screenshot({ path: resolve(artifacts, `${engine}-${viewport.width}-returned.png`), animations: 'disabled' });
           if (viewport.width < 640) {
             for (const destination of [fixture.links.source, fixture.links.character]) {

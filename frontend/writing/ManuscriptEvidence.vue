@@ -386,6 +386,7 @@ defineExpose({ open: openPanel, close: closePanel });
 .evidence-trigger[aria-expanded="true"] { background: var(--selection, #e7e7e7); font-weight: 600; }
 .evidence-panel { --evidence-inset-start: max(1rem, env(safe-area-inset-left)); --evidence-inset-end: max(1rem, env(safe-area-inset-right)); position: fixed; z-index: 20; inset-block: 0; inset-inline-end: 0; box-sizing: border-box; inline-size: var(--ms-evidence-width, min(320px, 40vw)); block-size: 100dvh; margin: 0; padding: 0 var(--evidence-inset-end) max(1.5rem, env(safe-area-inset-bottom)) var(--evidence-inset-start); border: 0; border-inline-start: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); color: var(--ink, #252525); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 7rem 1rem; overflow-wrap: anywhere; font-size: .875rem; }
 .evidence-panel[aria-hidden="true"] { pointer-events: none; }
+.evidence-panel:focus-visible { outline-offset: -2px; }
 .evidence-header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-inline: calc(-1 * var(--evidence-inset-start)) calc(-1 * var(--evidence-inset-end)); padding: max(1rem, env(safe-area-inset-top)) var(--evidence-inset-end) 1rem var(--evidence-inset-start); border-block-end: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); }
 h2 { margin: 0; font-size: 1rem; font-weight: 600; line-height: 1.5; }
 .evidence-identity { min-inline-size: 0; }
@@ -423,12 +424,15 @@ nav { display: grid; gap: .35rem; margin-block: .75rem; }
    Vue also has a timeout fallback if a browser never sends transitionend. */
 @media (prefers-reduced-motion: no-preference) {
   .evidence-motion-enter-active, .evidence-motion-leave-active {
-    transition-property: opacity, transform;
+    transition-property: opacity, clip-path;
     transition-duration: var(--motion-panel, 240ms);
     transition-timing-function: var(--ease-out, cubic-bezier(.16, 1, .3, 1));
   }
   .evidence-motion-leave-active { transition-duration: var(--motion-normal, 180ms); }
-  .evidence-motion-enter-from, .evidence-motion-leave-to { opacity: 0; transform: translateX(12px); }
+  .evidence-motion-enter-active, .evidence-motion-leave-active { clip-path: inset(0); }
+  /* Reveal within the viewport instead of translating a fixed surface outside
+     it: this keeps desktop scroll width and the reader's coordinates stable. */
+  .evidence-motion-enter-from, .evidence-motion-leave-to { opacity: 0; clip-path: inset(0 0 0 12px); }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Also takes effect if the preference changes during an in-flight leave. */
