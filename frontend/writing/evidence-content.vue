@@ -66,7 +66,7 @@ function excerpt(text: string) {
     <p v-if="!groups.length">这条记录没有保存额外引用或确认决定。</p>
     <details class="evidence-section evidence-record">
       <summary>查看来源记录</summary>
-      <p>{{ generation.title }}</p>
+      <p class="evidence-record-title">{{ generation.title }}</p>
       <p class="evidence-meta">{{ generation.mode === 'current-chat' ? '当前对话' : '委托生成' }} · {{ generation.createdAt.slice(0, 10) }}<template v-if="confirmed"> · 作者已确认关联</template></p>
       <template v-if="context?.policy === 'full'">
         <p v-if="!decisions.length">这版作者上下文没有已确认决定。</p>
@@ -84,18 +84,28 @@ function excerpt(text: string) {
 </template>
 
 <style scoped>
-.evidence-content { min-inline-size: 0; font-size: .875rem; }
-.evidence-section { padding-block: 1rem; border-block-end: 1px solid var(--line, #e5e5e5); }
-h3 { margin: 0 0 .55rem; color: var(--muted, #686868); font-size: .8125rem; font-weight: 600; }
-p, blockquote { margin: 0 0 .4rem; white-space: pre-wrap; line-height: 1.8; }
+.evidence-content { min-inline-size: 0; font-size: .875rem; overflow-wrap: anywhere; }
+.evidence-section { padding-block: 1.5rem; border-block-end: 1px solid var(--line, #e5e5e5); }
+h3 { margin: 0 0 .75rem; color: var(--muted, #686868); font-size: .8125rem; font-weight: 600; line-height: 1.5; }
+p, blockquote { margin: 0 0 .5rem; padding: 0; border: 0; color: var(--ink, #252525); white-space: pre-wrap; line-height: 1.8; }
 figure { margin: 0; }
-figure + figure, .evidence-reference + .evidence-reference, article + article { margin-block-start: .75rem; }
+figure + figure, .evidence-reference + .evidence-reference, article + article { margin-block-start: 1.25rem; }
 .evidence-source blockquote { font-size: 1.125rem; }
-figcaption, .evidence-meta { color: var(--muted, #686868); font-size: .8125rem; }
+figcaption, .evidence-meta { color: var(--muted, #686868); font-size: .8125rem; line-height: 1.6; }
+figcaption a { color: inherit; }
 .evidence-meta { margin: 0; }
+.evidence-record { padding-block: .25rem; }
+.evidence-record[open] { padding-block-end: 1rem; }
+.evidence-record-title { margin-block-start: .5rem; font-weight: 500; }
 nav { display: grid; gap: .25rem; margin-block-start: .5rem; }
-a { display: inline-block; padding-block: .25rem; overflow-wrap: anywhere; text-underline-offset: .2em; }
-summary { min-block-size: 2rem; padding-block: .25rem; cursor: pointer; }
+a { display: inline-block; padding-block: .25rem; overflow-wrap: anywhere; text-underline-offset: .2em; text-decoration-thickness: 1px; }
+a:hover { color: var(--ink, #252525); }
+summary { box-sizing: border-box; min-block-size: 2.25rem; padding-block: .5rem; color: var(--muted, #686868); line-height: 1.6; cursor: pointer; }
+summary:hover { color: var(--ink, #252525); }
 .evidence-quote:has(details[open]) .evidence-quote-preview { display: none; }
-:focus-visible { outline: 2px solid var(--accent, #252525); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--focus-ring, var(--ink, #252525)); outline-offset: 3px; }
+@media (pointer: coarse), (width < 640px) {
+  a, summary { min-block-size: 2.75rem; box-sizing: border-box; }
+  a { display: inline-flex; align-items: center; }
+}
 </style>

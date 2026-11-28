@@ -6,6 +6,7 @@ import type { Draft, Scene } from '../../src/story/contracts.ts';
 import type { StoryContext } from '../../src/story/decision-contracts.ts';
 import { errorText, invoke, operation } from '../api.ts';
 import AppIcon from '../AppIcon.vue';
+import Button from '../ui/Button.vue';
 import PrepareWriting from '../context/PrepareWriting.vue';
 import EvidenceAttachment from './evidence-attachment.vue';
 import EvidenceContent from './evidence-content.vue';
@@ -62,6 +63,9 @@ let scrollers: { element: HTMLElement; top: number; left: number }[] = [];
 let inertElements: HTMLElement[] = [];
 let lockedBody: { property: string; value: string; priority: string }[] | undefined;
 let lockedPosition = { x: 0, y: 0 };
+let lifecycle = 0;
+let disposed = false;
+let restorePending = false;
 
 function announceState() {
   root.value?.dispatchEvent(new CustomEvent('sth:evidence-state', {
@@ -153,31 +157,47 @@ function rememberSelection() {
   }
 }
 async function openPanel(source?: HTMLElement) {
-  if (open.value) return;
+  if (open.value || disposed) return;
+  const active = ++lifecycle;
   // A viewport resize can precede delivery of the media query's change event.
   compact.value = compactQuery.matches;
   returnTo.value = location.pathname + location.search + location.hash;
-  rememberEditor(); rememberSelection();
-  opener = source ?? (document.activeElement instanceof HTMLElement ? document.activeElement : trigger.value);
-  position = { x: window.scrollX, y: window.scrollY };
-  scrollers = [];
-  for (let element = root.value?.parentElement; element && element !== document.body; element = element.parentElement) {
-    if (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
-      scrollers.push({ element, top: element.scrollTop, left: element.scrollLeft });
+  // A same-tick reversal still owns the original reading position. The cancelled
+  // close must neither overwrite that snapshot nor restore focus into the page.
+  if (!restorePending) {
+    rememberEditor(); rememberSelection();
+    opener = source ?? (document.activeElement instanceof HTMLElement ? document.activeElement : trigger.value);
+    position = { x: window.scrollX, y: window.scrollY };
+    scrollers = [];
+    for (let element = root.value?.parentElement; element && element !== document.body; element = element.parentElement) {
+      if (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
+        scrollers.push({ element, top: element.scrollTop, left: element.scrollLeft });
+      }
     }
   }
+  restorePending = false;
   open.value = true;
+  announceState();
   await nextTick();
-  if (!open.value) return;
-  updateBackground(); announceState();
+  if (disposed || active !== lifecycle || !open.value) return;
+  updateBackground();
   panel.value?.focus({ preventScroll: true });
   if (!loaded) void load();
 }
 async function closePanel() {
-  if (!open.value) return;
+  if (!open.value || disposed) return;
+  const active = ++lifecycle;
+  restorePending = true;
   open.value = false;
-  await nextTick();
+  // Interaction follows logical state, never transitionend. Vue retains only
+  // the inert, non-interactive surface while its short visual exit finishes.
   releaseBackground(); announceState();
+  await nextTick();
+  if (disposed || active !== lifecycle || open.value) return;
+  restorePending = false;
+  restoreEditor();
+}
+function restoreEditor() {
   const target = editor?.isConnected ? editor : opener?.isConnected ? opener : trigger.value;
   target?.focus({ preventScroll: true });
   if (inputSelection && (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement)) {
@@ -268,8 +288,15 @@ onMounted(() => {
   announceState();
 });
 onBeforeUnmount(() => {
+  disposed = true; ++lifecycle;
   controller?.abort(); recordController?.abort(); prepareController?.abort();
+  const shouldRestore = open.value || restorePending;
   open.value = false; announceState(); releaseBackground(false);
+  // Removing only the panel restores its surviving reader. Route navigation
+  // owns focus/scroll when that reader was removed along with the panel.
+  if (shouldRestore) void nextTick(() => {
+    if (owner?.isConnected && (editor?.isConnected || opener?.isConnected)) restoreEditor();
+  });
   owner?.removeEventListener('sth:open-evidence', toolbarOpen);
   compactQuery.removeEventListener('change', sizeChanged);
   document.removeEventListener('keydown', keyboard);
@@ -280,25 +307,27 @@ defineExpose({ open: openPanel, close: closePanel });
 
 <template>
   <div ref="root" class="manuscript-evidence">
-    <button ref="trigger" class="evidence-trigger" type="button" :aria-expanded="open" :aria-controls="`${uid}-panel`"
-      @pointerdown="rememberEditor(); rememberSelection()" @click="open ? closePanel() : openPanel()"><AppIcon name="book" /><span>本次依据</span></button>
+    <Button as-child variant="ghost" size="sm">
+      <button ref="trigger" class="evidence-trigger" type="button" :aria-expanded="open" :aria-controls="`${uid}-panel`"
+        @pointerdown="rememberEditor(); rememberSelection()" @click="open ? closePanel() : openPanel()"><AppIcon name="book" /><span>本次依据</span></button>
+    </Button>
+    <Transition name="evidence-motion">
     <aside v-show="open" :id="`${uid}-panel`" ref="panel" class="evidence-panel" tabindex="-1" :aria-labelledby="`${uid}-heading`"
+      :inert="!open" :aria-hidden="!open"
       :aria-describedby="[`${uid}-identity`, evidenceStatus ? `${uid}-status` : '', draft && loaded && !items.length && !mismatch ? `${uid}-empty` : ''].filter(Boolean).join(' ')"
       :role="compact ? 'dialog' : undefined" :aria-modal="compact && open ? true : undefined">
-      <header>
+      <header class="evidence-header">
         <div class="evidence-identity">
           <h2 :id="`${uid}-heading`">本次依据</h2>
           <p :id="`${uid}-identity`" class="evidence-identity-line"><span>{{ panelIdentity }}</span></p>
         </div>
-        <button ref="closeButton" class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false">
-            <path d="m18 6-12 12M6 6l12 12" />
-          </svg>
-        </button>
+        <Button as-child variant="ghost" size="icon">
+          <button ref="closeButton" class="evidence-close" type="button" aria-label="关闭依据" @click="closePanel"><AppIcon name="close" /></button>
+        </Button>
       </header>
       <p v-if="evidenceStatus" :id="`${uid}-status`" class="evidence-status">{{ evidenceStatus }}</p>
       <p v-if="loading" role="status">正在读取本次依据…</p>
-      <p v-if="failure" role="alert">{{ failure }} <button v-if="!mismatch" type="button" :disabled="loading" @click="load()">重新读取本次依据</button></p>
+      <p v-if="failure" role="alert" class="ui-field-error">{{ failure }} <Button v-if="!mismatch" variant="outline" size="sm" :disabled="loading" @click="load()">重新读取本次依据</Button></p>
       <template v-if="!mismatch">
         <template v-if="loaded && !items.length">
           <p v-if="draft" :id="`${uid}-empty`" class="evidence-empty"><span>这版稿件还没有已确认的来源记录</span><span>。场景可用资料不会自动成为本版依据。</span></p>
@@ -306,7 +335,7 @@ defineExpose({ open: openPanel, close: closePanel });
         </template>
         <p v-if="!draft && record" class="evidence-caption">为此场景版本准备的组稿</p>
         <p v-if="recordLoading" role="status">正在读取来源记录…</p>
-        <p v-if="recordFailure" role="alert">{{ recordFailure }} <button type="button" @click="readRecord">重试组稿快照</button></p>
+        <p v-if="recordFailure" role="alert" class="ui-field-error">{{ recordFailure }} <Button variant="outline" size="sm" @click="readRecord">重试组稿快照</Button></p>
         <EvidenceContent v-if="record" :generation="record" :return-to="returnTo" :confirmed="selectedItem?.relation === 'author-confirmed'" />
         <nav v-if="draft && selectedItem?.passages.length" aria-label="明确关联的稿件片段">
           <a v-for="(passage, index) in selectedItem.passages" :key="index"
@@ -314,11 +343,13 @@ defineExpose({ open: openPanel, close: closePanel });
         </nav>
         <details v-if="items.length > 1 || more" :key="scope" class="evidence-options">
           <summary>切换来源记录</summary>
-          <label :for="`${uid}-generation`">{{ draft ? '此版本确认关联的组稿' : '为此场景准备的组稿' }}</label>
-          <select :id="`${uid}-generation`" v-model="selected" @change="readRecord">
-            <option v-for="item in items" :key="item.generation.generationId" :value="item.generation.generationId">{{ item.generation.title }} · {{ item.generation.createdAt.slice(0, 10) }}</option>
-          </select>
-          <button v-if="more" type="button" :disabled="loading" @click="load(true)">读取更早组稿</button>
+          <div class="ui-field">
+            <label :for="`${uid}-generation`">{{ draft ? '此版本确认关联的组稿' : '为此场景准备的组稿' }}</label>
+            <select :id="`${uid}-generation`" v-model="selected" class="ui-input" @change="readRecord">
+              <option v-for="item in items" :key="item.generation.generationId" :value="item.generation.generationId">{{ item.generation.title }} · {{ item.generation.createdAt.slice(0, 10) }}</option>
+            </select>
+          </div>
+          <Button v-if="more" variant="outline" size="sm" :disabled="loading" @click="load(true)">读取更早组稿</Button>
         </details>
         <div :key="scope" class="evidence-actions" role="group" aria-label="场景资料与写作操作">
           <section class="evidence-scene-section" :aria-labelledby="`${uid}-scene-heading`">
@@ -335,8 +366,8 @@ defineExpose({ open: openPanel, close: closePanel });
           <section class="evidence-prepare-section" :aria-labelledby="`${uid}-prepare-heading`">
             <h3 :id="`${uid}-prepare-heading`">准备下一稿</h3>
             <p class="evidence-prepare-note">{{ prepareNote }}</p>
-            <button v-if="!preparing" class="evidence-prepare" type="button" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '准备新稿' }}</button>
-            <p v-if="prepareFailure" role="alert">{{ prepareFailure }}</p>
+            <Button v-if="!preparing" class="evidence-prepare" variant="outline" size="sm" :disabled="prepareLoading" @click="prepare">{{ prepareLoading ? '正在读取写作上下文…' : '准备新稿' }}</Button>
+            <p v-if="prepareFailure" role="alert" class="ui-field-error">{{ prepareFailure }}</p>
             <PrepareWriting v-if="preparing" :scene="scene" :author-context="authorContext"
               :return-href="evidenceHref('scene', scene.sceneId, scene.revision)!" @prepared="!draft && load()" />
           </section>
@@ -344,46 +375,64 @@ defineExpose({ open: openPanel, close: closePanel });
         </div>
       </template>
     </aside>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
 .manuscript-evidence, .evidence-panel { min-inline-size: 0; max-inline-size: 100%; }
-.evidence-trigger, .evidence-close { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-inline-size: 2.75rem; padding: .4rem .65rem; border: 0; border-radius: 4px; background: transparent; color: var(--accent, #252525); font-size: .875rem; line-height: 1.5; }
+.evidence-trigger { min-block-size: 2.75rem; border: 0; }
 .evidence-trigger .icon { flex-shrink: 0; inline-size: 1.1rem; block-size: 1.1rem; }
-.evidence-trigger:hover, .evidence-close:hover { background: var(--sidebar, #f2f2f2); }
 .evidence-trigger[aria-expanded="true"] { background: var(--selection, #e7e7e7); font-weight: 600; }
-.evidence-panel { position: fixed; z-index: 20; inset-block: 0; inset-inline-end: 0; box-sizing: border-box; inline-size: var(--ms-evidence-width, min(320px, 40vw)); block-size: 100dvh; margin: 0; padding: 0 1rem max(1rem, env(safe-area-inset-bottom)); border: 0; border-inline-start: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); color: var(--ink, #252525); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 5rem 1rem; overflow-wrap: anywhere; font-size: .875rem; }
-header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 -1rem; padding: max(.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) .75rem max(1rem, env(safe-area-inset-left)); border-block-end: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); }
-h2 { margin: 0; font-size: 1rem; font-weight: 650; line-height: 1.5; }
+.evidence-panel { --evidence-inset-start: max(1rem, env(safe-area-inset-left)); --evidence-inset-end: max(1rem, env(safe-area-inset-right)); position: fixed; z-index: 20; inset-block: 0; inset-inline-end: 0; box-sizing: border-box; inline-size: var(--ms-evidence-width, min(320px, 40vw)); block-size: 100dvh; margin: 0; padding: 0 var(--evidence-inset-end) max(1.5rem, env(safe-area-inset-bottom)) var(--evidence-inset-start); border: 0; border-inline-start: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); color: var(--ink, #252525); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 7rem 1rem; overflow-wrap: anywhere; font-size: .875rem; }
+.evidence-panel[aria-hidden="true"] { pointer-events: none; }
+.evidence-header { position: sticky; z-index: 1; inset-block-start: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-inline: calc(-1 * var(--evidence-inset-start)) calc(-1 * var(--evidence-inset-end)); padding: max(1rem, env(safe-area-inset-top)) var(--evidence-inset-end) 1rem var(--evidence-inset-start); border-block-end: 1px solid var(--line, #e5e5e5); background: var(--sheet, #fff); }
+h2 { margin: 0; font-size: 1rem; font-weight: 600; line-height: 1.5; }
 .evidence-identity { min-inline-size: 0; }
-.evidence-identity-line { display: flex; flex-wrap: wrap; margin: .2rem 0 0; color: var(--muted, #686868); font-size: .8125rem; line-height: 1.5; }
+.evidence-identity-line { display: flex; flex-wrap: wrap; margin: .25rem 0 0; color: var(--muted, #686868); font-size: .8125rem; line-height: 1.6; }
 .evidence-identity-line span { min-inline-size: 0; overflow-wrap: anywhere; }
-.evidence-close { flex: none; background: var(--sidebar, #f2f2f2); }
-.evidence-close:hover { background: var(--selection, #e7e7e7); }
-h3 { font-size: 1rem; }
+.evidence-close { flex: none; margin-block-start: -.25rem; }
+h3 { font-size: .875rem; font-weight: 600; }
 p, blockquote { white-space: pre-wrap; line-height: 1.8; }
-.evidence-status { margin-block: 1rem .25rem; color: var(--ink, #252525); }
-.evidence-empty { margin-block: 1rem .75rem; }
+.evidence-status { margin-block: 1rem 0; color: var(--muted, #686868); font-size: .8125rem; }
+.evidence-empty { margin-block: 1.5rem; }
 .evidence-caption { color: var(--muted, #686868); }
 figure { margin: 1rem 0; }
 blockquote { margin: 0 0 .5rem; }
-label { display: block; margin-block: 1rem .4rem; }
-select { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; min-block-size: 2.75rem; padding: .5rem; border: 1px solid var(--line-strong); background: var(--sheet, #fff); color: inherit; font: inherit; }
-button, summary { min-block-size: 2.75rem; cursor: pointer; }
-button { font: inherit; }
-summary { padding-block: .6rem; }
+label { display: block; }
+.ui-field { margin-block: .5rem 1rem; }
+summary { box-sizing: border-box; min-block-size: 2.25rem; padding-block: .5rem; cursor: pointer; line-height: 1.6; }
+summary:hover { color: var(--ink, #252525); }
+a { text-underline-offset: .2em; }
 nav { display: grid; gap: .35rem; margin-block: .75rem; }
 .evidence-options { padding-block-end: .5rem; }
-.evidence-actions { margin-block-start: .5rem; color: var(--muted, #686868); }
+.evidence-actions { margin-block-start: 1.5rem; color: var(--muted, #686868); }
+.evidence-scene-heading { margin-block: 0 .25rem; color: var(--ink, #252525); }
 .evidence-actions :is(blockquote, article, figcaption) { color: var(--ink, #252525); }
-.evidence-prepare-section { margin-block-start: 1rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line, #e5e5e5); }
+.evidence-prepare-section { margin-block-start: 1rem; padding-block-start: 1.5rem; border-block-start: 1px solid var(--line, #e5e5e5); }
 .evidence-prepare-section h3 { margin: 0 0 .35rem; color: var(--ink, #252525); }
-.evidence-prepare-note { margin-block: 0 .35rem; }
-.evidence-prepare { padding: .5rem 0; border: 0; background: transparent; color: inherit; text-align: start; text-decoration: underline; text-underline-offset: .2em; }
-.evidence-prepare:hover:not(:disabled) { color: var(--ink, #252525); }
+.evidence-prepare-note { margin-block: 0 .75rem; }
 [role="alert"] { color: var(--danger); }
-:focus-visible { outline: 2px solid var(--accent, #252525); outline-offset: 3px; }
-@media (width < 640px) { .evidence-panel { inset: 0; inline-size: 100%; border: 0; padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)); scrollbar-gutter: auto; } }
+:focus-visible { outline: 2px solid var(--focus-ring, var(--ink, #252525)); outline-offset: 3px; }
+@media (width < 640px) { .evidence-panel { inset: 0; inline-size: 100%; border: 0; scrollbar-gutter: auto; } }
+@media (pointer: coarse), (width < 640px) {
+  summary, nav a, figcaption a { min-block-size: 2.75rem; box-sizing: border-box; }
+  nav a, figcaption a { display: flex; align-items: center; }
+}
+/* v-show's cancellable leave retains the surface without animating reader layout.
+   Vue also has a timeout fallback if a browser never sends transitionend. */
+@media (prefers-reduced-motion: no-preference) {
+  .evidence-motion-enter-active, .evidence-motion-leave-active {
+    transition-property: opacity, transform;
+    transition-duration: var(--motion-panel, 240ms);
+    transition-timing-function: var(--ease-out, cubic-bezier(.16, 1, .3, 1));
+  }
+  .evidence-motion-leave-active { transition-duration: var(--motion-normal, 180ms); }
+  .evidence-motion-enter-from, .evidence-motion-leave-to { opacity: 0; transform: translateX(12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Also takes effect if the preference changes during an in-flight leave. */
+  .evidence-panel[aria-hidden="true"] { display: none; }
+}
 @media (forced-colors: active) { .evidence-trigger[aria-expanded="true"] { outline: 1px solid Highlight; } }
 </style>
