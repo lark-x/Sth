@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "5182caaa82ff8ac8ac12743e4b9e7c4358cc59637cec3f08b6c9c15955334d67",
+  "inputSha256": "ae998251aa655e7101f86aeb9e211aa583f0e31cd0c502c9fe8bfb97a8328108",
   "inputs": [
     {
       "file": "package.json",
@@ -126,7 +126,7 @@
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 683239,
+        "bytes": 683217,
         "complexity": 36,
         "dependencies": 36,
         "duplicates": 36,
@@ -168,7 +168,7 @@
         "files": 61
       },
       "tests/test/mjs": {
-        "bytes": 174149,
+        "bytes": 174137,
         "complexity": 10,
         "dependencies": 10,
         "duplicates": 10,
@@ -2425,8 +2425,8 @@
       "file": "frontend/tests/characters-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 36747,
-      "sha256": "a933212a89856152c0dad7c58abe30c0e176edb4fe85a82f984b167115b87087",
+      "bytes": 36737,
+      "sha256": "05799b329cd6ca2c53c5c555669e107c9df59e93e381f54003b360703d3ac007",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2695,8 +2695,8 @@
       "file": "frontend/tests/sources-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 33553,
-      "sha256": "a2f3a6db0b101d890c3587bf75738b3692fb40f765ca4f7bde13b07cb8cc3a42",
+      "bytes": 33541,
+      "sha256": "f17e2a1848e630e40d0f991f8452b8ccaa70c5461eab58314fb5d551265dcef2",
       "analysis": [
         "complexity",
         "dependencies",
@@ -5655,8 +5655,8 @@
       "file": "tests/browser/diary-vue.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 48012,
-      "sha256": "663b3b99b4b5ae37fddb965a6fddca670dc7b88483496afedf578b1a4fa56688",
+      "bytes": 48000,
+      "sha256": "ddd6a39ca1006f5b3dbb9180e0297a7508e9cf69e43cafe83f3d1321f60ee264",
       "analysis": [
         "complexity",
         "dependencies",

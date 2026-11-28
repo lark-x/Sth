@@ -53,7 +53,7 @@ async function fixture(t) {
   const entry = '/__sources_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
-    optimizeDeps: { entries: ['frontend/main.ts'], include: ['vue', 'reka-ui', '@lucide/vue'] },
+    optimizeDeps: { noDiscovery: true, include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'sources-route-test',

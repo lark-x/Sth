@@ -71,6 +71,6 @@ Ulysses 是主要界面参考，iA Writer 提供正文节奏，Novelcrafter 提�
 - 第一轮浏览器套件 229/247，文稿套件 176/186。保留 `frontend/.artifacts/cohesive-ui/browser-final-1.log` 与 `manuscript-final-1.log`，不将父子测试的重复失败计数写成独立缺陷数。
 - 资料详情“更多”浮层样式漏迁移，320px 展开后标题被挤成竖排；恢复独立浮层，原六组视口的正文位置和工具栏高度断言不放宽。错误截图保留在 `regressions/source-menu-before-320.png`。列表手机范围和三个菜单分行，关闭的筛选面板明确 `display:none`，避免隐藏内容保留越界几何。
 - 读稿工具栏统一单排，版本选项显式区分“正在查看／章节采用／最新修订”。测试从旧文案、旧颜色和旧字号改为已批准的新规则，并增加浮层中版本状态的可见断言。依据退场期间背景立即可操作、焦点和滚动立即还原；退场面板自身保持 inert，最终隐藏。测试分别核验这两个阶段，不要求动画尚未结束时 DOM 已消失。
-- 三个独立 Vite 测试宿主首次 `goto` 超时。诊断记录显示入口或 Vue/Lucide 预构建请求仍 pending，页面尚未挂载；重新 `npm ci` 后仍复现。固定 `optimizeDeps.entries` 为实际 `frontend/main.ts`，并声明 Vue/Reka/Lucide 依赖，避免默认遍历归档 HTML。原加载期限、`load` 条件和所有业务断言均保留。依据为 [Vite 的入口扫描说明](https://github.com/vitejs/vite/blob/main/docs/config/dep-optimization-options.md)。
+- 三个独立 Vite 测试宿主首次 `goto` 超时。诊断记录显示入口或 Vue/Lucide/Reka 预构建请求仍 pending，页面尚未挂载；重新 `npm ci` 和固定扫描入口后仍复现。最终复用项目 connections/tasks 测试已有的固定依赖配置：`noDiscovery:true`，显式包含 Vue/Reka/Lucide，使虚拟测试宿主不依赖首次请求的 crawl-end 发现。原加载期限、`load` 条件和所有业务断言均保留。依据为 [Vite 的依赖预构建说明](https://github.com/vitejs/vite/blob/main/docs/config/dep-optimization-options.md)。是否稳定仍以最终重跑记录为准。
 - Xingchi 独立静态审查未发现阻断；其范围包括精确稿件修订、明确采用、未知回执、返回链接及依据状态，不将静态结论当作视觉通过。旧 samples 不代表最终工作树。
 - 尚未解决的非阻断项：同名最近稿件的摘要身份需要现有列表契约提供更多可读信息；资料搜索结果仍为真实正文开头摘要，并非围绕命中词的摘要；归档标题缺乏稳定 origin 格式契约，因此保留原始标题，不猜测截断。

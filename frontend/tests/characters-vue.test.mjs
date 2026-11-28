@@ -65,8 +65,8 @@ async function fixture(t) {
   const entry = '/__characters_test_entry.js';
   const vite = await createServer({
     configFile: false, root, publicDir: false, cacheDir: cache, logLevel: 'error',
-    // Scan the delivered app, not archived HTML under the repository's artifacts.
-    optimizeDeps: { entries: ['frontend/main.ts'], include: ['vue', 'reka-ui', '@lucide/vue'] },
+    // The virtual host has a fixed dependency set; avoid crawl-end discovery races.
+    optimizeDeps: { noDiscovery: true, include: ['vue', 'reka-ui', '@lucide/vue'] },
     resolve: { alias: { '/assets': resolve(root, 'web/assets') } },
     plugins: [vue(), {
       name: 'characters-route-test',
