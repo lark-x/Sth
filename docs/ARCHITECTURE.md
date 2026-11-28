@@ -4,6 +4,8 @@
 
 模块地图按当前源码标明入口、所有者和协作边界。行为细节随所链接的实现核对，实测过程和整合回归状态由执行记录追踪，结构计数及指纹由快照维护。源码链接使用文件路径和正文中的函数名定位，更新实现时一并复核职责描述。[迭代执行记录](ULYSSES_EXECUTION.md) · [采集实现](../scripts/architecture-baseline.mjs)
 
+作者审阅界面的增量边界：`ComparePage` 与 `AdoptPage` 提供 `wr-review-page` 标记，由既有 `frame.css` 收起中栏；页面局部呈现由 `writing/review.css` 负责。稿件版本菜单沿用 `ManuscriptTools`，场景页显式传入场景名称。依据面板只增加关系状态与资料/新稿准备的分区，不另建证据数据源。采用、编辑、保存和回执仍由现有 `state.ts` 与业务操作负责。[本轮收益与验收](AUTHOR_READING_REVIEW.md)
+
 ## 入口与所有权
 
 | 入口或流程 | 权威实现和边界 |

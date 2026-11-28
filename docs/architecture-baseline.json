@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "8345b750929ab0689b2d9ee329a5b09130bd0bdd63518b51de9090c22beee510",
+  "inputSha256": "10f321b1b0385e343b5c930fb3e859095b538eba6e0e44a8ec74a192da911d58",
   "inputs": [
     {
       "file": "package.json",
@@ -84,11 +84,11 @@
         "files": 3
       },
       "frontend/source/css": {
-        "bytes": 77811,
+        "bytes": 81651,
         "complexity": 0,
         "dependencies": 0,
         "duplicates": 0,
-        "files": 9
+        "files": 10
       },
       "frontend/source/js": {
         "bytes": 427,
@@ -119,21 +119,21 @@
         "files": 33
       },
       "frontend/source/vue": {
-        "bytes": 403354,
+        "bytes": 408243,
         "complexity": 58,
         "dependencies": 58,
         "duplicates": 58,
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 609796,
-        "complexity": 29,
-        "dependencies": 29,
-        "duplicates": 29,
-        "files": 29
+        "bytes": 631848,
+        "complexity": 32,
+        "dependencies": 32,
+        "duplicates": 32,
+        "files": 32
       },
       "scripts/source/mjs": {
-        "bytes": 188996,
+        "bytes": 189044,
         "complexity": 10,
         "dependencies": 10,
         "duplicates": 10,
@@ -1650,16 +1650,16 @@
       "file": "frontend/manuscript/LibraryPanels.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 30364,
-      "sha256": "c83dc3350e0fb524db5ee7833e8563fdcce19a9ece9be0e1a159dd19dc44998a",
+      "bytes": 30917,
+      "sha256": "852043c74d1f35dda9c7bec55eb7950af4f0b7123e048fb8d6d5e6d297465233",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 87,
-        "total": 221,
+        "functions": 90,
+        "total": 226,
         "max": 30,
         "hotspots": [
           {
@@ -1684,7 +1684,7 @@
           },
           {
             "name": "listKeydown",
-            "line": 329,
+            "line": 337,
             "score": 13
           }
         ]
@@ -1736,8 +1736,8 @@
       "file": "frontend/manuscript/frame.css",
       "kind": "source",
       "format": "css",
-      "bytes": 5027,
-      "sha256": "9ba958e1c8c36414d2da6915e85cb4927f2d8ffcc8c2e15d687e3f088ea8b5f0",
+      "bytes": 5747,
+      "sha256": "db76a1ce19850a8c5bca1659c30c43339ba9a46d9872502a83a4ce1494e63b0c",
       "analysis": []
     },
     {
@@ -1783,8 +1783,8 @@
       "file": "frontend/manuscript/library-panels.css",
       "kind": "source",
       "format": "css",
-      "bytes": 10536,
-      "sha256": "2261246030f92673f9d30eef3d14acc1a0d2d184bb212a9b6718f29fdb6446b3",
+      "bytes": 10766,
+      "sha256": "5439bc6de25147d7c7113701d6f0d102b79ef7d1ce892b8bf74b77962ff13c53",
       "analysis": []
     },
     {
@@ -1809,8 +1809,8 @@
       "file": "frontend/manuscript/library-summary.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 20642,
-      "sha256": "8827569584576d2b6fe2a02a91bb44650b2f0d843f4efd44e0306755215195b9",
+      "bytes": 21171,
+      "sha256": "1bea1e90c477afa5e92b144480652a7fe4324c1e983df3a56c70c9464e4107c5",
       "analysis": [
         "complexity",
         "dependencies",
@@ -2564,6 +2564,24 @@
       }
     },
     {
+      "file": "frontend/tests/review-frame.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 6370,
+      "sha256": "edb45f7d538b5139f34f1788b4a81581d74831d3f2df37f0285640f48cf5ac3e",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 13,
+        "total": 7,
+        "max": 6,
+        "hotspots": []
+      }
+    },
+    {
       "file": "frontend/tests/secondary-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
@@ -2956,16 +2974,16 @@
       "file": "frontend/writing/AdoptPage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 4662,
-      "sha256": "16b630755721adb6e0bdcc617adabdbe87fd63fa97499458d172d6aeabf40a8d",
+      "bytes": 5902,
+      "sha256": "693d59238fc30cc5a3402a1de3c251f678c5e474a7c427b32060a4e10f138407",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 5,
-        "total": 12,
+        "functions": 8,
+        "total": 15,
         "max": 7,
         "hotspots": []
       }
@@ -2992,8 +3010,8 @@
       "file": "frontend/writing/ComparePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 15629,
-      "sha256": "ac371da855e904f6fa8cd1cb75d060c7d329c90fc6b0d6bfffb16ea31513523f",
+      "bytes": 16227,
+      "sha256": "11356cd9dc702243cb0ec17995d28a1e1471a4f72ff1ffea9198f92b9c647e31",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3006,7 +3024,7 @@
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 39,
+            "line": 40,
             "score": 16
           }
         ]
@@ -3099,46 +3117,46 @@
       "file": "frontend/writing/ManuscriptEvidence.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 22687,
-      "sha256": "e131ab488f40acbb883a1d9e889209c4ca7cb9d03ebc0c6f79cb6e1827496a95",
+      "bytes": 24624,
+      "sha256": "43f00bae231e2a1f13f6f5b7b9708dfac68c5ca9d54ee22f644fdcd172e65250",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 22,
-        "total": 134,
+        "functions": 25,
+        "total": 141,
         "max": 21,
         "hotspots": [
           {
             "name": "updateBackground",
-            "line": 70,
+            "line": 82,
             "score": 13
           },
           {
             "name": "keyboard",
-            "line": 102,
+            "line": 114,
             "score": 15
           },
           {
             "name": "rememberEditor",
-            "line": 121,
+            "line": 133,
             "score": 13
           },
           {
             "name": "closePanel",
-            "line": 164,
+            "line": 176,
             "score": 21
           },
           {
             "name": "load",
-            "line": 186,
+            "line": 198,
             "score": 13
           },
           {
             "name": "prepare",
-            "line": 221,
+            "line": 233,
             "score": 13
           }
         ]
@@ -3148,8 +3166,8 @@
       "file": "frontend/writing/ManuscriptTools.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 8945,
-      "sha256": "8bf6f6611920d5befb51aacb88f35607e953e55543a9e63ad71462a4f467edbe",
+      "bytes": 9468,
+      "sha256": "323e7df001a74b994bf82a2f42c53f323d0f467c470cb6c255d21d8c549ece87",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3202,8 +3220,8 @@
       "file": "frontend/writing/ScenePage.vue",
       "kind": "source",
       "format": "vue",
-      "bytes": 17952,
-      "sha256": "f27ab4912e7bde09db74959729d7e3e34064ba3db5f3d05bdc20066a30843c9a",
+      "bytes": 17990,
+      "sha256": "1d83150bd9c27caf05d3a96b367bb938af039765c7a078c23b55c4f0fe07af2f",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3256,8 +3274,8 @@
       "file": "frontend/writing/author-flow-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 10441,
-      "sha256": "740deb2c1ab3e480c5cf4c2f2b24447b0ee569ea7db6ad1e3cef2e0a45f77f74",
+      "bytes": 10883,
+      "sha256": "331ea02c9c3b2d67140961d850cf0cbf210682ae78c4a3eea95ba7b30395375e",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3334,21 +3352,21 @@
       "file": "frontend/writing/evidence-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 37913,
-      "sha256": "da43881ab76a26a875c6be42615bfa782e21224f222d246372c78c4b6740cde0",
+      "bytes": 41581,
+      "sha256": "f46e0ab1a9f06fc7d5c88d7207138c338f3ae3976e7f768e604f50ee59256fc7",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 101,
-        "total": 43,
+        "functions": 108,
+        "total": 45,
         "max": 20,
         "hotspots": [
           {
             "name": "<anonymous>",
-            "line": 509,
+            "line": 554,
             "score": 20
           }
         ]
@@ -3376,8 +3394,8 @@
       "file": "frontend/writing/evidence-frame.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 11689,
-      "sha256": "943f217ef69a0ccef898c237186f090b4b56a127e6974ed3e0873e923e72ba69",
+      "bytes": 11813,
+      "sha256": "e9126e0107ccbe41ad672aa0693d575f0c1cbe0972089fcb67c5d0ca87b55394",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3453,8 +3471,8 @@
       "file": "frontend/writing/manuscript.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 30574,
-      "sha256": "6bcf4234e14321a5a482d244c0d49ba842a7b42c6da362f5b980a8c6c926ef30",
+      "bytes": 30842,
+      "sha256": "8b0246c0653517de1b7bb3d43b33a2fa016fd667c99002212d6fa5081310482e",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3513,8 +3531,8 @@
       "file": "frontend/writing/reader-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 21452,
-      "sha256": "c6dbe98a61b4cb92846af6999e9c859e0cf0debea79f90c64274c46b2fb257c8",
+      "bytes": 22201,
+      "sha256": "587e74014e87ac99c8c64dc2ce880b3b0c14351580dfc308e94da482794936f8",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3522,8 +3540,26 @@
       ],
       "complexity": {
         "functions": 44,
-        "total": 17,
-        "max": 6,
+        "total": 19,
+        "max": 8,
+        "hotspots": []
+      }
+    },
+    {
+      "file": "frontend/writing/reader-style.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 3438,
+      "sha256": "c9825d739869039883d3000677c5a9faf264d29b38d566e9c02e866b857b1300",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 3,
+        "total": 0,
+        "max": 0,
         "hotspots": []
       }
     },
@@ -3573,6 +3609,32 @@
           }
         ]
       }
+    },
+    {
+      "file": "frontend/writing/review-browser.test.mjs",
+      "kind": "test",
+      "format": "mjs",
+      "bytes": 5994,
+      "sha256": "bcb0ff317182999e0af6494ed4d3563b5709183cd8e9232010cbd0454f5d2466",
+      "analysis": [
+        "complexity",
+        "dependencies",
+        "duplicates"
+      ],
+      "complexity": {
+        "functions": 6,
+        "total": 3,
+        "max": 2,
+        "hotspots": []
+      }
+    },
+    {
+      "file": "frontend/writing/review.css",
+      "kind": "source",
+      "format": "css",
+      "bytes": 2556,
+      "sha256": "8555286887d59e621d3805c1dec4a6efc8c96b0127192d10a5bd6264d34e7525",
+      "analysis": []
     },
     {
       "file": "frontend/writing/routes.ts",
@@ -3626,8 +3688,8 @@
       "file": "frontend/writing/webkit-layout.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 10140,
-      "sha256": "bdff84a1c63b662843cd5ea29f520768d19f1438ac0096f59336198b54271517",
+      "bytes": 10610,
+      "sha256": "7f57d2888e276e650c334553d45d93ea8a57870191660578cbbdb52d8c6ef7d5",
       "analysis": [
         "complexity",
         "dependencies",
@@ -3644,8 +3706,8 @@
       "file": "frontend/writing/writing.css",
       "kind": "source",
       "format": "css",
-      "bytes": 16539,
-      "sha256": "36727dbac1aa55a7b7d6831d6f1ac46153fd1ede9eede2cb36fd32a0e76019f0",
+      "bytes": 16873,
+      "sha256": "119339715fa2c584ce214d0b0e9f83cd126b3b60fd20375e62759785e0ea77dd",
       "analysis": []
     },
     {
@@ -3812,8 +3874,8 @@
       "file": "scripts/capture-manuscript.mjs",
       "kind": "source",
       "format": "mjs",
-      "bytes": 74648,
-      "sha256": "187438a9de46b58afaa6c67e932da435fd1b38256f6292e19fca5cc98382f66e",
+      "bytes": 74696,
+      "sha256": "6079956d0980c243d789144fbe9d432c25ff733ba19c0aeee16b8181c9d460d1",
       "analysis": [
         "complexity",
         "dependencies",
@@ -8362,6 +8424,13 @@
         "column": 1
       },
       {
+        "from": "frontend/tests/review-frame.test.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
         "from": "frontend/tests/secondary-layout.test.mjs",
         "to": "scripts/manuscript-fixture.mjs",
         "type": "static",
@@ -8694,14 +8763,14 @@
         "from": "frontend/writing/AdoptPage.vue",
         "to": "frontend/writing/ReadState.vue",
         "type": "static",
-        "line": 7,
+        "line": 8,
         "column": 1
       },
       {
         "from": "frontend/writing/AdoptPage.vue",
         "to": "frontend/writing/SceneContext.vue",
         "type": "static",
-        "line": 8,
+        "line": 9,
         "column": 1
       },
       {
@@ -8720,6 +8789,20 @@
       },
       {
         "from": "frontend/writing/AdoptPage.vue",
+        "to": "frontend/writing/reading.ts",
+        "type": "static",
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/AdoptPage.vue",
+        "to": "frontend/writing/review.css",
+        "type": "static",
+        "line": 10,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/AdoptPage.vue",
         "to": "frontend/writing/routes.ts",
         "type": "type",
         "line": 5,
@@ -8729,7 +8812,7 @@
         "from": "frontend/writing/AdoptPage.vue",
         "to": "frontend/writing/state.ts",
         "type": "static",
-        "line": 6,
+        "line": 7,
         "column": 1
       },
       {
@@ -8814,6 +8897,13 @@
         "to": "frontend/writing/reading.ts",
         "type": "static",
         "line": 23,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/ComparePage.vue",
+        "to": "frontend/writing/review.css",
+        "type": "static",
+        "line": 27,
         "column": 1
       },
       {
@@ -9531,7 +9621,21 @@
         "column": 1
       },
       {
+        "from": "frontend/writing/reader-style.test.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 4,
+        "column": 1
+      },
+      {
         "from": "frontend/writing/reading-browser.test.mjs",
+        "to": "scripts/manuscript-fixture.mjs",
+        "type": "static",
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/review-browser.test.mjs",
         "to": "scripts/manuscript-fixture.mjs",
         "type": "static",
         "line": 6,
@@ -13302,9 +13406,9 @@
       "adapters -> adapters (python)": 18,
       "adapters -> adapters (static)": 29,
       "adapters -> src (static)": 2,
-      "frontend -> frontend (static)": 232,
+      "frontend -> frontend (static)": 235,
       "frontend -> frontend (type)": 68,
-      "frontend -> scripts (static)": 14,
+      "frontend -> scripts (static)": 17,
       "frontend -> src (static)": 6,
       "frontend -> src/core (static)": 1,
       "frontend -> src/generation (static)": 1,
@@ -15341,12 +15445,12 @@
       "platform": "win32/x64",
       "nodeEnv": null
     },
-    "bytes": 639331,
+    "bytes": 646465,
     "files": [
       {
         "file": "index.html",
         "bytes": 602,
-        "sha256": "7308365b7ad8272e04dd160b0c87224ba8cf3c80b1a1bcfd850f7f82dea1ccfe"
+        "sha256": "65abad24588c5378c57f9208c7e20fcb4307d04b7f705fad98be5fbd192b405b"
       },
       {
         "file": "vue/CharacterRoute-BMFUXsrP.css",
@@ -15354,14 +15458,14 @@
         "sha256": "0f64444cb676ad71391a3d6cdec6800e66135cbddce28a579aacdf9605454ea4"
       },
       {
-        "file": "vue/CharacterRoute-C6BBtXCA.js",
+        "file": "vue/CharacterRoute-DOrIkgqg.js",
         "bytes": 16913,
-        "sha256": "17b96912829fbe50862bd9633a185505541e3d152ea6886bec1c6d5d8a9587c6"
+        "sha256": "36bf11a142ff7003e83b2b41430eda2b56cf7ffffcca7ae9c17f2642b8ccf812"
       },
       {
-        "file": "vue/ConnectionsRoute-DBuchjbZ.js",
+        "file": "vue/ConnectionsRoute-CCicNLPO.js",
         "bytes": 22334,
-        "sha256": "d2c022102202b77e0ff2dec02d3bca94a5bae342d82f9f76266a4b892130fafe"
+        "sha256": "3f2b7cc976b047373697f29767d8a6fe2343b6e6e9bfd5b2b90449a0bf97e70d"
       },
       {
         "file": "vue/ConnectionsRoute-Dv2tzozb.css",
@@ -15369,9 +15473,9 @@
         "sha256": "d95f102b1c9d70b446ef6c2cf1bbdde99e572066da63c642a549e2cfb3026ebb"
       },
       {
-        "file": "vue/ContextRoute-BXqFVFDz.js",
+        "file": "vue/ContextRoute-BaIz1cAq.js",
         "bytes": 10373,
-        "sha256": "5020c8f459cbfec2aa1bb0eb672e6897a1959ea521aa4dd79fdc1c37f5e46049"
+        "sha256": "7abcefdf43ffb9d1c1784a53271fa694705a17e981dcfc757730b225965204b0"
       },
       {
         "file": "vue/ContextRoute-BeO2sDTC.css",
@@ -15384,9 +15488,14 @@
         "sha256": "a3ede2168bf924cca49e2d1d41d603c8bf8a5b58898ec07be63a147b60ec258e"
       },
       {
-        "file": "vue/DiaryRoute-CsAIIyR4.js",
+        "file": "vue/DiaryRoute-DVFTwKZY.js",
         "bytes": 37384,
-        "sha256": "e79da35a3396f1e9299a0f866dea1a0b7a82bc291d3d44a16738e45525a577aa"
+        "sha256": "1fe53b3784f028ad0c9b76fe1ba5eada4146a7c182328e5e282060a2d884418c"
+      },
+      {
+        "file": "vue/PrepareWriting-Bp4wAapk.js",
+        "bytes": 19257,
+        "sha256": "a754259872034bd467b4012b700bbdac3ec448a665719ce5fb648fbef9c02f20"
       },
       {
         "file": "vue/PrepareWriting-CuTrZ9jX.css",
@@ -15394,19 +15503,9 @@
         "sha256": "c9e7c1ee21057fab94558d8262808a44f797c7afed98149239730fda133c14a5"
       },
       {
-        "file": "vue/PrepareWriting-MsXkoXmM.js",
-        "bytes": 19257,
-        "sha256": "ac948bdf06b1a48c7d5b4092e80542c1cdba71d1c880cce71228d9f568fbed12"
-      },
-      {
-        "file": "vue/ProjectRoute-D5WH3niX.js",
+        "file": "vue/ProjectRoute-DsLcYE8w.js",
         "bytes": 402,
-        "sha256": "b22bd576245a214ab3e5e50f90f79ada353d9c0b43c0e69a8e06d9783e8c8aa8"
-      },
-      {
-        "file": "vue/SourcesRoute-Cc2U_4TG.js",
-        "bytes": 35651,
-        "sha256": "771f7fa3bda21aa64e0d1d0c5637c978dc2bdb6fcfa58e99eaa00b3ddf2406cf"
+        "sha256": "c02851c27db01f85559562d91bfbf45954872d7fd1d8280dc309ce37191747de"
       },
       {
         "file": "vue/SourcesRoute-D-ofSBD2.css",
@@ -15414,14 +15513,24 @@
         "sha256": "f68ea250767949c0fdc39b21665dd9819aa47454a4ff169616887027c51b3836"
       },
       {
+        "file": "vue/SourcesRoute-Q-xXTvh1.js",
+        "bytes": 35651,
+        "sha256": "19e2fafea11f23562bac63c86a0122a5ecad3759ee929a3be7065ab40ad3d74e"
+      },
+      {
         "file": "vue/TasksRoute-BwOn2dtZ.css",
         "bytes": 3773,
         "sha256": "e238fa07a144582b35ad0bcada348dc42fd716667b63d2267d0761067f24a1e2"
       },
       {
-        "file": "vue/TasksRoute-DsvwpnCr.js",
+        "file": "vue/TasksRoute-DwajGWym.js",
         "bytes": 28486,
-        "sha256": "46ce60802e0ba47773919726400cf352ff26fdec375660ad54510529d13e0083"
+        "sha256": "09a00a402704331aa10dc8645c8e649852c11815d4f076dc7c73189a2205aa60"
+      },
+      {
+        "file": "vue/WorkspaceRoute-B0Nt6K7c.js",
+        "bytes": 135,
+        "sha256": "ddd6e06e8b15a81828f521235ee2dcd5ec80863c69e3565a0e9d6142216df9dc"
       },
       {
         "file": "vue/WorkspaceRoute-Dz_zqH0Z.css",
@@ -15429,24 +15538,19 @@
         "sha256": "2a23b537373e77a48458854288cc48bdf40aa73f9a35ed72edc9010242081cf1"
       },
       {
-        "file": "vue/WorkspaceRoute-I-YlxNjJ.js",
-        "bytes": 135,
-        "sha256": "c0d11e81fa01b341e1b36fe3a013cf96ffdb3ac0c2233897d921736c95839855"
-      },
-      {
-        "file": "vue/WorkspaceRoute.vue_vue_type_script_setup_true_lang-D3B7EgIX.js",
+        "file": "vue/WorkspaceRoute.vue_vue_type_script_setup_true_lang-BGduSwtA.js",
         "bytes": 31241,
-        "sha256": "d8068adc5f8a67d99d3e2fd92c7d2e1f7f361eda3ca2d744c9e507b95f4056b2"
+        "sha256": "97ebb5f9fdfb1cfc3b86af6d721020807a1d53f5354e96a13d376f1c091ed8e8"
       },
       {
-        "file": "vue/WritingRoute-Dkz9knbx.css",
-        "bytes": 20282,
-        "sha256": "ef791dfe0dea67a7c51d2e7730fc24ace089c5b80ef8b6f4182c423676b30e39"
+        "file": "vue/WritingRoute-B7P8TKT1.js",
+        "bytes": 84595,
+        "sha256": "123bf678768603868b0579c2d6badc73ef1da5e11bfcef851108bcd8e7d1f074"
       },
       {
-        "file": "vue/WritingRoute-lwG8J3jE.js",
-        "bytes": 81158,
-        "sha256": "f8e3eab21c0c8fd776f28c4fe2e7a5d74e9eec4338d773eb506bacbd6187b104"
+        "file": "vue/WritingRoute-Dn90MNQC.css",
+        "bytes": 22989,
+        "sha256": "440fb9388a00cb489533eace20827f3f97e34eeb8e4e97901bb4bc082cfb4c13"
       },
       {
         "file": "vue/api-DvfvzJK5.js",
@@ -15459,14 +15563,14 @@
         "sha256": "ee727ed018202f9f86258425ecc522264e205483b045671409dd400e960f1e9b"
       },
       {
-        "file": "vue/index-Bx-5ZmaS.js",
-        "bytes": 247901,
-        "sha256": "c7a7f7a3e80e4d295ef4c48967d82c9f1eec34517784b46ba64120e0ee88a190"
+        "file": "vue/index-DYrnCO7s.css",
+        "bytes": 39792,
+        "sha256": "4299d9f22191632d7d4baacaf03fd23f08cd3ac22b2e890a5ec29d08d1c681df"
       },
       {
-        "file": "vue/index-R19Ge2kl.css",
-        "bytes": 39101,
-        "sha256": "054f52c5d96ddd628cf293399a7dd8e128268d2e5b1937e97132295a4af6b8d7"
+        "file": "vue/index-XP5x99Eb.js",
+        "bytes": 248200,
+        "sha256": "d496cc8dce6899d30cb1f5f06ccd7a90e92df36da834ca7c18dca1efe7e37407"
       }
     ]
   }

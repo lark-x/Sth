@@ -322,7 +322,8 @@ test('an author can inspect an existing completed generation and explicitly asso
   await button(page, '确认关联此版本').click();
   await panel(page).getByText(`${fx.draft.title} · 修订 1`, { exact: true }).waitFor();
   await panel(page).getByText('查看来源记录', { exact: true }).click();
-  await panel(page).getByText(/作者已确认关联/).waitFor();
+  await panel(page).locator('.evidence-content').getByText(/作者已确认关联/).waitFor();
+  await panel(page).locator('.evidence-status').getByText('作者已确认关联到这版稿件。', { exact: true }).waitFor();
   assert.equal((await fx.invoke('generations.evidence.list', { ...fx.target, draftId: fx.draft.draftId, draftRevision: 1 })).items[0].generation.generationId, record.generationId);
 });
 

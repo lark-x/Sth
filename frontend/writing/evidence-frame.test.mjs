@@ -84,7 +84,9 @@ test('actual manuscript toolbar opens the fixed panel on Chromium and mobile Web
           assert.ok(Math.abs(box.width - expectedWidth) < 1, `panel uses the frame width at ${viewport.width}px`);
           assert.ok(Math.abs(box.x + box.width - viewport.width) < 1);
           assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
-          const revision = await panel.getByText('· 修订 1', { exact: true }).boundingBox();
+          const identity = panel.locator('.evidence-identity-line');
+          assert.equal(await identity.innerText(), `${fixture.drafts[0].title} · 修订 1`);
+          const revision = await identity.boundingBox();
           assert.ok(revision && revision.x + revision.width <= box.x + box.width);
           if (viewport.width >= 640) {
             const main = await page.locator('main').boundingBox();
