@@ -43,7 +43,7 @@ const evidenceStatus = computed(() => {
   if (!props.draft) return '当前显示场景准备记录，尚未关联到具体稿件。';
   if (loading.value || failure.value || !loaded) return '';
   if (selectedItem.value?.relation === 'author-confirmed') return '作者已确认关联到这版稿件。';
-  return '这版没有已确认依据，场景可用资料不会自动成为本版依据。';
+  return '';
 });
 const prepareNote = computed(() => props.draft
   ? `准备下一稿会建立新的写作上下文，不会改变正在阅读的《${props.draft.title}》第 ${props.draft.revision} 版依据。`
@@ -283,7 +283,7 @@ defineExpose({ open: openPanel, close: closePanel });
     <button ref="trigger" class="evidence-trigger" type="button" :aria-expanded="open" :aria-controls="`${uid}-panel`"
       @pointerdown="rememberEditor(); rememberSelection()" @click="open ? closePanel() : openPanel()"><AppIcon name="book" /><span>本次依据</span></button>
     <aside v-show="open" :id="`${uid}-panel`" ref="panel" class="evidence-panel" tabindex="-1" :aria-labelledby="`${uid}-heading`"
-      :aria-describedby="[`${uid}-identity`, evidenceStatus ? `${uid}-status` : ''].filter(Boolean).join(' ')"
+      :aria-describedby="[`${uid}-identity`, evidenceStatus ? `${uid}-status` : '', draft && loaded && !items.length && !mismatch ? `${uid}-empty` : ''].filter(Boolean).join(' ')"
       :role="compact ? 'dialog' : undefined" :aria-modal="compact && open ? true : undefined">
       <header>
         <div class="evidence-identity">
@@ -301,7 +301,7 @@ defineExpose({ open: openPanel, close: closePanel });
       <p v-if="failure" role="alert">{{ failure }} <button v-if="!mismatch" type="button" :disabled="loading" @click="load()">重新读取本次依据</button></p>
       <template v-if="!mismatch">
         <template v-if="loaded && !items.length">
-          <p v-if="draft" class="evidence-empty"><span>这版稿件还没有已确认的来源记录</span><span>。场景可用资料不会自动成为本版依据。</span></p>
+          <p v-if="draft" :id="`${uid}-empty`" class="evidence-empty"><span>这版稿件还没有已确认的来源记录</span><span>。场景可用资料不会自动成为本版依据。</span></p>
           <p v-else>此场景版本还没有保存的组稿。</p>
         </template>
         <p v-if="!draft && record" class="evidence-caption">为此场景版本准备的组稿</p>

@@ -165,7 +165,7 @@ test('real library summaries, collection scope and cold request costs', { timeou
         await page.locator('.manuscript-frame[data-pane="sheets"]').waitFor();
         assert.equal(new URL(page.url()).pathname, '/create');
         await row(page, fixture.scenes[1].title).getByText(/守夜人视角 · 第 2 版/).waitFor();
-        if (output) await page.screenshot({ path: join(output, 'all-390-sheets.png'), animations: 'disabled' });
+        if (output) await page.screenshot({ path: join(output, `all-${viewport.width}-sheets.png`), animations: 'disabled' });
       }
       await row(page, fixture.scenes[0].title).click();
       await page.waitForURL(url => url.pathname === `/scenes/${fixture.scenes[0].sceneId}`

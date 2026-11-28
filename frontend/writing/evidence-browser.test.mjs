@@ -156,8 +156,9 @@ test('failed evidence reads stay unknown and panel descriptions reference render
   const targetsAfterRetry = await describedByTargets();
   assert.equal(targetsAfterRetry.length, 2);
   assert.ok(targetsAfterRetry.every(target => target.exists));
-  const statusId = await evidencePanel.locator('.evidence-status').getAttribute('id');
-  assert.ok(targetsAfterRetry.some(target => target.id === statusId));
+  const emptyId = await evidencePanel.locator('.evidence-empty').getAttribute('id');
+  assert.ok(targetsAfterRetry.some(target => target.id === emptyId));
+  assert.equal(await evidencePanel.locator('.evidence-status').count(), 0, 'empty guidance is shown only once');
 });
 
 test('confirmed association shows pinned originals, characters and author decisions after later edits', async t => {
