@@ -217,17 +217,19 @@ function cite(kind: 'character' | 'event') {
       :editing="editing"
       :saveable="editing"
       :save-disabled="!editor || editor.saving"
+      :save-busy="editor?.saveBusy"
       :edit-label="historical && !editing ? '编辑旧版' : undefined"
       @edit="edit"
       @save="editor?.requestSave()"
     >
       <template #versions>
+        <p class="wr-menu-section">查看稿件与版本</p>
         <label>稿件<select aria-label="切换稿件" :value="data.draft.draftId" @change="switchDraft">
           <option v-for="draft in data.drafts" :key="draft.draftId" :value="draft.draftId">{{ draft.title }}</option>
         </select></label>
         <label>版本<select aria-label="切换稿件版本" :value="data.draft.revision" @change="switchVersion">
           <option v-for="item in data.revisions" :key="item.revision" :value="item.revision">
-            {{ version(item.revision) }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新' : '' }}{{ data.currentScene.adopted && draftKey(data.currentScene.adopted) === draftKey(item) ? ' · 采用稿' : '' }}
+            {{ version(item.revision) }}{{ item.revision === data.draft.revision ? ' · 正在查看' : '' }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新修订' : '' }}{{ data.currentScene.adopted && draftKey(data.currentScene.adopted) === draftKey(item) ? ' · 章节采用' : '' }}
           </option>
         </select></label>
       </template>

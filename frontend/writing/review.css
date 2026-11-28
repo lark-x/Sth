@@ -71,6 +71,45 @@
   overflow-wrap: anywhere;
 }
 
+.wr-review-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  padding-block-start: .45rem;
+}
+
+.wr-review-draft-actions > .ui-button {
+  min-block-size: 2.5rem;
+  text-align: center;
+}
+
+.wr-review-adopt-link {
+  font-weight: 600;
+}
+
+.wr-review-draft-actions .wr-compare-actions {
+  margin-inline-start: auto;
+}
+
+.wr-review-draft-actions .wr-compare-actions > summary {
+  min-block-size: 2.5rem;
+  padding: .5rem .4rem;
+  color: var(--muted, #686868);
+  font-size: .8125rem;
+}
+
+.wr-review-draft-actions .wr-compare-actions nav {
+  padding-block-end: .4rem;
+}
+
+.wr-review-draft-actions .wr-compare-actions nav a {
+  display: flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding-inline: .5rem;
+}
+
 .wr-review-adopt {
   padding-block-end: 1rem;
 }
@@ -91,13 +130,46 @@
   gap: 2rem;
 }
 
-.wr-review-adopt-form {
-  padding-block: .75rem;
+.wr-review-adopt-main {
+  min-inline-size: 0;
+}
+
+.wr-review-transition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: .75rem;
+  padding-block: .8rem;
   border-block: 1px solid var(--wr-line);
 }
 
-.wr-review-adopt-form > .wr-actions {
-  margin-block-end: 0;
+.wr-review-transition-side {
+  display: grid;
+  gap: .2rem;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.wr-review-transition-side > strong {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.wr-review-transition-label,
+.wr-review-transition-status {
+  color: var(--muted, #686868);
+  font-size: .8rem;
+}
+
+.wr-review-transition-arrow {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  color: var(--muted, #686868);
+}
+
+.wr-review-adopt-form {
+  padding-block: .75rem;
+  border-block: 1px solid var(--wr-line);
 }
 
 .wr-review-current-summary {
@@ -105,7 +177,65 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: .25rem .7rem;
-  margin-block-end: .5rem;
+  margin: 0;
+}
+
+.wr-review-transition .wr-review-current-summary {
+  display: grid;
+}
+
+.wr-review-confirm-controls {
+  display: grid;
+  justify-items: start;
+  gap: .55rem;
+}
+
+.wr-review-confirm-controls > .wr-notice {
+  margin: 0 !important;
+}
+
+.wr-review-submit {
+  min-inline-size: 10rem;
+  min-block-size: 2.75rem;
+}
+
+.wr-review-refresh-control {
+  display: grid;
+  justify-items: start;
+  gap: .35rem;
+}
+
+.wr-review-refresh {
+  min-inline-size: 15rem;
+  min-block-size: 2.75rem;
+}
+
+.wr-review-refresh-error {
+  color: #8c362c;
+  font-size: .875rem;
+}
+
+.wr-review-more {
+  padding-block: .15rem;
+  border-block-end: 1px solid var(--wr-line);
+}
+
+.wr-review-more > summary {
+  color: var(--muted, #686868);
+  font-size: .875rem;
+}
+
+.wr-review-more nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .8rem;
+  padding-block-end: .35rem;
+}
+
+.wr-review-more nav a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
 }
 
 .wr-review-target {
@@ -117,11 +247,6 @@
   font-weight: 600;
 }
 
-.wr-review-no-current {
-  padding-block: 1.5rem;
-  border-block-end: 1px solid var(--wr-line);
-}
-
 @media (max-width: 48rem) {
   .wr-diff-legend {
     flex-basis: 100%;
@@ -129,12 +254,41 @@
     padding-block-start: .2rem;
   }
 
-  .wr-review-adopt-form .wr-actions {
-    align-items: stretch;
+  .wr-review-transition {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .45rem;
   }
 
-  .wr-review-adopt-form .wr-actions > * {
-    flex: 1 1 12rem;
+  .wr-review-transition-side {
+    grid-column: 1;
+  }
+
+  .wr-review-transition-arrow {
+    grid-column: 1;
+    transform: rotate(90deg);
+  }
+
+  .wr-review-adopt-form .wr-review-confirm-controls,
+  .wr-review-adopt-form .wr-review-submit {
+    inline-size: 100%;
+  }
+
+  .wr-review-adopt-form .wr-review-refresh {
+    min-inline-size: min(15rem, calc(100vw - 2 * var(--wr-gutter)));
+    max-inline-size: 100%;
+  }
+
+  .wr-review-draft-actions {
+    gap: .25rem;
+  }
+
+  .wr-review-draft-actions > .ui-button,
+  .wr-review-draft-actions .wr-compare-actions > summary {
+    min-block-size: 2.75rem;
+  }
+
+  .wr-review-draft-actions .wr-compare-actions {
+    margin-inline-start: 0;
   }
 }
 

@@ -24,6 +24,7 @@ import { returnHref } from './reading.ts';
 import { compareLines } from './diff.ts';
 import ReadState from './ReadState.vue';
 import SceneContext from './SceneContext.vue';
+import Button from '../ui/Button.vue';
 import './review.css';
 const props = defineProps<{ route: WritingRoute; url: URL }>();
 const emit = defineEmits<{ navigate: [href: string] }>();
@@ -370,7 +371,7 @@ function latestRevision(draft: DraftSummary) {
                 :href="
                   href(recordHref('drafts', data.compared[side].draftId), {
                     revision: data.compared[side].revision,
-                    returnTo: url.pathname + url.search,
+                    returnTo: url.pathname + url.search + url.hash,
                   })
                 "
                 >{{ data.compared[side].title }} ·
@@ -391,35 +392,47 @@ function latestRevision(draft: DraftSummary) {
                 >上下文 · {{ version(data.compared[side].sceneRevision) }}</a
               >
             </p>
-            <details class="wr-compare-actions" @toggle="alignParagraphs">
-              <summary>采用与 IF</summary>
-              <nav
-                class="wr-actions"
-                :aria-label="index ? '右稿操作' : '左稿操作'"
+            <nav
+              class="wr-review-draft-actions"
+              :aria-label="index ? '右稿操作' : '左稿操作'"
+            >
+              <Button
+                as="a"
+                variant="outline"
+                class="wr-review-evidence-link"
+                :aria-label="`核对${index ? '右稿' : '左稿'}依据`"
+                :href="href(recordHref('drafts', data.compared[side].draftId), {
+                  revision: data.compared[side].revision,
+                  returnTo: url.pathname + url.search + url.hash,
+                })"
+                >核对依据</Button
               >
-                <a
-                  class="wr-button wr-primary"
-                  :href="
-                    href(recordHref('drafts', data.compared[side].draftId), {
-                      revision: data.compared[side].revision,
-                      action: 'adopt',
-                      returnTo: url.pathname + url.search + url.hash,
-                    })
-                  "
-                  >采纳{{ index ? '右稿' : '左稿' }}</a
-                ><a
-                  :href="
-                    href(recordHref('scenes', data.scene.sceneId), {
+              <Button
+                as="a"
+                variant="secondary"
+                class="wr-review-adopt-link"
+                :href="href(recordHref('drafts', data.compared[side].draftId), {
+                  revision: data.compared[side].revision,
+                  action: 'adopt',
+                  returnTo: url.pathname + url.search + url.hash,
+                })"
+                >采纳{{ index ? '右稿' : '左稿' }}</Button
+              >
+              <details class="wr-compare-actions" @toggle="alignParagraphs">
+                <summary>更多操作</summary>
+                <nav :aria-label="index ? '右稿更多操作' : '左稿更多操作'">
+                  <a
+                    :href="href(recordHref('scenes', data.scene.sceneId), {
                       revision: data.compared[side].sceneRevision,
                       action: 'branch',
                       draftId: data.compared[side].draftId,
                       draftRevision: data.compared[side].revision,
-                    })
-                  "
-                  >从此稿建立 IF</a
-                >
-              </nav>
-            </details>
+                    })"
+                    >从此稿建立 IF</a
+                  >
+                </nav>
+              </details>
+            </nav>
           </header>
           <div
             v-for="(paragraph, i) in lines.paragraphs"

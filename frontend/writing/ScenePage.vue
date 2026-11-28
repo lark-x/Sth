@@ -240,24 +240,26 @@ function versionHref(revision?: number) {
       :editing="editing"
       :saveable="editing"
       :save-disabled="!editor || editor.saving"
+      :save-busy="editor?.saveBusy"
       :edit-label="!manuscript ? '写作' : undefined"
       @edit="edit"
       @save="editor?.requestSave()"
     >
       <template #versions>
+        <p class="wr-menu-section">查看稿件与场景版本</p>
         <label v-if="manuscript">稿件<select aria-label="切换稿件" :value="draftKey(manuscript)" @change="switchDraft">
           <option v-if="data.scene.adopted" :value="draftKey(data.scene.adopted)">
-            {{ data.scene.adopted.title }} · {{ adoptedDraftLabel }}
+            {{ data.scene.adopted.title }} · {{ adoptedDraftLabel }}{{ draftKey(manuscript) === draftKey(data.scene.adopted) ? ' · 正在查看' : '' }}
           </option>
           <option
             v-for="draft in data.drafts.filter(item => !data!.scene.adopted || draftKey(item) !== draftKey(data!.scene.adopted))"
             :key="draftKey(draft)"
             :value="draftKey(draft)"
-          >{{ draft.title }} · {{ version(draft.revision) }} · 最新</option>
+          >{{ draft.title }} · {{ version(draft.revision) }}{{ draftKey(manuscript) === draftKey(draft) ? ' · 正在查看' : '' }} · 最新修订{{ data.scene.adopted && draftKey(data.scene.adopted) === draftKey(draft) ? ' · 章节采用' : ' · 候选稿' }}</option>
         </select></label>
         <label>场景版本<select aria-label="切换场景版本" :value="data.scene.revision" @change="switchVersion">
           <option v-for="item in data.revisions" :key="item.revision" :value="item.revision">
-            {{ version(item.revision) }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新' : '' }}
+            {{ version(item.revision) }}{{ item.revision === data.scene.revision ? ' · 正在查看' : '' }}{{ item.revision === data.revisions[0]?.revision ? ' · 最新场景' : '' }}
           </option>
         </select></label>
       </template>

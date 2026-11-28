@@ -265,6 +265,7 @@ defineExpose({
       document.getElementById(formId) as HTMLFormElement | null
     )?.requestSubmit(),
   saving: computed(() => save.busy || save.conflict),
+  saveBusy: computed(() => save.busy),
 });
 async function loadLatest() {
   latestRead?.abort();
@@ -341,10 +342,11 @@ function saveDraft(event: Event) {
           <button
             ref="saveButton"
             type="submit"
-            class="wr-button wr-primary"
+            class="wr-button wr-primary wr-editor-submit"
+            :aria-busy="save.busy"
             :disabled="save.busy || save.conflict"
           >
-            {{
+            <span>{{
               save.busy
                 ? '正在保存…'
                 : save.pending
@@ -352,7 +354,8 @@ function saveDraft(event: Event) {
                   : editing
                     ? '保存修订'
                     : '新建候选稿'
-            }}</button><button
+            }}</span>
+          </button><button
             v-if="inline"
             type="button"
             class="wr-tool"
@@ -361,15 +364,15 @@ function saveDraft(event: Event) {
             返回阅读
           </button>
         </div>
+        <p v-if="save.error" ref="saveNotice" role="alert" class="wr-notice wr-editor-save-error">
+          {{ save.error }}
+        </p>
         <p class="wr-muted" role="status">
           {{
             initial || changed
               ? '未保存文字保留在本标签页'
               : '保存为候选稿，采用需另行确认'
           }}
-        </p>
-        <p v-if="save.error" ref="saveNotice" role="alert" class="wr-notice">
-          {{ save.error }}
         </p>
         <div v-if="save.conflict" class="wr-conflict">
           <button type="button" class="wr-button" @click="loadLatest">

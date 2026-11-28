@@ -2,6 +2,7 @@
 import { computed, onMounted, onScopeDispose, ref, useId } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import ManuscriptViewControls from '../manuscript/ManuscriptViewControls.vue';
+import Button from '../ui/Button.vue';
 import { all, read, recordHref } from './api.ts';
 import type { Scene } from './api.ts';
 import { useRead } from './state.ts';
@@ -22,6 +23,7 @@ const props = defineProps<{
   editLabel?: string;
   saveable?: boolean;
   saveDisabled?: boolean;
+  saveBusy?: boolean;
 }>();
 const emit = defineEmits<{ edit: []; save: [] }>();
 const toolbar = ref<HTMLElement>();
@@ -115,6 +117,9 @@ onScopeDispose(() => {
         @click="toggleFallback('versions')"
       >
         <span class="wr-toolbar-label">稿件与版本</span>
+        <span class="wr-toolbar-current-version" aria-hidden="true">
+          {{ revision ? `第 ${revision} 版` : '选择稿件' }}
+        </span>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
       </button>
       <div
@@ -126,7 +131,15 @@ onScopeDispose(() => {
         @change="close(versions)"
         @click="($event.target as Element).closest('a') && close(versions)"
       >
-        <p class="wr-version-title">{{ title }}</p>
+        <div class="wr-version-heading">
+          <p class="wr-version-title">{{ title }}</p>
+          <p class="wr-version-state">
+            <span v-if="revision">正在查看 · 第 {{ revision }} 版</span>
+            <span>{{ adoptedLabel ?? status }}</span>
+            <span v-if="historical">最新修订 · 第 {{ latestRevision }} 版</span>
+            <span v-else-if="revision && latestRevision === revision">最新修订</span>
+          </p>
+        </div>
         <nav v-if="placement || sceneTitle" class="wr-version-path" aria-label="完整文稿位置">
           <template v-if="placement">
             <a :href="recordHref('projects', placement.projectId)">{{ path?.project ?? '作品' }}</a>
@@ -140,12 +153,14 @@ onScopeDispose(() => {
       </div>
     </div>
     <div class="wr-toolbar-actions">
-      <button
+      <Button
         v-if="saveable"
         type="button"
-        class="wr-tool"
-        aria-label="保存"
+        variant="ghost"
+        class="wr-tool wr-toolbar-save"
+        :aria-label="saveBusy ? '正在保存修订' : '保存修订'"
         title="保存修订"
+        :aria-busy="saveBusy"
         :disabled="saveDisabled"
         @click="emit('save')"
       >
@@ -160,10 +175,11 @@ onScopeDispose(() => {
           aria-hidden="true"
         >
           <path d="M5 3h12l4 4v14H3V3zM7 3v6h10V3M7 21v-8h10v8" /></svg
-        ><span class="wr-optional-label">保存</span>
-      </button>
-      <button
+        ><span class="wr-optional-label wr-save-label">{{ saveBusy ? '正在保存…' : '保存' }}</span>
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
         class="wr-tool"
         :aria-label="editLabel ?? (editing ? '阅读' : '编辑')"
         :title="editLabel ?? (editing ? '阅读' : '编辑')"
@@ -174,9 +190,10 @@ onScopeDispose(() => {
           class="wr-optional-label"
           >{{ editLabel ?? (editing ? '阅读' : '编辑') }}</span
         >
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
         class="wr-tool"
         aria-label="来源与依据"
         title="来源与依据"
@@ -196,7 +213,7 @@ onScopeDispose(() => {
         >
           <path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h5" /></svg
         ><span class="wr-optional-label">来源</span>
-      </button>
+      </Button>
       <button
         ref="moreButton"
         type="button"
@@ -239,6 +256,16 @@ onScopeDispose(() => {
       @click="($event.target as Element).closest('a,button') && close(menu)"
     >
       <a :href="back">{{ backLabel ?? '返回场景' }}</a>
+      <p v-if="saveable" class="wr-menu-heading">当前修订</p>
+      <Button
+        v-if="saveable"
+        type="button"
+        variant="ghost"
+        class="wr-menu-action wr-menu-save"
+        :aria-busy="saveBusy"
+        :disabled="saveDisabled"
+        @click="emit('save')"
+      >{{ saveBusy ? '正在保存修订…' : '保存修订' }}</Button>
       <slot />
     </div>
   </nav>
