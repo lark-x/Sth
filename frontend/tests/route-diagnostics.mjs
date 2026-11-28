@@ -32,6 +32,10 @@ export async function diagnoseRoute(page, action) {
       main: Boolean(window.document.querySelector('main')?.getClientRects().length),
       passage: Boolean(window.document.querySelector('#passage-body')),
       tools: Boolean(window.document.querySelector('.wr-reader-toolbar')),
+      controls: [...window.document.querySelectorAll('.wr-compare-switch button')].map(node => ({
+        text: node.textContent?.trim(), rect: node.getBoundingClientRect().toJSON(),
+        display: getComputedStyle(node).display, visibility: getComputedStyle(node).visibility,
+      })),
       messages: [...window.document.querySelectorAll('[role="status"], [role="alert"]')]
         .filter(node => node.getClientRects().length).map(node => node.textContent?.trim()),
     })).catch(fallback), new Promise(resolve => { deadline = setTimeout(() => resolve(fallback()), 1000); })])

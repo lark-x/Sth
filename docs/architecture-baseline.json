@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "b9021b78cc41c06bd7c0627a30a2cfba29662a0ba6644b1704843cbb68c53650",
+  "inputSha256": "1321c7da9424e0e0b055c709d611fad44c2ea9b08bb9c41ba455eca5e94d9c05",
   "inputs": [
     {
       "file": "package.json",
@@ -126,7 +126,7 @@
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 634615,
+        "bytes": 635029,
         "complexity": 33,
         "dependencies": 33,
         "duplicates": 33,
@@ -2585,15 +2585,15 @@
       "file": "frontend/tests/route-diagnostics.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 2172,
-      "sha256": "88c7a9ff5252b0ccf4894d72891d3c654b77bdb4faf9175ee6d95f8abb90fafe",
+      "bytes": 2462,
+      "sha256": "f407f63f35c1bbbef0ece6925767404e7dfe600a89f2b600f9f1585d6b81ad84",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 13,
+        "functions": 14,
         "total": 4,
         "max": 2,
         "hotspots": []
@@ -3292,15 +3292,15 @@
       "file": "frontend/writing/author-flow-browser.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 10883,
-      "sha256": "331ea02c9c3b2d67140961d850cf0cbf210682ae78c4a3eea95ba7b30395375e",
+      "bytes": 11007,
+      "sha256": "8c6f7fcf065d813287189be2c6519d567729afee732e0eca670d3123b9e0a76c",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 20,
+        "functions": 21,
         "total": 6,
         "max": 3,
         "hotspots": []
@@ -9430,6 +9430,13 @@
       },
       {
         "from": "frontend/writing/author-flow-browser.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 6,
+        "column": 1
+      },
+      {
+        "from": "frontend/writing/author-flow-browser.test.mjs",
         "to": "scripts/manuscript-fixture.mjs",
         "type": "static",
         "line": 4,
@@ -13445,7 +13452,7 @@
       "adapters -> adapters (python)": 18,
       "adapters -> adapters (static)": 29,
       "adapters -> src (static)": 2,
-      "frontend -> frontend (static)": 238,
+      "frontend -> frontend (static)": 239,
       "frontend -> frontend (type)": 68,
       "frontend -> scripts (static)": 17,
       "frontend -> src (static)": 6,

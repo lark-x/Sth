@@ -3,6 +3,7 @@ import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { startManuscriptWorkspace } from '../../scripts/manuscript-fixture.mjs';
 import { assertFitsViewport } from '../../tests/browser/harness.mjs';
+import { diagnoseRoute } from '../tests/route-diagnostics.mjs';
 
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const body = page => page.getByRole('textbox', { name: '正文', exact: true });
@@ -55,6 +56,7 @@ test('author reading, inline revision and comparison keep manuscript identity an
       await t.test(`${engine.name()} ${width} saved title, selected manuscript and recovered edits agree`, async t => {
         const { scene, draft, alternate, sceneHref } = await fixture();
         const page = await open(t, `/drafts/${draft.draftId}?returnTo=${encodeURIComponent(sceneHref)}`);
+        await diagnoseRoute(page, async () => {
         await button(page, '编辑').click();
         await body(page).waitFor();
         await page.getByRole('textbox', { name: '标题', exact: true }).fill('登船之前的一封信');
@@ -109,6 +111,7 @@ test('author reading, inline revision and comparison keep manuscript identity an
           assert.equal(await page.locator('[data-side="left"]').isVisible(), false);
         }
         await assertFitsViewport(page);
+        });
       });
 
       await t.test(`${engine.name()} ${width} scene versions, candidate links and comparison preserve the return path`, async t => {

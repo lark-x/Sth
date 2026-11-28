@@ -1,0 +1,111 @@
+{
+  "provenance": "Synthetic isolated workspace on the production Sth server with built frontend; browser screenshots, not real iOS acceptance.",
+  "sourceSha256": "432f2c3b846130309b4037709ece83e326eba7a60cfc0908bf1ca399881d694e",
+  "bundleSha256": "47dcf8dd433b56afd1251ee51d8ee48591f72c99da3ba794ceb3f17da3e298c8",
+  "groups": [
+    {
+      "name": "chromium-1280",
+      "passed": true,
+      "states": 10,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-768",
+      "passed": true,
+      "states": 11,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-390",
+      "passed": true,
+      "states": 11,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "chromium-320",
+      "passed": true,
+      "states": 11,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "webkit-390",
+      "passed": true,
+      "states": 11,
+      "sourceStable": true,
+      "servedBuildStable": true
+    },
+    {
+      "name": "webkit-320",
+      "passed": true,
+      "states": 11,
+      "sourceStable": true,
+      "servedBuildStable": true
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "chromium-1280-reader.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-1280/chromium-1280-reader.png",
+      "sha256": "8cb2062399e6be9d6539d9cacbed2f8ae1499f4687bd4905e7de122909009e36"
+    },
+    {
+      "file": "chromium-1280-compare-left.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-1280/chromium-1280-compare-left.png",
+      "sha256": "0733d9042dd882605d68d559292e8e9b8251a2ebc269bd4d0b1aa205bdcb4f6d"
+    },
+    {
+      "file": "chromium-1280-adopt.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-1280/chromium-1280-adopt.png",
+      "sha256": "1b8d4cbb15480a097bf99f1a7dbbbbaff6fb1bdf38c37c5ff0ca2ef33478fdd1"
+    },
+    {
+      "file": "chromium-768-compare-right.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-768/chromium-768-compare-right.png",
+      "sha256": "b44a8ab43c86f0cc46178a2ab5c917f95068704e61a4bf6b7c9c69079f221bbf"
+    },
+    {
+      "file": "chromium-390-reader.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-390/chromium-390-reader.png",
+      "sha256": "201576a86dabcfdc532d2236da26bfac9ef51dbd527d6fa2e31fddef1e209c92"
+    },
+    {
+      "file": "chromium-390-directory.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/chromium-390/chromium-390-directory.png",
+      "sha256": "fe48a6c207b657a7063bf6c7a9848190692c251e23c5fa1a7f6b8290ebb26879"
+    },
+    {
+      "file": "webkit-320-reader.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-reader.png",
+      "sha256": "f02d674e3142d76d5cdd21f112fbccdf70b79647ea9611a540ce39659fb77719"
+    },
+    {
+      "file": "webkit-320-versions.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-versions.png",
+      "sha256": "c0fad41869c3a1bcd1efc02fd0616aedcea21c4248e00a4a913d63b27a5162d9"
+    },
+    {
+      "file": "webkit-320-evidence.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-evidence.png",
+      "sha256": "646a69c2a3fc4e5041b424ff58591801e41494bf7b69d7d576cb584db50cef09"
+    },
+    {
+      "file": "webkit-320-evidence-empty.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-evidence-empty.png",
+      "sha256": "20fd8afeead32815bd44b49d45e808379a756bc300eb538892c11f2cf3148e27"
+    },
+    {
+      "file": "webkit-320-compare-right.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-compare-right.png",
+      "sha256": "da7ae48839d085ea8ae88bb5c51359e4333231c88224b7e3bfa45f9fae193b62"
+    },
+    {
+      "file": "webkit-320-adopt.png",
+      "source": "frontend/.artifacts/author-review/final/screens-built/webkit-320/webkit-320-adopt.png",
+      "sha256": "51d54aa574954fec6c7bd6391133b62d6bea6257d88de782b0281481a02a4d3c"
+    }
+  ]
+}
