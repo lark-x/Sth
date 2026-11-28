@@ -236,6 +236,7 @@ function versionHref(revision?: number) {
       :alternate="!!(data.scene.branchFrom || data.scene.branchId)"
       :placement="data.scene.placement"
       :chapter-title="data.chapter?.title"
+      :scene-title="data.scene.title"
       :editing="editing"
       :saveable="editing"
       :save-disabled="!editor || editor.saving"
