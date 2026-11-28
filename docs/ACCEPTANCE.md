@@ -2,6 +2,28 @@
 
 本机预览为 <http://127.0.0.1:9322>，Compose 工程名 `sth-authoring`，使用独立数据卷 `sth-authoring_workspace`。四阶段基线、角色条目、研究与叙事分别使用数据库格式 2、3、4。下列链接可在运行预览的电脑上打开。
 
+## 2026-11-28 · 全站视觉与交互重设计
+
+应用提交 `482e9af56ad68917283938848594cccf81a3e3ba` 已部署到 <http://127.0.0.1:9322>，开发分支 `feat/cohesive-writing-ui`。采用 Ulysses 方向的灰白资料库、文稿列表与正文，统一 Vue/Reka/Lucide 控件、页面层级和手机触区；新增可中断的菜单、依据面板及导航动效。日记、资料、角色、任务、设置与可达旧页均纳入范围。范围、治理收益、性能成本和失败记录见 [完整执行记录](COHESIVE_UI_EXECUTION.md)。
+
+| 最终合成样例 | 图片 |
+| --- | --- |
+| 三栏读稿与手机精确选段 | [桌面](cohesive-ui-screens/chromium-1280-reader.png) · [320px](cohesive-ui-screens/chromium-320-reader.png) |
+| 两行速记与最近编辑 | [桌面](cohesive-ui-screens/chromium-1280-home.png) · [320px](cohesive-ui-screens/chromium-320-home.png) |
+| 比稿核依据与明确采用 | [比稿](cohesive-ui-screens/chromium-1280-compare.png) · [采用](cohesive-ui-screens/chromium-320-adopt.png) |
+| 资料列表与长标题原文 | [列表](cohesive-ui-screens/chromium-1280-sources.png) · [详情](cohesive-ui-screens/webkit-320-source-long.png) |
+| 日记、设置及旧页 | [日记](cohesive-ui-screens/chromium-1280-diary.png) · [设置](cohesive-ui-screens/webkit-320-settings.png) · [章节编排](cohesive-ui-screens/webkit-320-chapter-arrange.png) |
+
+完整浏览器 **247/247**；完整文稿专项 **186/186**，最终采用标签调整后定向 **15/15**；后端 **130 通过、1 原配置跳过**。类型、构建、架构核对通过。全站两引擎四宽度 432 页面采集为 **431/432**，一次 Chromium 768px 旧 `/requirements` 加载失败未稳定复现，同构建 12 轮旧别名序列 **48/48**；保留这个未确诊风险，不记为一次全绿。动态流程 **6/6**，36 张状态图、2 段视频。来源与哈希见 [截图清单](cohesive-ui-screens/manifest.json)。真机 iOS/WKWebView 和真实模型/私聊本轮未测。
+
+发布后实际服务完成六组视口 **72 个检查项**。第二轮 68 项通过，四个手机“全部文稿”首屏按其资料库语义补测 **4/4**；原 67/72 和 68/72 脚本结果保留，不冒充一次完整全绿。检查脚本先前仅等待 networkidle，或错误要求所有入口都有正文标题；已改为等待业务页实际内容，并区分手机资料库首屏。最终各项无浏览器异常、HTTP 失败和横向溢出，原稿修订、依据焦点/滚动恢复、比稿返回及采用确认可用。主代理查看实际桌面旧稿和 WebKit 320px 设置图；真实作者内容截图只留本机。
+
+运行镜像 `sha256:8000801d5b775fa185e9712e00129098a3780b6a4ad2803a940ec46bbdccb8ad`，OCI revision、运行源码、数据卷与原配置核对通过。26 个前端文件在本机测试构建、镜像、运行容器和 Hermes 包中逐文件一致。发布前后 59 张表、6,291 行与最终演练逐项一致；实际浏览器验收后其余 58 张表未变，原回执全保留，只新增与捕获请求逐项对应的 1,303 条读取回执。HTTP/Docker 健康，完整性与外键检查通过。回滚 dry-run 通过，目标为上一版 `9e73ab1`，未执行回滚。
+
+本机证据根目录 `frontend/.artifacts/cohesive-ui/`：`delivery.json`、`browser-release.log`、`reader-release.log`、`final-pages-v3/manifest.json`、`legacy-route-probe/manifest.json`、`final-motion/manifest.json`、`metrics-comparison.json`、`frontend-delivery.json`、`live-data-audit.json`。发布预检目录 `artifacts/release-preflight-20261127/runs/2026-11-28T13-29-29-282Z-e00683f1/`。验证采用 screenshot-matrix 模式，`browserAcceptancePassed:false` 仅表示未选择 targeted-browser 模式；实际服务检查如上。
+
+新 Hermes 包为 `frontend/.artifacts/cohesive-ui/package/sth-hermes-1.2.0-482e9af-win32-x64.zip`，1,933 个公开文件，Windows x64 / Node 24.15.0；SHA-256 `bb46c94fba9d5c22ee53c9aedfbbd77b8a2fed54685e537d0b1b9ebc291844c4`。分发单测 **16/16**，前端文件等价核对通过。隔离升级验收首次卡于宿主依赖下载，第二次 `pm repair` 超过 300 秒，均未进入插件安装；缓存预置重试结果另行补记，不能称作新包完整升级已通过。
+
 ## 2026-11-28 · 作者读写与候选稿审阅
 
 本轮分支为 [`feat/author-reading-review`](https://github.com/lark-x/Sth/tree/feat/author-reading-review)，应用提交 [`9e73ab139c15f678985c732ce69e565acfb815b2`](https://github.com/lark-x/Sth/commit/9e73ab139c15f678985c732ce69e565acfb815b2) 已推送并部署到本机 <http://127.0.0.1:9322>。后续提交只补充交付记录，运行应用以该 SHA 为准。`main` 仍为 `ec1f1e4ba41f261419e70658a76b5e68868caada`。范围、所有权、独立审查、架构成本和失败轮次详见 [本轮记录](AUTHOR_READING_REVIEW.md)。

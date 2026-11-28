@@ -1,0 +1,379 @@
+{
+  "sampledAt": "2026-11-28T13:40:10.010Z",
+  "build": {
+    "ui": "snapshot",
+    "head": "482e9af56ad68917283938848594cccf81a3e3ba",
+    "branch": "feat/cohesive-writing-ui",
+    "status": [
+      "M docs/COHESIVE_UI_EXECUTION.md",
+      "?? pnpm-lock.yaml",
+      "?? pnpm-workspace.yaml"
+    ],
+    "contentSha256": "daea6241b1ac60014b023d8c3b9a7d58a8a48c9b98b17fee582cceadf7b69cf4",
+    "fileCount": 197,
+    "node": "v24.15.0",
+    "measuredAt": "2026-11-28T13:39:57.102Z",
+    "bundle": {
+      "sha256": "c8f4706c46bd96ce5741aebfe1d6c7ac80d2d53437f10cb51befc86f9af276bf",
+      "fileCount": 51
+    },
+    "compiledAt": "2026-11-28T13:40:09.976Z"
+  },
+  "sourceStable": true,
+  "servedBuildStable": true,
+  "matrix": {
+    "total": 432,
+    "passed": 431,
+    "failures": [
+      {
+        "engine": "chromium",
+        "viewport": "tablet",
+        "width": 768,
+        "height": 1024,
+        "name": "alias-requirements",
+        "href": "/requirements",
+        "status": "failed",
+        "pageErrors": [],
+        "observation": {
+          "title": "页面暂时无法打开 · Sth",
+          "headings": [
+            "页面暂时无法打开"
+          ],
+          "alerts": [
+            "页面加载失败，请重试。"
+          ],
+          "legacy": false,
+          "viewportWidth": 768,
+          "contentWidth": 768,
+          "smallTouchControls": [],
+          "unreadablePrimaryControls": []
+        },
+        "image": "chromium-768-alias-requirements.png",
+        "error": "Route resolves to its actual page"
+      }
+    ],
+    "supplement": {
+      "source": "frontend/.artifacts/cohesive-ui/legacy-route-probe/manifest.json",
+      "cases": 48,
+      "passed": true,
+      "note": "One transient legacy alias load failure was not reproduced in twelve four-route sequences. Original failure retained; root cause not established."
+    }
+  },
+  "sourceManifest": "frontend/.artifacts/cohesive-ui/final-pages-v3/manifest.json",
+  "purpose": "Visual route coverage; does not replace behavioral tests or human image review",
+  "selected": [
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "reader",
+      "href": "/drafts/460b978c-91e1-4e9b-b597-423dbdf2a26c?revision=1&start=307&end=328",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "林澈的讲法 · 第三声以后那封仍未拆开的长信 · Sth",
+        "headings": [
+          "第二章 · 第三声以后",
+          "林澈的讲法 · 第三声以后那封仍未拆开的长信",
+          "写作上下文"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-reader.png",
+      "sha256": "ffc644577418bb6b671801c77751d8c0be0d1035248cd686b4c6024ea2ae6f15"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "reader",
+      "href": "/drafts/460b978c-91e1-4e9b-b597-423dbdf2a26c?revision=1&start=307&end=328",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "林澈的讲法 · 第三声以后那封仍未拆开的长信 · Sth",
+        "headings": [
+          "林澈的讲法 · 第三声以后那封仍未拆开的长信",
+          "写作上下文"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-320-reader.png",
+      "sha256": "39e804b298c29c291f33806a13876c7a6c3c2f1a1bb030c905241ff875b4b808"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "home",
+      "href": "/",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "首页 · Sth",
+        "headings": [
+          "记一句",
+          "最近编辑",
+          "日记接续"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-home.png",
+      "sha256": "83cfed01f6515685acb734af59b4e25176331ded31876f38615ab02fee373bc0"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "home",
+      "href": "/",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "首页 · Sth",
+        "headings": [
+          "记一句",
+          "最近编辑",
+          "日记接续"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-320-home.png",
+      "sha256": "cb0fcbf32f24124ef8fc264e1cf9f1dc189d66e1a26e9c44afb3e28e19d7a041"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "compare",
+      "href": "/scenes/a3306799-d2f4-4706-a326-8a3e9b78702f?action=compare&left=460b978c-91e1-4e9b-b597-423dbdf2a26c@1&right=340db5e5-a2ec-4cb3-b2e5-06cad992da38@1",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "对照候选稿 · 栈桥尽头 · 等待第三声钟响的那个雨夜 · Sth",
+        "headings": [
+          "对照候选稿",
+          "左稿 · 林澈的讲法 · 第三声以后那封仍未拆开的长信 · 第 1 版",
+          "写作上下文",
+          "右稿 · 船长的讲法 · 第 1 版",
+          "写作上下文"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-compare.png",
+      "sha256": "050cfc99d8533405820edea359c17f0ccf9db8b600033a53e62b7ff09f82d4ba"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "adopt",
+      "href": "/drafts/340db5e5-a2ec-4cb3-b2e5-06cad992da38?action=adopt&revision=1",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "采纳候选稿 · 船长的讲法 · Sth",
+        "headings": [
+          "采纳候选稿",
+          "船长的讲法 · 第 1 版",
+          "写作上下文",
+          "写作上下文"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-320-adopt.png",
+      "sha256": "24eb8098df7abaac025488da39bd4b7de53dbd7ada3324ce31e7becfa1b40778"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "sources",
+      "href": "/sources?projectId=80e98264-dd07-4f9c-aba4-b6e31df68687",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "资料 · Sth",
+        "headings": [
+          "资料",
+          "北港值夜簿 · 雨夜抄本",
+          "北港巡灯手记：从旧码头最后一班渡船到雨夜未拆的信——角色动机、场景顺序与两种结局的讨论记录"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-sources.png",
+      "sha256": "684690ca62f74cfd207fc930cc0b51bec334cb1090076ec28c2e2bcc595f9d6f"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "source-long",
+      "href": "/sources/0e2e347c-c563-4da2-91c4-3bbd9d52dd51",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "北港巡灯手记：从旧码头最后一班渡船到雨夜未拆的信——角色动机、场景顺序与两种结局的讨论记录 · Sth",
+        "headings": [
+          "北港巡灯手记：从旧码头最后一班渡船到雨夜未拆的信——角色动机、场景顺序与两种结局的讨论记录",
+          "原文",
+          "出处",
+          "关联项目",
+          "引用这条资料的内容"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "webkit-320-source-long.png",
+      "sha256": "e3e66bfe35c3c7695221c64bba8a14eb478d2d2e5bcdbb8c556ff63026ecc915"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "diary",
+      "href": "/diaries/d0c21fe6-f192-4dc3-bdaf-d1215760827b",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "雨夜巡灯手记 · Sth",
+        "headings": [
+          "日记",
+          "雨夜巡灯手记",
+          "资料引用"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-diary.png",
+      "sha256": "ac6f235d696d4767ff9f015652c27feae413dafaa19b22abe2522fd4299809b7"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "settings",
+      "href": "/settings",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "连接设置 · Sth",
+        "headings": [
+          "连接设置",
+          "配对码",
+          "连接记录"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "webkit-320-settings.png",
+      "sha256": "aebfd7b5cdf9a2909b998c81a301ac878b14a3ba327672c2ebe4fb8610726600"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 800,
+      "name": "project-overview",
+      "href": "/projects/80e98264-dd07-4f9c-aba4-b6e31df68687?view=overview",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "Sth",
+        "headings": [
+          "作品",
+          "第三声以后"
+        ],
+        "alerts": [],
+        "legacy": false,
+        "viewportWidth": 1280,
+        "contentWidth": 1280,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "chromium-1280-project-overview.png",
+      "sha256": "2f4c62377f39bd7b143526209197600f1c43033a8601ee67456a31099e24dd84"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "compact",
+      "width": 320,
+      "height": 640,
+      "name": "chapter-arrange",
+      "href": "/chapters/bce8a8e6-e9b4-4798-9b78-1677364d08e8?action=arrange",
+      "status": "passed",
+      "pageErrors": [],
+      "observation": {
+        "title": "编排章节 · Sth",
+        "headings": [
+          "编排章节"
+        ],
+        "alerts": [],
+        "legacy": true,
+        "viewportWidth": 320,
+        "contentWidth": 320,
+        "smallTouchControls": [],
+        "unreadablePrimaryControls": []
+      },
+      "image": "webkit-320-chapter-arrange.png",
+      "sha256": "f3f3cbc34ab0197e22c10c6bfd2025e2c5a6dd03e54f44d534eb22ef2d36f44d"
+    }
+  ]
+}
