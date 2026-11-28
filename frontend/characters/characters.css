@@ -16,15 +16,15 @@
 
 .sth-app main:has(> .characters-route) { padding-block-start: 1.25rem; }
 .characters-route ::selection { color: var(--characters-ink); background: var(--selection, #e7e7e7); }
-.characters-route h1 { margin: 0; font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
+.characters-route h1 { margin: 0; font-size: var(--page-title-size, 1.5rem); font-weight: 600; line-height: var(--page-title-leading, 1.4); }
 .characters-route h2 { margin: 0 0 .75rem; font-size: 1.125rem; line-height: 1.45; }
 .characters-route h3 { margin: 0 0 .5rem; font-size: 1rem; line-height: 1.5; }
-.characters-route a { color: var(--characters-ink); text-underline-offset: .2em; }
+.characters-route a:not(.ui-button) { color: var(--characters-ink); text-underline-offset: .2em; }
 .characters-route :is(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--characters-ink);
   outline-offset: 3px;
 }
-.characters-route :is(input, select, textarea) { max-inline-size: 100%; min-inline-size: 0; font: inherit; caret-color: var(--characters-ink); }
+.characters-route :is(input, select, textarea) { max-inline-size: 100%; min-inline-size: 0; caret-color: var(--characters-ink); }
 
 .characters-heading {
   position: relative;
@@ -156,6 +156,7 @@
 .characters-editor :is(.editor, fieldset, .ui-field) { min-inline-size: 0; }
 .characters-editor .editor { max-inline-size: none; }
 .characters-editor .ui-field :is(input, select, textarea) { inline-size: 100%; }
+.characters-editor textarea[name='persona'] { font: var(--body-size, 18px)/var(--body-leading, 1.8) var(--body-font, var(--sans, sans-serif)); }
 .characters-editor .ui-field input[type='file'] { padding: .65rem; }
 .characters-editor .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .characters-editor .character-media-preview :is(img, audio) { max-inline-size: 100%; }
@@ -168,7 +169,6 @@
   .sth-app main:has(> .characters-route) { padding: .75rem 1rem 3rem; }
   .characters-heading { gap: .45rem; }
   .characters-toolbar { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .characters-title h1 { font-size: .9375rem; }
   .characters-title .characters-muted { font-size: .6875rem; }
   .characters-project { max-inline-size: 29vw; }
   .characters-editor .workspace-fieldset { padding: .75rem; }

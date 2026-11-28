@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import Button from '../ui/Button.vue';
 import { ApiError, catalog, errorText, href, kinds, listAll, query, read } from './api';
 import type { Project, SourceKind, Summary, Summary as SourceSummary } from './api';
@@ -28,6 +28,7 @@ const projectId = ref(props.url.searchParams.get('projectId') ?? '');
 const kind = ref(props.url.searchParams.get('kind') ?? '');
 const q = ref(props.url.searchParams.get('q') ?? '');
 const searchTerm = props.url.searchParams.get('q')?.trim() ?? '';
+const activeFilterCount = computed(() => Number(Boolean(projectId.value)) + Number(Boolean(q.value.trim())));
 const filter = {
   ...(projectId.value ? { projectId: projectId.value } : {}),
   ...(Object.hasOwn(kinds, kind.value) ? { kind: kind.value } : {}),
@@ -95,6 +96,9 @@ async function load() {
 function search() {
   emit('navigate', contextual(query('/sources', { projectId: projectId.value, kind: kind.value, q: q.value.trim() })));
 }
+function typeHref(value: string) {
+  return contextual(query('/sources', { projectId: projectId.value, kind: value, q: q.value.trim() }));
+}
 onMounted(() => {
   document.title = '资料 · Sth';
   void load();
@@ -115,42 +119,48 @@ onBeforeUnmount(() => controller.abort());
         >新建资料</Button
       >
     </header>
-    <div class="sources-list-bar"><span class="sources-muted">{{ searchTerm ? `搜索「${searchTerm}」` : '已归档资料' }}<template v-if="url.searchParams.get('kind')"> · {{ kinds[url.searchParams.get('kind') as SourceKind] }}</template></span>
-    <details class="sources-disclosure sources-workspace"><summary>资料工作区</summary><nav class="sources-tabs" aria-label="资料工作区">
-      <a :href="contextual('/sources')" aria-current="page">已归档资料</a><a href="/research">外部检索</a
-      ><a href="/judgments">判断</a>
-    </nav></details></div>
-    <details class="sources-disclosure sources-filter-disclosure"><summary>筛选<span v-if="url.searchParams.get('projectId')"> · {{ projects.find(item => item.projectId === url.searchParams.get('projectId'))?.title ?? '当前项目' }}</span></summary>
-    <form class="sources-filter" role="search" action="/sources" @submit.prevent="search">
-      <div class="sources-field ui-field">
-        <label for="sources-project">项目</label
-        ><select id="sources-project" class="ui-input" v-model="projectId" name="projectId">
-          <option value="">全部项目</option>
-          <option
-            v-if="projectId && !projects.some((item) => item.projectId === projectId)"
-            :value="projectId"
-          >
-            {{ projectId }}
-          </option>
-          <option v-for="project in projects" :key="project.projectId" :value="project.projectId">
-            {{ project.title }}
-          </option>
-        </select>
+    <div class="sources-list-bar">
+      <div class="sources-list-scope">
+        <span class="sources-list-scope-label">{{ searchTerm ? `搜索「${searchTerm}」` : '已归档资料' }}</span>
+        <span v-if="projectId">· {{ projects.find(item => item.projectId === projectId)?.title ?? '当前项目' }}</span>
+        <span v-if="!loading && !error" id="workspace-count" class="sources-list-count" role="status">{{ items.length }} 条记录</span>
       </div>
-      <div class="sources-field ui-field">
-        <label for="sources-kind">类型</label
-        ><select id="sources-kind" class="ui-input" v-model="kind" name="kind">
-          <option value="">全部类型</option>
-          <option v-for="(label, value) in kinds" :key="value" :value="value">{{ label }}</option>
-        </select>
+      <div class="sources-list-tools">
+        <details class="sources-disclosure sources-toolbar-menu sources-filter-disclosure">
+          <summary>筛选<span v-if="activeFilterCount" class="sources-filter-count">{{ activeFilterCount }}</span></summary>
+          <form class="sources-filter sources-toolbar-panel" role="search" action="/sources" @submit.prevent="search">
+            <div class="sources-field ui-field">
+              <label for="sources-project">项目</label>
+              <select id="sources-project" class="ui-input" v-model="projectId" name="projectId">
+                <option value="">全部项目</option>
+                <option v-if="projectId && !projects.some(item => item.projectId === projectId)" :value="projectId">{{ projectId }}</option>
+                <option v-for="project in projects" :key="project.projectId" :value="project.projectId">{{ project.title }}</option>
+              </select>
+            </div>
+            <div class="sources-field sources-keyword ui-field">
+              <label for="sources-q">关键词</label>
+              <input id="sources-q" class="ui-input" v-model="q" name="q" type="search" maxlength="500" />
+            </div>
+            <Button class="sources-button" variant="outline" type="submit">搜索</Button>
+          </form>
+        </details>
+        <details class="sources-disclosure sources-toolbar-menu sources-type-menu">
+          <summary>类型<span v-if="kind && kinds[kind as SourceKind]" class="sources-type-current">{{ kinds[kind as SourceKind] }}</span></summary>
+          <nav class="sources-type-options sources-toolbar-panel" aria-label="资料类型">
+            <a :href="typeHref('')" :aria-current="!kind ? 'page' : undefined">全部类型</a>
+            <a v-for="(label, value) in kinds" :key="value" :href="typeHref(value)" :aria-current="kind === value ? 'page' : undefined">{{ label }}</a>
+          </nav>
+        </details>
+        <details class="sources-disclosure sources-toolbar-menu sources-workspace">
+          <summary>工作区</summary>
+          <nav class="sources-tabs sources-toolbar-panel" aria-label="资料工作区">
+            <a :href="contextual('/sources')" aria-current="page">已归档资料</a>
+            <a href="/research">外部检索</a>
+            <a href="/judgments">判断</a>
+          </nav>
+        </details>
       </div>
-      <div class="sources-field sources-keyword ui-field">
-        <label for="sources-q">关键词</label
-        ><input id="sources-q" class="ui-input" v-model="q" name="q" type="search" maxlength="500" />
-      </div>
-      <Button class="sources-button" variant="outline" type="submit">搜索</Button>
-    </form>
-    </details>
+    </div>
     <p v-if="contextError" role="alert">
       项目列表读取失败。{{ contextError }} <Button type="button" variant="outline" @click="load">重试</Button>
     </p>
@@ -160,7 +170,6 @@ onBeforeUnmount(() => controller.abort());
       <Button class="sources-button" variant="outline" type="button" @click="load">重试</Button>
     </div>
     <template v-else>
-      <p id="workspace-count" class="sources-muted" role="status">{{ items.length }} 条记录</p>
       <div id="workspace-list">
         <ul v-if="items.length" class="sources-list">
           <li v-for="item in items" :key="item.sourceId">

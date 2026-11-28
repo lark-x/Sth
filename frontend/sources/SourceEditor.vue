@@ -185,7 +185,7 @@ onBeforeUnmount(() => controller.abort());
         </p>
         <div class="sources-actions">
           <Button class="sources-button" variant="outline" type="button" @click="applyLatest(false)">
-            保留我的修改并采用新版</button
+            保留我的修改并采用新版</Button
           ><Button class="sources-button" variant="outline" type="button" @click="applyLatest(true)">改用最新版</Button>
         </div>
       </template>

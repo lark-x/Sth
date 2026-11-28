@@ -14,11 +14,11 @@
   background: var(--sheet, #fff);
   overflow-wrap: break-word;
 }
-.sources-route h1 { margin: 0; font-size: 1.25rem; line-height: 1.4; }
+.sources-route h1 { margin: 0; font-size: var(--page-title-size, 1.5rem); font-weight: 600; line-height: var(--page-title-leading, 1.4); }
 .sources-route h2 { margin: 0 0 .7rem; font-size: 1.125rem; line-height: 1.45; }
 .sources-route h3 { font-size: 1rem; line-height: 1.5; }
-.sources-route a { color: var(--ink, #252525); text-underline-offset: .2em; }
-.sources-route a:hover { text-decoration-thickness: 2px; }
+.sources-route a:not(.ui-button) { color: var(--ink, #252525); text-underline-offset: .2em; }
+.sources-route a:not(.ui-button):hover { text-decoration-thickness: 2px; }
 .sources-domain :focus-visible { outline: 2px solid var(--ink, #252525); outline-offset: 3px; }
 
 .sources-heading {
@@ -41,20 +41,55 @@
 .sources-tabs { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-block-end: 1.25rem; padding-block-end: .65rem; border-block-end: 1px solid var(--line, #e5e5e5); }
 .sources-tabs a { display: inline-flex; align-items: center; min-block-size: 2.75rem; }
 .sources-tabs a[aria-current] { font-weight: 650; }
-.sources-filter { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-block: 1rem; }
+.sources-list-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem 1rem; min-block-size: 2.75rem; margin-block-end: .25rem; }
+.sources-list-scope { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; min-inline-size: 0; font-size: .8125rem; }
+.sources-list-scope-label { overflow-wrap: anywhere; }
+.sources-list-count { color: var(--muted, #686868); white-space: nowrap; }
+.sources-list-tools { display: flex; align-items: center; justify-content: end; flex-wrap: wrap; gap: .15rem; }
+.sources-toolbar-menu { position: relative; }
+.sources-toolbar-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  min-block-size: 2.75rem;
+  padding-inline: .6rem;
+  border-radius: var(--radius-control, 6px);
+  color: var(--ink, #252525);
+  font-size: .8125rem;
+  cursor: pointer;
+  list-style: none;
+}
+.sources-toolbar-menu > summary::-webkit-details-marker { display: none; }
+.sources-toolbar-menu > summary::after {
+  inline-size: .38rem;
+  block-size: .38rem;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  content: '';
+  transform: translateY(-.1rem) rotate(45deg);
+  transition: transform var(--motion-fast, 120ms) var(--ease-out, ease-out);
+}
+.sources-toolbar-menu[open] > summary::after { transform: translateY(.1rem) rotate(225deg); }
+.sources-toolbar-menu > summary:hover { background: var(--surface-subtle, #f2f2f2); }
+.sources-filter-count,
+.sources-type-current { color: var(--muted, #686868); font-size: .75rem; white-space: nowrap; }
+.sources-filter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
 .sources-field { display: grid; gap: .35rem; min-inline-size: 0; margin-block-end: .75rem; }
 .sources-field label,
 .sources-projects legend { font-size: .875rem; font-weight: 600; }
-.sources-filter .sources-field { flex: 1 1 9rem; margin: 0; }
-.sources-filter .sources-keyword { flex-basis: 14rem; }
+.sources-filter .sources-field { min-inline-size: 0; margin: 0; }
+.sources-filter .sources-keyword,
+.sources-filter .sources-button { grid-column: 1 / -1; }
+.sources-filter .sources-button { justify-self: end; }
 .sources-route input:not([type='checkbox']),
 .sources-route select,
-.sources-route textarea { box-sizing: border-box; inline-size: 100%; max-inline-size: 100%; min-inline-size: 0; font: inherit; }
+.sources-route textarea { box-sizing: border-box; inline-size: 100%; max-inline-size: 100%; min-inline-size: 0; }
 .sources-route textarea { resize: vertical; }
 .sources-route input:disabled,
 .sources-route textarea:disabled,
 .sources-route select:disabled { opacity: .7; }
 .sources-editor { max-inline-size: 47rem; }
+.sources-editor #source-body { font: var(--body-size, 18px)/var(--body-leading, 1.8) var(--body-font, var(--sans, sans-serif)); }
 .sources-editor > fieldset { min-inline-size: 0; padding: 0; border: 0; margin: 0; }
 .sources-projects { min-inline-size: 0; padding: 1rem 0; border: 0; border-block-start: 1px solid var(--line, #e5e5e5); }
 .sources-check { display: flex; align-items: center; gap: .6rem; min-block-size: 2.75rem; }
@@ -69,7 +104,7 @@
 #workspace-list .sources-list { margin-block: .35rem 1rem; }
 #workspace-list .sources-list > li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(6rem, 7.5rem);
   align-items: baseline;
   gap: .25rem .75rem;
   min-block-size: 3.25rem;
@@ -86,6 +121,7 @@
   font-weight: 550;
   line-height: 1.4;
   text-wrap: balance;
+  font-family: var(--sans, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -94,7 +130,7 @@
 #workspace-list .sources-index-title a:focus-visible { outline-offset: -2px; }
 #workspace-list .sources-index-identity {
   grid-column: 2;
-  max-inline-size: min(11rem, 34vw);
+  max-inline-size: 100%;
   margin: 0;
   overflow: hidden;
   font-size: .75rem;
@@ -111,9 +147,10 @@
   color: var(--muted, #686868);
   font-size: .8125rem;
   line-height: 1.45;
+  font-family: var(--body-font, var(--sans, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif));
   white-space: pre-line;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 #workspace-list .sources-index-origin { grid-column: 1 / -1; font-size: .75rem; }
 #workspace-list .sources-index-origin summary {
@@ -146,35 +183,42 @@
 .sources-context > summary,
 .sources-disclosure > summary { display: inline-flex; align-items: center; min-block-size: 2.75rem; cursor: pointer; }
 .sources-context > section { margin-block-start: 1rem; }
-.sources-workspace { position: relative; }
-.sources-workspace .sources-tabs { margin: 0; border: 0; }
-.sources-workspace[open] .sources-tabs {
+.sources-toolbar-panel {
   position: absolute;
-  inset-block-start: 100%;
+  inset-block-start: calc(100% + .25rem);
   inset-inline-end: 0;
-  z-index: 2;
+  z-index: 10;
   display: grid;
   gap: 0;
-  inline-size: 12rem;
   padding: .5rem .75rem;
   border: 1px solid var(--line, #e5e5e5);
   border-radius: var(--radius-panel, 12px);
   background: var(--sheet, #fff);
   box-shadow: var(--shadow-popover, 0 4px 18px rgb(0 0 0 / .14));
 }
-.sources-workspace[open] .sources-tabs a { min-block-size: 2.75rem; }
+.sources-toolbar-menu[open] > .sources-toolbar-panel { display: grid; }
+.sources-workspace .sources-toolbar-panel,
+.sources-type-menu .sources-toolbar-panel { inline-size: min(14rem, calc(100vw - 2rem)); }
+.sources-filter-disclosure .sources-toolbar-panel { inline-size: min(24rem, calc(100vw - 2rem)); }
+.sources-workspace .sources-tabs { margin: 0; border: 0; }
+.sources-workspace .sources-tabs a,
+.sources-type-options a { display: flex; align-items: center; min-block-size: 2.75rem; }
+.sources-type-options a[aria-current] { font-weight: 650; }
+.sources-filter-disclosure .sources-field { margin: 0; }
 .sources-history a[aria-current] { font-weight: 650; }
 
 @media (width < 640px) {
   .sth-app main:has(> .sources-domain) { padding: .75rem 1rem 3rem; }
   .sources-heading { gap: .45rem; }
   .sources-toolbar { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .sources-title h1 { font-size: .9375rem; }
   .sources-title .sources-muted { font-size: .6875rem; }
-  .sources-filter .sources-keyword { flex-basis: 100%; }
+  .sources-list-bar { align-items: flex-start; }
+  .sources-list-scope { flex: 1 1 auto; padding-block: .55rem; }
+  .sources-list-tools { flex: 0 0 auto; }
   .sources-editor .sources-projects { padding: .75rem 0; }
   .sources-actions { gap: .4rem; }
-  #workspace-list .sources-index-identity { max-inline-size: 29vw; }
+  #workspace-list .sources-list > li { grid-template-columns: minmax(0, 1fr); }
+  #workspace-list .sources-index-identity { grid-column: 1; text-align: start; white-space: normal; }
   #workspace-list .sources-index-origin summary { min-block-size: 2.75rem; }
 }
 
@@ -184,5 +228,5 @@
 
 @media (forced-colors: active) {
   .sources-domain :focus-visible { outline-color: Highlight; }
-  .sources-workspace[open] .sources-tabs { border-color: CanvasText; }
+  .sources-toolbar-panel { border-color: CanvasText; }
 }
