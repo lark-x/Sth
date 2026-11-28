@@ -22,7 +22,11 @@
 
 本机证据根目录 `frontend/.artifacts/cohesive-ui/`：`delivery.json`、`browser-release.log`、`reader-release.log`、`final-pages-v3/manifest.json`、`legacy-route-probe/manifest.json`、`final-motion/manifest.json`、`metrics-comparison.json`、`frontend-delivery.json`、`live-data-audit.json`。发布预检目录 `artifacts/release-preflight-20261127/runs/2026-11-28T13-29-29-282Z-e00683f1/`。验证采用 screenshot-matrix 模式，`browserAcceptancePassed:false` 仅表示未选择 targeted-browser 模式；实际服务检查如上。
 
-新 Hermes 包为 `frontend/.artifacts/cohesive-ui/package/sth-hermes-1.2.0-482e9af-win32-x64.zip`，1,933 个公开文件，Windows x64 / Node 24.15.0；SHA-256 `bb46c94fba9d5c22ee53c9aedfbbd77b8a2fed54685e537d0b1b9ebc291844c4`。分发单测 **16/16**，前端文件等价核对通过。隔离升级验收首次卡于宿主依赖下载，第二次 `pm repair` 超过 300 秒，均未进入插件安装；缓存预置重试结果另行补记，不能称作新包完整升级已通过。
+新 Hermes 包为 `frontend/.artifacts/cohesive-ui/package/sth-hermes-1.2.0-482e9af-win32-x64.zip`，1,933 个公开文件，Windows x64 / Node 24.15.0；SHA-256 `bb46c94fba9d5c22ee53c9aedfbbd77b8a2fed54685e537d0b1b9ebc291844c4`。分发单测 **16/16**，前端文件等价核对通过。
+
+最终隔离升级验收 **10/10**：通过已安装 Hermes 的原生入口先安装 `ed01a63` 旧包，再停服、安装最终 ZIP、重启；1,933 个 manifest 文件与 25 项生产依赖逐项核对，HTTP 首页与最终包一致。工作区、连接、原资料版本及回执保留，升级后新写入、独立进程读回、幂等重放、重启、跨终端拒绝和撤销通过。临时服务已停止，端口关闭，无残留测试进程或清理错误；真实 Hermes 配置未改。
+
+前两轮分别卡于宿主依赖下载和 `pm repair` 300 秒超时，均未进入插件安装。最终轮在隔离根目录预置本机 uv 缓存，保留官方 PM、安装流程、原断言与原超时；准备阶段的锁文件、导入路径和重复空 profile 错误也保留记录。因此此次结论是有缓存条件下的确定性升级通过，不代表无缓存网络安装、真实模型或真人私聊验收。证据为 `hermes-diagnosis/final-upgrade-report.json`、`final-acceptance.json` 和 `retry-final.{stdout,stderr}.log`，均位于上述本机证据根目录。
 
 ## 2026-11-28 · 作者读写与候选稿审阅
 
