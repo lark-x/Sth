@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "inputSha256": "ae998251aa655e7101f86aeb9e211aa583f0e31cd0c502c9fe8bfb97a8328108",
+  "inputSha256": "59ba93f391f496650c59a02bd55d255b3fe2dfb1559dad1ab076e1ac0482c480",
   "inputs": [
     {
       "file": "package.json",
@@ -126,7 +126,7 @@
         "files": 58
       },
       "frontend/test/mjs": {
-        "bytes": 683217,
+        "bytes": 683332,
         "complexity": 36,
         "dependencies": 36,
         "duplicates": 36,
@@ -2731,15 +2731,15 @@
       "file": "frontend/tests/unified-navigation.test.mjs",
       "kind": "test",
       "format": "mjs",
-      "bytes": 19431,
-      "sha256": "be615be949b2b4e257e9abb8f8f6550489dd43df7d080d38fcf70a93c3e47051",
+      "bytes": 19546,
+      "sha256": "08157b0c7ad8be69c5f5c48d5b237d5e703009896db761be3dc063db4a840d07",
       "analysis": [
         "complexity",
         "dependencies",
         "duplicates"
       ],
       "complexity": {
-        "functions": 57,
+        "functions": 58,
         "total": 30,
         "max": 7,
         "hotspots": []
@@ -8788,6 +8788,13 @@
       },
       {
         "from": "frontend/tests/unified-navigation.test.mjs",
+        "to": "frontend/tests/route-diagnostics.mjs",
+        "type": "static",
+        "line": 7,
+        "column": 1
+      },
+      {
+        "from": "frontend/tests/unified-navigation.test.mjs",
         "to": "scripts/manuscript-fixture.mjs",
         "type": "static",
         "line": 6,
@@ -13811,7 +13818,7 @@
       "adapters -> adapters (python)": 18,
       "adapters -> adapters (static)": 29,
       "adapters -> src (static)": 2,
-      "frontend -> frontend (static)": 271,
+      "frontend -> frontend (static)": 272,
       "frontend -> frontend (type)": 68,
       "frontend -> scripts (static)": 19,
       "frontend -> src (static)": 6,

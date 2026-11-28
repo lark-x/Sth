@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { createManuscriptFixture, startManuscriptWorkspace } from '../../scripts/manuscript-fixture.mjs';
+import { diagnoseRoute } from './route-diagnostics.mjs';
 
 const artifacts = resolve('frontend/.artifacts/unified-ui/navigation-after-candidate');
 const viewports = [
@@ -153,11 +154,13 @@ async function clickAuxiliaryLink(page, label, pathname, mobile) {
   const href = await link.getAttribute('href');
   assert.ok(href, `${label} has a destination`);
   const expected = pathOf(new URL(href, page.url()).href);
-  await link.click();
-  await waitForRoute(page, pathname);
-  if (pathname === '/characters') await page.locator('.characters-route').waitFor();
-  if (pathname === '/sources') await page.locator('.sources-domain').waitFor();
-  if (pathname === '/settings') await page.getByRole('heading', { name: '连接设置', exact: true }).waitFor();
+  await diagnoseRoute(page, async () => {
+    await link.click();
+    await waitForRoute(page, pathname);
+    if (pathname === '/characters') await page.locator('.characters-route').waitFor();
+    if (pathname === '/sources') await page.locator('.sources-domain').waitFor();
+    if (pathname === '/settings') await page.getByRole('heading', { name: '连接设置', exact: true }).waitFor();
+  });
   assert.equal(new URL(page.url()).pathname, pathname, `${label} lands on ${pathname}`);
   assert.equal(pathOf(page.url()), expected, `${label} preserves its exact path and query`);
   return expected;
